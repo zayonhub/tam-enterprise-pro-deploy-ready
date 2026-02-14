@@ -582,9 +582,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // ══════════════════════════════════════
     async function loadAllApplications() {
       const isStaff = currentProfile?.role === 'staff' || currentProfile?.role === 'admin';
-      // Join profiles to get applicant name/email for staff view
+
+      // Plain applications fetch — no join (avoids FK requirement)
       let query = sb.from('applications')
-        .select('*, profiles(full_name, email)')
+        .select('*')
         .order('created_at', { ascending: false });
 
       // Applicants only see their own
@@ -595,6 +596,25 @@ document.addEventListener('DOMContentLoaded', () => {
       const { data, error } = await query;
       if (error) { console.error('loadAllApplications:', error); return; }
       allApplications = data || [];
+
+      // For staff: enrich each application with the applicant's profile data
+      // by fetching from profiles table using the collected user_ids
+      if (isStaff && allApplications.length) {
+        const userIds = [...new Set(allApplications.map(a => a.user_id).filter(Boolean))];
+        const { data: profiles } = await sb
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', userIds);
+
+        if (profiles?.length) {
+          const profileMap = {};
+          profiles.forEach(p => { profileMap[p.id] = p; });
+          allApplications = allApplications.map(a => ({
+            ...a,
+            profiles: profileMap[a.user_id] || null
+          }));
+        }
+      }
     }
 
     function renderDashboard() {
