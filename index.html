@@ -876,23 +876,57 @@ document.addEventListener('DOMContentLoaded', () => {
       const app = allApplications.find(a => String(a.id) === String(appId));
       if (!app) return;
 
-      $('modal-title').textContent = `#${String(app.id).slice(-4).toUpperCase()} — ${app.applicant_name || 'Application'}`;  // textContent, safe
+      $('modal-title').textContent = `#${String(app.id).slice(-4).toUpperCase()} — ${app.applicant_name || 'Application'}`;
 
       const date = app.created_at ? new Date(app.created_at).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '—';
       const safeStatus = ['pending','review','approved','rejected'].includes(app.status) ? app.status : 'pending';
-      const isStaffModal = currentProfile?.role === 'staff' || currentProfile?.role === 'admin';
-      const profileFullName = sanitize(app.profiles?.full_name || '');
-      $('app-info').innerHTML = `
-        <div><div class="text-xs text-gray-400 font-medium mb-1">Applicant</div><div class="font-semibold text-gray-800">${sanitize(app.applicant_name) || '—'}</div></div>
-        <div><div class="text-xs text-gray-400 font-medium mb-1">Status</div><span class="badge-${safeStatus} px-2.5 py-1 rounded-full text-xs font-semibold capitalize">${safeStatus}</span></div>
-        <div><div class="text-xs text-gray-400 font-medium mb-1">Destination</div><div class="font-semibold text-gray-800">${sanitize(app.destination) || '—'}</div></div>
-        <div><div class="text-xs text-gray-400 font-medium mb-1">Travel Date</div><div class="font-semibold text-gray-800">${sanitize(app.travel_date) || '—'}</div></div>
-        ${isStaffModal && profileFullName ? `<div><div class="text-xs text-gray-400 font-medium mb-1">Profile Name</div><div class="font-semibold text-emerald-700">${profileFullName}</div></div>` : ''}
-        <div class="${isStaffModal && profileFullName ? '' : 'col-span-2'}"><div class="text-xs text-gray-400 font-medium mb-1">Submitted</div><div class="text-gray-800">${date}</div></div>
-      `;
+      const isStaff = currentProfile?.role === 'staff' || currentProfile?.role === 'admin';
+
+      if (isStaff) {
+        // Staff sees editable fields
+        $('app-info').innerHTML = `
+          <div class="col-span-2">
+            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Applicant Name</label>
+            <input id="edit-app-name" value="${sanitize(app.applicant_name || '')}"
+              class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all" />
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Destination</label>
+            <input id="edit-app-destination" value="${sanitize(app.destination || '')}"
+              class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all" />
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Travel Date</label>
+            <input id="edit-app-date" type="date" value="${sanitize(app.travel_date || '')}"
+              class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all" />
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Status</label>
+            <span class="badge-${safeStatus} px-2.5 py-1 rounded-full text-xs font-semibold capitalize">${safeStatus}</span>
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Submitted</label>
+            <div class="text-sm text-gray-700">${date}</div>
+          </div>
+          <div class="col-span-2 flex justify-end">
+            <button onclick="saveApplicationEdits()" 
+              class="flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-all shadow">
+              <i class="fa-solid fa-floppy-disk"></i> Save Changes
+            </button>
+          </div>
+        `;
+      } else {
+        // Applicant sees read-only view
+        $('app-info').innerHTML = `
+          <div><div class="text-xs text-gray-400 font-medium mb-1">Applicant</div><div class="font-semibold text-gray-800">${sanitize(app.applicant_name) || '—'}</div></div>
+          <div><div class="text-xs text-gray-400 font-medium mb-1">Status</div><span class="badge-${safeStatus} px-2.5 py-1 rounded-full text-xs font-semibold capitalize">${safeStatus}</span></div>
+          <div><div class="text-xs text-gray-400 font-medium mb-1">Destination</div><div class="font-semibold text-gray-800">${sanitize(app.destination) || '—'}</div></div>
+          <div><div class="text-xs text-gray-400 font-medium mb-1">Travel Date</div><div class="font-semibold text-gray-800">${sanitize(app.travel_date) || '—'}</div></div>
+          <div class="col-span-2"><div class="text-xs text-gray-400 font-medium mb-1">Submitted</div><div class="text-gray-800">${date}</div></div>
+        `;
+      }
 
       // Show status controls and delete only for staff
-      const isStaff = currentProfile?.role === 'staff' || currentProfile?.role === 'admin';
       $('status-update-section').classList.toggle('hidden', !isStaff);
       $('delete-app-btn').classList.toggle('hidden', !isStaff);
 
@@ -908,6 +942,69 @@ document.addEventListener('DOMContentLoaded', () => {
       $('detail-modal').classList.add('hidden');
       selectedAppId = null;
     };
+
+    // ══════════════════════════════════════
+    // SAVE APPLICATION EDITS (staff only)
+    // ══════════════════════════════════════
+    window.saveApplicationEdits = async function() {
+      if (!selectedAppId) return;
+      const name  = $('edit-app-name')?.value.trim();
+      const dest  = $('edit-app-destination')?.value.trim();
+      const tdate = $('edit-app-date')?.value;
+      if (!name) return alert('Applicant name cannot be empty.');
+
+      const btn = document.querySelector('[onclick="saveApplicationEdits()"]');
+      if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+
+      const { error } = await sb.from('applications')
+        .update({
+          applicant_name: name,
+          destination:    dest || null,
+          travel_date:    tdate || null,
+        })
+        .eq('id', selectedAppId);
+
+      if (btn) { btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes'; btn.disabled = false; }
+      if (error) return alert('Error saving: ' + error.message);
+
+      await logActivity('edit', selectedAppId,
+        `Updated details: name="${name}", destination="${dest || '—'}", travel_date="${tdate || '—'}"`);
+
+      await loadAllApplications();
+      renderDashboard();
+      openApplicationModal(selectedAppId);
+    };
+
+    // ══════════════════════════════════════
+    // EMAIL NOTIFICATION (via Supabase Edge Function)
+    // ══════════════════════════════════════
+    async function sendStatusEmail(app, newStatus, prevStatus) {
+      // Get applicant email from auth.users using their user_id
+      // We store it via a secure RPC to avoid exposing admin APIs client-side
+      try {
+        const { data: emailData, error: emailErr } = await sb
+          .rpc('get_user_email', { user_id: app.user_id });
+
+        const applicantEmail = emailData || null;
+        if (!applicantEmail) {
+          console.warn('Email not found for user_id:', app.user_id);
+          return;
+        }
+
+        await sb.functions.invoke('notify-applicant', {
+          body: {
+            applicant_email: applicantEmail,
+            applicant_name:  app.applicant_name || 'Applicant',
+            new_status:      newStatus,
+            prev_status:     prevStatus,
+            app_id:          app.id,
+          }
+        });
+        console.log('[Email] Notification sent to', applicantEmail, 'for status:', newStatus);
+      } catch(e) {
+        console.warn('[Email] Notification failed (non-critical):', e.message);
+      }
+    }
 
     // ══════════════════════════════════════
     // ACTIVITY LOGGING
@@ -933,39 +1030,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const prevStatus = app?.status || 'unknown';
 
       const { error } = await sb.from('applications')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .update({ status: newStatus })
         .eq('id', selectedAppId);
       if (error) return alert('Error updating status: ' + error.message);
 
       await logActivity('status_update', selectedAppId,
         `Changed status from "${prevStatus}" to "${newStatus}" for "${app?.applicant_name || selectedAppId}"`);
 
-      // ── Email notification to applicant ──────────────────────────────────
-      // Calls a Supabase Edge Function. Create it in your Supabase project:
-      // supabase/functions/notify-applicant/index.ts
-      // It receives { applicant_email, applicant_name, new_status, app_id }
-      // and sends the email via Resend / SendGrid / SMTP.
-      try {
-        // Fetch applicant email from auth.users via their user_id
-        let applicantEmail = null;
-        try {
-          const { data: userData } = await sb.auth.admin?.getUserById(app?.user_id);
-          applicantEmail = userData?.user?.email || null;
-        } catch(e) { /* admin API may not be available client-side */ }
-        if (applicantEmail) {
-          await sb.functions.invoke('notify-applicant', {
-            body: {
-              applicant_email: applicantEmail,
-              applicant_name:  app?.applicant_name || 'Applicant',
-              new_status:      newStatus,
-              prev_status:     prevStatus,
-              app_id:          selectedAppId,
-            }
-          });
-        }
-      } catch(e) {
-        console.warn('Email notification failed (non-critical):', e.message);
-      }
+      // ── Email notification to applicant ────────────────────────────────
+      if (app) await sendStatusEmail(app, newStatus, prevStatus);
 
       await loadAllApplications();
       renderDashboard();
@@ -1254,9 +1327,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const actionIcon = { view:'fa-eye', status_update:'fa-pen-to-square', delete:'fa-trash-can', upload:'fa-cloud-arrow-up', note:'fa-note-sticky' };
-      const actionLabel = { view:'Viewed', status_update:'Status Updated', delete:'Deleted', upload:'Uploaded File', note:'Note Added' };
-      const actionColor = { view:'log-view', status_update:'log-status', delete:'log-delete', upload:'log-upload', note:'log-note' };
+      const actionIcon = { view:'fa-eye', status_update:'fa-pen-to-square', delete:'fa-trash-can', upload:'fa-cloud-arrow-up', note:'fa-note-sticky', edit:'fa-pen' };
+      const actionLabel = { view:'Viewed', status_update:'Status Updated', delete:'Deleted', upload:'Uploaded File', note:'Note Added', edit:'Details Edited' };
+      const actionColor = { view:'log-view', status_update:'log-status', delete:'log-delete', upload:'log-upload', note:'log-note', edit:'log-status' };
 
       container.innerHTML = `
         <div class="space-y-4">
