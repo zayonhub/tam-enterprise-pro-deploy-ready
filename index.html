@@ -94,7 +94,7 @@
     <div class="text-center mb-10">
       <div class="inline-flex items-center justify-center w-16 h-16 bg-white/20 backdrop-blur rounded-2xl text-3xl mb-4">✈️</div>
       <h1 class="text-3xl font-extrabold text-white tracking-tight">NonStop Travels</h1>
-      <p class="text-emerald-300 mt-1 text-sm font-medium">Application Management software</p>
+      <p class="text-emerald-300 mt-1 text-sm font-medium">Application Management Hub</p>
     </div>
 
     <div class="bg-white rounded-2xl shadow-2xl p-8">
@@ -275,31 +275,72 @@
       <div class="flex items-center justify-between mb-6">
         <div>
           <h2 class="text-2xl font-bold text-gray-800">Staff Portal</h2>
-          <p class="text-sm text-gray-500 mt-0.5">Activity log — all staff actions on applicant records</p>
+          <p class="text-sm text-gray-500 mt-0.5">Manage all applicants and review activity</p>
         </div>
-        <button onclick="loadActivityLog()" class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 hover:border-emerald-400 transition-all">
+        <button id="staff-refresh-btn" onclick="refreshStaffPortal()" class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 hover:border-emerald-400 transition-all">
           <i class="fa-solid fa-rotate-right"></i> Refresh
         </button>
       </div>
-      <div class="flex items-center gap-3 mb-5">
-        <div class="relative flex-1 max-w-xs">
-          <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
-          <input id="log-search" type="text" placeholder="Search log…"
-            class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm transition-all" />
-        </div>
-        <select id="log-action-filter" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 transition-all">
-          <option value="">All Actions</option>
-          <option value="view">View</option>
-          <option value="status_update">Status Update</option>
-          <option value="delete">Delete</option>
-          <option value="upload">Upload</option>
-          <option value="note">Note Added</option>
-        </select>
+
+      <!-- Tabs -->
+      <div class="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
+        <button id="tab-applicants-btn" onclick="switchStaffTab('applicants')"
+          class="px-5 py-2 rounded-lg text-sm font-semibold transition-all bg-white text-gray-800 shadow-sm">
+          <i class="fa-solid fa-users mr-2"></i>All Applicants
+        </button>
+        <button id="tab-log-btn" onclick="switchStaffTab('log')"
+          class="px-5 py-2 rounded-lg text-sm font-semibold transition-all text-gray-500 hover:text-gray-700">
+          <i class="fa-solid fa-clock-rotate-left mr-2"></i>Activity Log
+        </button>
       </div>
-      <div id="activity-log-container" class="card p-6">
-        <div class="text-center text-gray-400 py-8">
-          <i class="fa-solid fa-spinner fa-spin text-2xl mb-3 text-gray-300"></i>
-          <p class="text-sm">Loading activity log…</p>
+
+      <!-- ── APPLICANTS TAB ── -->
+      <div id="staff-tab-applicants">
+        <!-- Search + filter -->
+        <div class="flex items-center gap-3 mb-5">
+          <div class="relative flex-1">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+            <input id="staff-search" type="text" placeholder="Search applicant name, destination…"
+              class="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm transition-all shadow-sm" />
+          </div>
+          <select id="staff-status-filter" class="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 transition-all">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="review">Review</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div id="staff-applicants-list" class="space-y-3"></div>
+        <!-- Staff pagination -->
+        <div id="staff-pagination-bar" class="flex items-center justify-between mt-6 hidden">
+          <span id="staff-pagination-info" class="text-xs text-gray-400"></span>
+          <div id="staff-pagination-btns" class="flex items-center gap-1.5"></div>
+        </div>
+      </div>
+
+      <!-- ── ACTIVITY LOG TAB ── -->
+      <div id="staff-tab-log" class="hidden">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="relative flex-1 max-w-xs">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+            <input id="log-search" type="text" placeholder="Search log…"
+              class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm transition-all" />
+          </div>
+          <select id="log-action-filter" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 transition-all">
+            <option value="">All Actions</option>
+            <option value="view">View</option>
+            <option value="status_update">Status Update</option>
+            <option value="delete">Delete</option>
+            <option value="upload">Upload</option>
+            <option value="note">Note Added</option>
+          </select>
+        </div>
+        <div id="activity-log-container" class="card p-6">
+          <div class="text-center text-gray-400 py-8">
+            <i class="fa-solid fa-spinner fa-spin text-2xl mb-3 text-gray-300 block"></i>
+            <p class="text-sm">Loading activity log…</p>
+          </div>
         </div>
       </div>
     </section>
@@ -479,6 +520,10 @@ document.addEventListener('DOMContentLoaded', () => {
       searchQuery = ''; currentPage = 1;
       $('auth-error').classList.add('hidden');
       $('email-input').value = ''; $('password-input').value = '';
+      // Reset sidebar so next user gets clean state
+      $('staff-portal-nav').style.display = 'none';
+      $('new-app-btn').style.display = '';
+      $('new-app-btn-2').style.display = '';
       $('auth-screen').style.display = '';
       $('main-app').style.display = 'none';
     });
@@ -525,20 +570,25 @@ document.addEventListener('DOMContentLoaded', () => {
       const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
       $('greeting-text').textContent = `${greet}, ${name.split(' ')[0]}`;
 
-      // Show staff portal for staff
-      if (role === 'staff' || role === 'admin') {
-        $('staff-portal-nav').style.display = '';
-      }
+      const isStaffRole = role === 'staff' || role === 'admin';
+      // Staff: show portal nav, hide New Application button
+      $('staff-portal-nav').style.display = isStaffRole ? '' : 'none';
+      $('new-app-btn').style.display   = isStaffRole ? 'none' : '';
+      $('new-app-btn-2').style.display = isStaffRole ? 'none' : '';
     }
 
     // ══════════════════════════════════════
     // 3. APPLICATIONS
     // ══════════════════════════════════════
     async function loadAllApplications() {
-      let query = sb.from('applications').select('*').order('created_at', { ascending: false });
+      const isStaff = currentProfile?.role === 'staff' || currentProfile?.role === 'admin';
+      // Join profiles to get applicant name/email for staff view
+      let query = sb.from('applications')
+        .select('*, profiles(full_name, email)')
+        .order('created_at', { ascending: false });
 
-      // Role-based filter
-      if (currentProfile?.role === 'applicant') {
+      // Applicants only see their own
+      if (!isStaff) {
         query = query.eq('user_id', currentUser.id);
       }
 
@@ -551,6 +601,10 @@ document.addEventListener('DOMContentLoaded', () => {
       renderMetrics();
       renderRecentApps();
       renderApplicationsGrid();
+      // Keep staff applicant list in sync if it was rendered
+      if (currentProfile?.role === 'staff' || currentProfile?.role === 'admin') {
+        renderStaffApplicants();
+      }
     }
 
     // ══════════════════════════════════════
@@ -784,12 +838,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const date = app.created_at ? new Date(app.created_at).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '—';
       const safeStatus = ['pending','review','approved','rejected'].includes(app.status) ? app.status : 'pending';
+      const isStaffModal = currentProfile?.role === 'staff' || currentProfile?.role === 'admin';
+      const applicantEmail = sanitize(app.profiles?.email || '');
       $('app-info').innerHTML = `
         <div><div class="text-xs text-gray-400 font-medium mb-1">Applicant</div><div class="font-semibold text-gray-800">${sanitize(app.applicant_name) || '—'}</div></div>
         <div><div class="text-xs text-gray-400 font-medium mb-1">Status</div><span class="badge-${safeStatus} px-2.5 py-1 rounded-full text-xs font-semibold capitalize">${safeStatus}</span></div>
         <div><div class="text-xs text-gray-400 font-medium mb-1">Destination</div><div class="font-semibold text-gray-800">${sanitize(app.destination) || '—'}</div></div>
         <div><div class="text-xs text-gray-400 font-medium mb-1">Travel Date</div><div class="font-semibold text-gray-800">${sanitize(app.travel_date) || '—'}</div></div>
-        <div class="col-span-2"><div class="text-xs text-gray-400 font-medium mb-1">Submitted</div><div class="text-gray-800">${date}</div></div>
+        ${isStaffModal && applicantEmail ? `<div><div class="text-xs text-gray-400 font-medium mb-1">Applicant Email</div><div class="font-semibold text-emerald-700">${applicantEmail}</div></div>` : ''}
+        <div class="${isStaffModal && applicantEmail ? '' : 'col-span-2'}"><div class="text-xs text-gray-400 font-medium mb-1">Submitted</div><div class="text-gray-800">${date}</div></div>
       `;
 
       // Show status controls and delete only for staff
@@ -832,13 +889,42 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!selectedAppId) return;
       const app = allApplications.find(a => String(a.id) === String(selectedAppId));
       const prevStatus = app?.status || 'unknown';
+
       const { error } = await sb.from('applications')
-        .update({ status: newStatus })
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
         .eq('id', selectedAppId);
       if (error) return alert('Error updating status: ' + error.message);
-      await logActivity('status_update', selectedAppId, `Changed status from "${prevStatus}" to "${newStatus}"`);
+
+      await logActivity('status_update', selectedAppId,
+        `Changed status from "${prevStatus}" to "${newStatus}" for "${app?.applicant_name || selectedAppId}"`);
+
+      // ── Email notification to applicant ──────────────────────────────────
+      // Calls a Supabase Edge Function. Create it in your Supabase project:
+      // supabase/functions/notify-applicant/index.ts
+      // It receives { applicant_email, applicant_name, new_status, app_id }
+      // and sends the email via Resend / SendGrid / SMTP.
+      try {
+        const applicantEmail = app?.profiles?.email || null;
+        if (applicantEmail) {
+          await sb.functions.invoke('notify-applicant', {
+            body: {
+              applicant_email: applicantEmail,
+              applicant_name:  app?.applicant_name || 'Applicant',
+              new_status:      newStatus,
+              prev_status:     prevStatus,
+              app_id:          selectedAppId,
+            }
+          });
+        }
+      } catch(e) {
+        console.warn('Email notification failed (non-critical):', e.message);
+      }
+
       await loadAllApplications();
       renderDashboard();
+      if (currentProfile?.role === 'staff' || currentProfile?.role === 'admin') {
+        renderStaffApplicants();
+      }
       openApplicationModal(selectedAppId);
     };
 
@@ -856,6 +942,9 @@ document.addEventListener('DOMContentLoaded', () => {
       closeModal();
       await loadAllApplications();
       renderDashboard();
+      if (currentProfile?.role === 'staff' || currentProfile?.role === 'admin') {
+        renderStaffApplicants();
+      }
     };
 
     // ══════════════════════════════════════
@@ -954,6 +1043,128 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ══════════════════════════════════════
+    // STAFF PORTAL — APPLICANT LIST
+    // ══════════════════════════════════════
+    let staffPage = 1;
+    const STAFF_PAGE_SIZE = 15;
+    let currentStaffTab = 'applicants';
+
+    window.switchStaffTab = function(tab) {
+      currentStaffTab = tab;
+      $('staff-tab-applicants').classList.toggle('hidden', tab !== 'applicants');
+      $('staff-tab-log').classList.toggle('hidden', tab !== 'log');
+      $('tab-applicants-btn').className = tab === 'applicants'
+        ? 'px-5 py-2 rounded-lg text-sm font-semibold transition-all bg-white text-gray-800 shadow-sm'
+        : 'px-5 py-2 rounded-lg text-sm font-semibold transition-all text-gray-500 hover:text-gray-700';
+      $('tab-log-btn').className = tab === 'log'
+        ? 'px-5 py-2 rounded-lg text-sm font-semibold transition-all bg-white text-gray-800 shadow-sm'
+        : 'px-5 py-2 rounded-lg text-sm font-semibold transition-all text-gray-500 hover:text-gray-700';
+      if (tab === 'log') loadActivityLog();
+      if (tab === 'applicants') renderStaffApplicants();
+    };
+
+    window.refreshStaffPortal = async function() {
+      await loadAllApplications();
+      renderStaffApplicants();
+      if (currentStaffTab === 'log') loadActivityLog();
+    };
+
+    function getStaffFilteredApps() {
+      const q = ($('staff-search')?.value || '').toLowerCase();
+      const statusF = $('staff-status-filter')?.value || '';
+      return allApplications.filter(a => {
+        const matchStatus = !statusF || a.status === statusF;
+        const matchQ = !q ||
+          (a.applicant_name || '').toLowerCase().includes(q) ||
+          (a.destination || '').toLowerCase().includes(q) ||
+          (a.profiles?.email || '').toLowerCase().includes(q);
+        return matchStatus && matchQ;
+      });
+    }
+
+    function renderStaffApplicants() {
+      const filtered = getStaffFilteredApps();
+      const totalPages = Math.max(1, Math.ceil(filtered.length / STAFF_PAGE_SIZE));
+      if (staffPage > totalPages) staffPage = 1;
+      const start = (staffPage - 1) * STAFF_PAGE_SIZE;
+      const page = filtered.slice(start, start + STAFF_PAGE_SIZE);
+      const list = $('staff-applicants-list');
+
+      if (!filtered.length) {
+        list.innerHTML = `<div class="card p-12 text-center text-gray-400">
+          <i class="fa-solid fa-users text-4xl mb-3 text-gray-200"></i>
+          <p class="font-medium">No applicants found.</p></div>`;
+        $('staff-pagination-bar').classList.add('hidden');
+        return;
+      }
+
+      list.innerHTML = page.map(app => staffAppRow(app)).join('');
+
+      if (totalPages > 1) {
+        $('staff-pagination-bar').classList.remove('hidden');
+        $('staff-pagination-info').textContent =
+          `Showing ${start + 1}–${Math.min(start + STAFF_PAGE_SIZE, filtered.length)} of ${filtered.length}`;
+        renderStaffPaginationBtns(totalPages);
+      } else {
+        $('staff-pagination-bar').classList.add('hidden');
+      }
+    }
+
+    function staffAppRow(app) {
+      const safeStatus = ['pending','review','approved','rejected'].includes(app.status) ? app.status : 'pending';
+      const dotClass = { approved:'dot-approved', pending:'dot-pending', review:'dot-review', rejected:'dot-rejected' }[safeStatus];
+      const badgeClass = { approved:'badge-approved', pending:'badge-pending', review:'badge-review', rejected:'badge-rejected' }[safeStatus];
+      const date = app.created_at ? new Date(app.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+      const appNum = `#${String(app.id).slice(-4).toUpperCase()}`;
+      const applicantEmail = sanitize(app.profiles?.email || '');
+      const applicantName = sanitize(app.applicant_name || 'Untitled');
+      const dest = sanitize(app.destination || '');
+
+      return `
+        <div class="app-row" onclick="openApplicationModal('${app.id}')">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500 mr-4 flex-shrink-0">
+            <i class="fa-solid fa-user text-sm"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold text-gray-800 text-sm">${appNum} — ${applicantName}</div>
+            <div class="text-xs text-gray-400 mt-0.5">
+              ${applicantEmail ? `<span class="text-gray-500">${applicantEmail}</span> · ` : ''}${date}${dest ? ` · ${dest}` : ''}
+            </div>
+          </div>
+          <div class="flex items-center gap-3 ml-4">
+            <div class="flex items-center gap-1.5">
+              <span class="status-dot ${dotClass}"></span>
+              <span class="text-xs font-medium ${badgeClass} px-2.5 py-1 rounded-full capitalize">${safeStatus}</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
+          </div>
+        </div>`;
+    }
+
+    function renderStaffPaginationBtns(totalPages) {
+      let html = `<button class="page-btn" ${staffPage===1?'disabled':''} onclick="goStaffPage(${staffPage-1})"><i class="fa-solid fa-chevron-left text-xs"></i></button>`;
+      for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || Math.abs(i - staffPage) <= 1) {
+          html += `<button class="page-btn ${i===staffPage?'active':''}" onclick="goStaffPage(${i})">${i}</button>`;
+        } else if (Math.abs(i - staffPage) === 2) {
+          html += `<span class="text-gray-400 text-xs px-1">…</span>`;
+        }
+      }
+      html += `<button class="page-btn" ${staffPage===totalPages?'disabled':''} onclick="goStaffPage(${staffPage+1})"><i class="fa-solid fa-chevron-right text-xs"></i></button>`;
+      $('staff-pagination-btns').innerHTML = html;
+    }
+
+    window.goStaffPage = function(p) { staffPage = p; renderStaffApplicants(); };
+
+    // Wire staff search + filter
+    document.addEventListener('input', e => {
+      if (e.target.id === 'staff-search') { staffPage = 1; renderStaffApplicants(); }
+    });
+    document.addEventListener('change', e => {
+      if (e.target.id === 'staff-status-filter') { staffPage = 1; renderStaffApplicants(); }
+    });
+
+    // ══════════════════════════════════════
     // ACTIVITY LOG
     // ══════════════════════════════════════
     let allLogs = [];
@@ -1038,7 +1249,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const titles = { dashboard:'Dashboard', applications:'Applications', staff:'Staff Portal' };
       $('page-title').textContent = titles[name] || '';
       if (name === 'applications') renderApplicationsGrid();
-      if (name === 'staff') loadActivityLog();
+      if (name === 'staff') {
+        renderStaffApplicants();  // always render applicant list on tab open
+        // reset to applicants tab each time
+        switchStaffTab('applicants');
+      }
     };
 
     // Log filter listeners
