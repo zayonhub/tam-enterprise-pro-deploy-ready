@@ -549,10 +549,14 @@ document.addEventListener('DOMContentLoaded', () => {
         .single();
 
       if (error || !data) {
-        // Fallback: derive from email
+        // No profile row found — default to applicant
+        // ⚠️  If you expect staff access, make sure a row exists in your
+        //     profiles table with role='staff' for this user's id.
         currentProfile = { full_name: currentUser.email.split('@')[0], role: 'applicant' };
+        console.warn('[Profile] No profile found for user, defaulting to applicant role:', currentUser.id);
       } else {
         currentProfile = data;
+        console.log('[Profile] Loaded:', { role: data.role, name: data.full_name, id: data.id });
       }
 
       const name = currentProfile.full_name || currentUser.email;
@@ -582,6 +586,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ══════════════════════════════════════
     async function loadAllApplications() {
       const isStaff = currentProfile?.role === 'staff' || currentProfile?.role === 'admin';
+      console.log('[loadAllApplications] role:', currentProfile?.role, '| isStaff:', isStaff);
 
       // Plain applications fetch — no join (avoids FK requirement)
       let query = sb.from('applications')
@@ -591,11 +596,15 @@ document.addEventListener('DOMContentLoaded', () => {
       // Applicants only see their own
       if (!isStaff) {
         query = query.eq('user_id', currentUser.id);
+        console.log('[loadAllApplications] Filtering to user_id:', currentUser.id);
+      } else {
+        console.log('[loadAllApplications] Staff — fetching ALL applications');
       }
 
       const { data, error } = await query;
-      if (error) { console.error('loadAllApplications:', error); return; }
+      if (error) { console.error('loadAllApplications ERROR:', error); return; }
       allApplications = data || [];
+      console.log('[loadAllApplications] Got', allApplications.length, 'applications');
 
       // For staff: enrich each application with the applicant's profile data
       // by fetching from profiles table using the collected user_ids
@@ -1103,7 +1112,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderStaffApplicants() {
+      console.log('[renderStaffApplicants] allApplications.length:', allApplications.length,
+        '| role:', currentProfile?.role);
       const filtered = getStaffFilteredApps();
+      console.log('[renderStaffApplicants] filtered:', filtered.length);
       const totalPages = Math.max(1, Math.ceil(filtered.length / STAFF_PAGE_SIZE));
       if (staffPage > totalPages) staffPage = 1;
       const start = (staffPage - 1) * STAFF_PAGE_SIZE;
@@ -1270,8 +1282,7 @@ document.addEventListener('DOMContentLoaded', () => {
       $('page-title').textContent = titles[name] || '';
       if (name === 'applications') renderApplicationsGrid();
       if (name === 'staff') {
-        renderStaffApplicants();  // always render applicant list on tab open
-        // reset to applicants tab each time
+        // Switch tab first (makes divs visible), then render into them
         switchStaffTab('applicants');
       }
     };
