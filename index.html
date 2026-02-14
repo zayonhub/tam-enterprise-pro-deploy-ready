@@ -567,9 +567,14 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('[Profile] Loaded:', { role: data.role, name: data.full_name, id: data.id });
       }
 
-      const name = currentProfile.full_name || currentUser.email;
+      // Use full_name if set, otherwise derive a display name from email
+      const emailUsername = currentUser.email.split('@')[0];
+      const name = currentProfile.full_name || emailUsername;
       const role = currentProfile.role || 'applicant';
-      const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+      // Initials: works for both "John Doe" and "johndoe" style names
+      const initials = name.includes(' ')
+        ? name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2)
+        : name.slice(0,2).toUpperCase();
 
       $('user-display').textContent = currentUser.email;
       $('role-display').textContent = role;
@@ -580,7 +585,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Greeting
       const hour = new Date().getHours();
       const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-      $('greeting-text').textContent = `${greet}, ${name.split(' ')[0]}`;
+      $('greeting-text').textContent = `${greet}, ${currentProfile.full_name ? name.split(' ')[0] : emailUsername}`;
 
       const isStaffRole = role === 'staff' || role === 'admin';
       // Staff: show portal nav, hide New Application button
