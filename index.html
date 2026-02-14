@@ -549,13 +549,21 @@ document.addEventListener('DOMContentLoaded', () => {
         .single();
 
       if (error || !data) {
-        // No profile row found — default to applicant
-        // ⚠️  If you expect staff access, make sure a row exists in your
-        //     profiles table with role='staff' for this user's id.
-        currentProfile = { full_name: currentUser.email.split('@')[0], role: 'applicant' };
-        console.warn('[Profile] No profile found for user, defaulting to applicant role:', currentUser.id);
+        // Profile fetch failed — could be RLS blocking the read or no row exists
+        console.error('[Profile] Failed to load profile. Error:', error?.message,
+          '| user_id:', currentUser.id,
+          '\n⚠️  Check: 1) profiles table has a row for this user  2) RLS allows self-read');
+        // Fallback — use email as name, default role to applicant
+        currentProfile = {
+          id: currentUser.id,
+          full_name: currentUser.email.split('@')[0],
+          email: currentUser.email,
+          role: 'applicant'
+        };
       } else {
         currentProfile = data;
+        // Ensure email is always populated on the profile object
+        if (!currentProfile.email) currentProfile.email = currentUser.email;
         console.log('[Profile] Loaded:', { role: data.role, name: data.full_name, id: data.id });
       }
 
@@ -612,7 +620,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const userIds = [...new Set(allApplications.map(a => a.user_id).filter(Boolean))];
         const { data: profiles } = await sb
           .from('profiles')
-          .select('id, full_name, email')
+          .select('id, full_name')
           .in('id', userIds);
 
         if (profiles?.length) {
@@ -868,14 +876,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const date = app.created_at ? new Date(app.created_at).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '—';
       const safeStatus = ['pending','review','approved','rejected'].includes(app.status) ? app.status : 'pending';
       const isStaffModal = currentProfile?.role === 'staff' || currentProfile?.role === 'admin';
-      const applicantEmail = sanitize(app.profiles?.email || '');
+      const profileFullName = sanitize(app.profiles?.full_name || '');
       $('app-info').innerHTML = `
         <div><div class="text-xs text-gray-400 font-medium mb-1">Applicant</div><div class="font-semibold text-gray-800">${sanitize(app.applicant_name) || '—'}</div></div>
         <div><div class="text-xs text-gray-400 font-medium mb-1">Status</div><span class="badge-${safeStatus} px-2.5 py-1 rounded-full text-xs font-semibold capitalize">${safeStatus}</span></div>
         <div><div class="text-xs text-gray-400 font-medium mb-1">Destination</div><div class="font-semibold text-gray-800">${sanitize(app.destination) || '—'}</div></div>
         <div><div class="text-xs text-gray-400 font-medium mb-1">Travel Date</div><div class="font-semibold text-gray-800">${sanitize(app.travel_date) || '—'}</div></div>
-        ${isStaffModal && applicantEmail ? `<div><div class="text-xs text-gray-400 font-medium mb-1">Applicant Email</div><div class="font-semibold text-emerald-700">${applicantEmail}</div></div>` : ''}
-        <div class="${isStaffModal && applicantEmail ? '' : 'col-span-2'}"><div class="text-xs text-gray-400 font-medium mb-1">Submitted</div><div class="text-gray-800">${date}</div></div>
+        ${isStaffModal && profileFullName ? `<div><div class="text-xs text-gray-400 font-medium mb-1">Profile Name</div><div class="font-semibold text-emerald-700">${profileFullName}</div></div>` : ''}
+        <div class="${isStaffModal && profileFullName ? '' : 'col-span-2'}"><div class="text-xs text-gray-400 font-medium mb-1">Submitted</div><div class="text-gray-800">${date}</div></div>
       `;
 
       // Show status controls and delete only for staff
@@ -933,7 +941,12 @@ document.addEventListener('DOMContentLoaded', () => {
       // It receives { applicant_email, applicant_name, new_status, app_id }
       // and sends the email via Resend / SendGrid / SMTP.
       try {
-        const applicantEmail = app?.profiles?.email || null;
+        // Fetch applicant email from auth.users via their user_id
+        let applicantEmail = null;
+        try {
+          const { data: userData } = await sb.auth.admin?.getUserById(app?.user_id);
+          applicantEmail = userData?.user?.email || null;
+        } catch(e) { /* admin API may not be available client-side */ }
         if (applicantEmail) {
           await sb.functions.invoke('notify-applicant', {
             body: {
@@ -1106,7 +1119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const matchQ = !q ||
           (a.applicant_name || '').toLowerCase().includes(q) ||
           (a.destination || '').toLowerCase().includes(q) ||
-          (a.profiles?.email || '').toLowerCase().includes(q);
+          (a.profiles?.full_name || '').toLowerCase().includes(q);
         return matchStatus && matchQ;
       });
     }
@@ -1148,7 +1161,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const badgeClass = { approved:'badge-approved', pending:'badge-pending', review:'badge-review', rejected:'badge-rejected' }[safeStatus];
       const date = app.created_at ? new Date(app.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
       const appNum = `#${String(app.id).slice(-4).toUpperCase()}`;
-      const applicantEmail = sanitize(app.profiles?.email || '');
+      const profileName = sanitize(app.profiles?.full_name || '');
       const applicantName = sanitize(app.applicant_name || 'Untitled');
       const dest = sanitize(app.destination || '');
 
@@ -1160,7 +1173,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="flex-1 min-w-0">
             <div class="font-semibold text-gray-800 text-sm">${appNum} — ${applicantName}</div>
             <div class="text-xs text-gray-400 mt-0.5">
-              ${applicantEmail ? `<span class="text-gray-500">${applicantEmail}</span> · ` : ''}${date}${dest ? ` · ${dest}` : ''}
+              ${profileName ? `<span class="text-gray-500">${profileName}</span> · ` : ''}${date}${dest ? ` · ${dest}` : ''}
             </div>
           </div>
           <div class="flex items-center gap-3 ml-4">
