@@ -970,52 +970,61 @@
 
         // ==================== APP INITIALIZATION ====================
         async function bootApp(user) {
-            currentUser = user;
-            
-            // Load profile
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', user.id)
-                .single();
+    currentUser = user;
+    
+    // Load profile
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-            if (!profile) {
-                showAuthError('Profile not found');
-                await supabase.auth.signOut();
-                return;
-            }
+    if (!profile) {
+        showAuthError('Profile not found');
+        await supabase.auth.signOut();
+        return;
+    }
 
-            currentProfile = profile;
+    currentProfile = profile;
 
-            // Update UI
-            $('authScreen').classList.add('hidden');
-            $('mainApp').classList.remove('hidden');
-            
-            // Update sidebar
-            $('sidebarName').textContent = profile.full_name;
-            $('sidebarRole').textContent = profile.role;
-            $('userAvatar').textContent = profile.full_name.charAt(0).toUpperCase();
-            $('headerEmail').textContent = user.email;
-            $('headerRole').textContent = profile.role;
-            $('heroName').textContent = profile.full_name.split(' ')[0];
-            $('greetingText').textContent = getGreeting() + ',';
+    // Update UI
+    $('authScreen').classList.add('hidden');
+    $('mainApp').classList.remove('hidden');
+    
+    // Update sidebar
+    $('sidebarName').textContent = profile.full_name || user.email.split('@')[0];
+    $('sidebarRole').textContent = profile.role;
+    $('userAvatar').textContent = (profile.full_name || 'U').charAt(0).toUpperCase();
+    
+    // ✅ FIX: Use profile.role not hardcoded value
+    $('headerEmail').textContent = user.email;
+    $('headerRole').textContent = profile.role;
+    $('headerRole').className = `px-3 py-1 rounded-full text-xs font-semibold capitalize ${
+        profile.role === 'admin' ? 'bg-red-100 text-red-700' :
+        profile.role === 'staff' ? 'bg-blue-100 text-blue-700' :
+        'bg-emerald-100 text-emerald-700'
+    }`;
 
-            // Show/hide staff portal
-            if (profile.role === 'staff' || profile.role === 'admin') {
-                $('navStaff').classList.remove('hidden');
-                $('newAppBtn').classList.add('hidden');
-                $('newAppBtn2').classList.add('hidden');
-                $('referralCard').classList.add('hidden');
-                await loadStaffMembers();
-            } else {
-                $('referralCodeDisplay').textContent = profile.referral_code || '--------';
-            }
+    $('heroName').textContent = (profile.full_name || 'User').split(' ')[0];
+    $('greetingText').textContent = getGreeting() + ',';
 
-            // Load data
-            await loadAllApplications();
-            renderDashboard();
-            showSection('dashboard');
-        }
+    // ✅ FIX: Correct role check
+    if (profile.role === 'staff' || profile.role === 'admin') {
+        $('navStaff').classList.remove('hidden');
+        $('newAppBtn').classList.add('hidden');
+        $('newAppBtn2').classList.add('hidden');
+        $('referralCard').classList.add('hidden');
+        await loadStaffMembers();
+    } else {
+        $('referralCard').classList.remove('hidden');
+        $('referralCodeDisplay').textContent = profile.referral_code || '--------';
+    }
+
+    // Load data
+    await loadAllApplications();
+    renderDashboard();
+    showSection('dashboard');
+}
 
         // ==================== DATA LOADING ====================
         async function loadAllApplications() {
