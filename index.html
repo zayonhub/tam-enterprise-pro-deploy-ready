@@ -153,7 +153,7 @@
         <header class="sticky top-0 bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between z-40">
             <h1 id="pageTitle" class="text-2xl font-bold text-gray-800">Dashboard</h1>
             <div class="flex items-center gap-4">
-                <span class="text-gray-600 text-sm" id="headerEmail">user@example.com</span>
+                <span class="text-gray-600 text-sm" id="headerEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8bfef8eef9cbeef3eae6fbe7eea5e8e4e6">[email&#160;protected]</a></span>
                 <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold capitalize" id="headerRole">Applicant</span>
             </div>
         </header>
@@ -568,10 +568,10 @@
     <span id="toastMessage">Success!</span>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ==================== CONFIGURATION ====================
 const SUPABASE_URL = 'https://lveejxxuvwikbitdbmbw.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_5wqWoM5FlCNJDNRhxgMFdA_9vzgwd6U';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2ZWVqeHh1dndpa2JpdGRibWJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQxMjkxNzQsImV4cCI6MjA0OTcwNTE3NH0.e7HlIVPXMwQQllS3nVqUDh1aUHiFhz2pBWKqG9BNZPM';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==================== GLOBAL STATE ====================
@@ -681,13 +681,30 @@ async function handleSignup() {
     }
 
     const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
-    if (authError) { showAuthError(authError.message); return; }
+
+    // Handle already-registered email
+    if (authError) {
+        if (authError.message.toLowerCase().includes('already registered') ||
+            authError.message.toLowerCase().includes('already exists')) {
+            showAuthError('This email is already registered. Please sign in instead.');
+        } else {
+            showAuthError(authError.message);
+        }
+        return;
+    }
+
+    // Supabase returns identities:[] when user already exists (email confirmation off)
+    if (!authData.user || authData.user.identities?.length === 0) {
+        showAuthError('This email is already registered. Please sign in instead.');
+        return;
+    }
 
     const newReferralCode = generateReferralCode();
     const hashedAnswer = CryptoJS.SHA256(securityAnswer.toLowerCase().trim()).toString();
     const fullName = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-    const { error: profileError } = await supabase.from('profiles').insert([{
+    // Use upsert with ignoreDuplicates to avoid duplicate key errors
+    const { error: profileError } = await supabase.from('profiles').upsert([{
         id: authData.user.id,
         full_name: fullName,
         email: email,
@@ -696,9 +713,12 @@ async function handleSignup() {
         referred_by_code: referralCode || null,
         security_question: securityQuestion,
         security_answer_hash: hashedAnswer
-    }]);
+    }], { onConflict: 'id', ignoreDuplicates: true });
 
-    if (profileError) { showAuthError('Error creating profile: ' + profileError.message); return; }
+    if (profileError) {
+        showAuthError('Error creating profile: ' + profileError.message);
+        return;
+    }
 
     showToast('Account created! You can now sign in.');
     toggleAuthMode();
@@ -1658,17 +1678,4 @@ window.addEventListener('load', async () => {
     if (session) await bootApp(session.user);
 
     supabase.auth.onAuthStateChange((event) => {
-        if (event === 'SIGNED_OUT') location.reload();
-    });
-});
-
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        closeModal();
-        closeNewAppModal();
-        closeReferrerModal();
-    }
-});
-</script>
-</body>
-</html>
+        if (event === 'SIGNED_OUT
