@@ -926,16 +926,16 @@
             const fullName = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
             const { error: profileError } = await supabase
-                .from('profiles')
-                .insert([{
-                    id: authData.user.id,
-                    full_name: fullName,
-                    role: 'applicant',
-                    referral_code: newReferralCode,
-                    referred_by_code: referralCode || null,
-                    security_question: securityQuestion,
-                    security_answer_hash: hashedAnswer  // FIXED: Now properly hashed
-                }]);
+    .from('profiles')
+    .insert([{
+        id: authData.user.id,
+        full_name: fullName,
+        role: 'applicant',
+        referral_code: newReferralCode,
+        referred_by_code: referralCode || null,
+        security_question: securityQuestion,
+        security_answer_hash: hashedAnswer
+    }]);
 
             if (profileError) {
                 showAuthError('Error creating profile: ' + profileError.message);
