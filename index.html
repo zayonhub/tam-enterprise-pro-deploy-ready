@@ -1737,12 +1737,8 @@
                 </div>
             `).join('') || '<p class="text-sm text-gray-500 italic">No documents uploaded</p>';
 
-            if (isStaff) {
-                $('uploadZone').classList.remove('hidden');
-            } else {
-                $('uploadZone').classList.add('hidden');
-            }
-
+            // Allow both staff AND applicants to upload
+$('uploadZone').classList.remove('hidden');
             // Notes
             const notes = await loadNotes(appId);
             $('notesList').innerHTML = notes.map(note => `
