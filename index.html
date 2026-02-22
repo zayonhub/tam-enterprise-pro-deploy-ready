@@ -1069,13 +1069,17 @@
         }
 
         async function loadStaffMembers() {
-            const { data } = await supabase
-                .from('profiles')
-                .select('id, full_name, email, role')
-                .in('role', ['staff', 'admin']);
-            
-            allStaffMembers = data || [];
-        }
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, role')
+        .in('role', ['staff', 'admin']);
+    
+    // Debug - remove after fixing
+    console.log('Staff members loaded:', data);
+    console.log('Staff load error:', error);
+    
+    allStaffMembers = data || [];
+}
 
         async function loadDocuments(appId) {
             const { data } = await supabase
