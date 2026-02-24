@@ -1,1451 +1,1987 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NonStop Travels - Application Management System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <style>
-        * { font-family: 'Plus Jakarta Sans', sans-serif; }
-        body { background-color: #f0f4f8; }
-        .sidebar { width: 240px; background: linear-gradient(180deg, #0d6c4e 0%, #10b981 100%); }
-        .status-pending { background-color: #fef3c7; color: #92400e; }
-        .status-review { background-color: #ffedd5; color: #9a3412; }
-        .status-approved { background-color: #d1fae5; color: #065f46; }
-        .status-rejected { background-color: #fee2e2; color: #991b1b; }
-        .log-view { border-left-color: #3b82f6; }
-        .log-status_update { border-left-color: #10b981; }
-        .log-delete { border-left-color: #ef4444; }
-        .log-upload { border-left-color: #8b5cf6; }
-        .log-note { border-left-color: #f59e0b; }
-        .log-assign { border-left-color: #059669; }
-        .log-edit { border-left-color: #f97316; }
-        .fade-in { animation: fadeIn 0.3s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
-        .drag-active { border-color: #10b981 !important; background-color: #ecfdf5 !important; }
-        mark { background-color: #a7f3d0; padding: 0 2px; border-radius: 2px; }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #059669; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NonStop Travels — AMS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+<style>
+  :root {
+    --brand:      #0d5c3a;
+    --brand-mid:  #138a52;
+    --brand-lite: #1db96b;
+    --brand-glow: rgba(29,185,107,.18);
+    --surface:    #f4f7f5;
+    --card:       #ffffff;
+    --border:     #e2ebe6;
+    --text:       #0f1f17;
+    --muted:      #6b8579;
+    --admin-c:    #7c3aed;
+    --staff-c:    #0369a1;
+    --app-c:      #047857;
+    --danger:     #dc2626;
+  }
+
+  * { font-family: 'DM Sans', sans-serif; box-sizing: border-box; }
+  h1,h2,h3,h4,.syne { font-family: 'Syne', sans-serif; }
+  body { background: var(--surface); color: var(--text); }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--brand-mid); border-radius: 99px; }
+
+  /* ===== SIDEBAR ===== */
+  .sidebar {
+    width: 260px;
+    background: var(--brand);
+    background-image: radial-gradient(ellipse at top left, rgba(29,185,107,.15) 0%, transparent 60%);
+    transition: transform .3s ease;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 16px; border-radius: 10px;
+    font-size: .875rem; font-weight: 500; color: rgba(255,255,255,.75);
+    cursor: pointer; transition: all .2s;
+  }
+  .nav-item:hover { background: rgba(255,255,255,.1); color: #fff; }
+  .nav-item.active { background: rgba(255,255,255,.15); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+  .nav-item i { width: 18px; text-align: center; }
+
+  /* ===== STATUS BADGES ===== */
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 99px; font-size: .72rem; font-weight: 600; letter-spacing: .02em; }
+  .badge-pending  { background: #fef9c3; color: #854d0e; }
+  .badge-review   { background: #ffedd5; color: #9a3412; }
+  .badge-approved { background: #dcfce7; color: #14532d; }
+  .badge-rejected { background: #fee2e2; color: #7f1d1d; }
+  .badge-admin    { background: #ede9fe; color: #5b21b6; }
+  .badge-staff    { background: #e0f2fe; color: #075985; }
+  .badge-applicant{ background: #d1fae5; color: #065f46; }
+
+  /* ===== CARDS ===== */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; }
+  .card-hover { transition: transform .2s, box-shadow .2s; }
+  .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(13,92,58,.1); }
+
+  /* ===== BUTTONS ===== */
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 10px; font-size: .875rem; font-weight: 600; cursor: pointer; transition: all .2s; border: none; outline: none; }
+  .btn-primary { background: var(--brand-mid); color: #fff; }
+  .btn-primary:hover { background: var(--brand); transform: translateY(-1px); box-shadow: 0 4px 14px var(--brand-glow); }
+  .btn-secondary { background: transparent; color: var(--brand-mid); border: 1.5px solid var(--brand-mid); }
+  .btn-secondary:hover { background: var(--brand-glow); }
+  .btn-danger { background: #fef2f2; color: var(--danger); border: 1.5px solid #fca5a5; }
+  .btn-danger:hover { background: #fee2e2; }
+  .btn-ghost { background: transparent; color: var(--muted); }
+  .btn-ghost:hover { background: var(--surface); color: var(--text); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; transform: none !important; }
+
+  /* ===== INPUTS ===== */
+  .inp {
+    width: 100%; padding: 10px 14px; border: 1.5px solid var(--border);
+    border-radius: 10px; font-size: .875rem; background: var(--card);
+    color: var(--text); outline: none; transition: border-color .2s, box-shadow .2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .inp:focus { border-color: var(--brand-mid); box-shadow: 0 0 0 3px var(--brand-glow); }
+  .inp-sm { padding: 7px 12px; font-size: .8rem; }
+  label.lbl { display: block; font-size: .78rem; font-weight: 600; color: var(--muted); margin-bottom: 5px; letter-spacing: .03em; text-transform: uppercase; }
+
+  /* ===== TABS ===== */
+  .tab-bar { display: flex; gap: 4px; background: var(--surface); padding: 4px; border-radius: 12px; border: 1px solid var(--border); }
+  .tab-btn { padding: 8px 20px; border-radius: 9px; font-size: .83rem; font-weight: 600; cursor: pointer; transition: all .2s; color: var(--muted); border: none; background: transparent; }
+  .tab-btn.active { background: var(--card); color: var(--brand); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+
+  /* ===== LOG LINES ===== */
+  .log-view         { border-left-color: #3b82f6; }
+  .log-status_update{ border-left-color: var(--brand-lite); }
+  .log-delete       { border-left-color: var(--danger); }
+  .log-upload       { border-left-color: #8b5cf6; }
+  .log-note         { border-left-color: #f59e0b; }
+  .log-assign       { border-left-color: #0891b2; }
+  .log-edit         { border-left-color: #f97316; }
+  .log-promote      { border-left-color: #7c3aed; }
+
+  /* ===== LOADING SKELETON ===== */
+  @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+  .skeleton {
+    background: linear-gradient(90deg, #e8f0ec 25%, #d4e4db 50%, #e8f0ec 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+  }
+
+  /* ===== SPINNER ===== */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { width: 20px; height: 20px; border: 2.5px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
+  .spinner-dark { border-color: rgba(13,92,58,.2); border-top-color: var(--brand-mid); }
+
+  /* ===== MODAL ===== */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(10,20,15,.55); backdrop-filter: blur(4px); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .modal-box { background: var(--card); border-radius: 20px; width: 100%; max-height: 92vh; overflow: hidden; display: flex; flex-direction: column; animation: modalIn .25s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes modalIn { from { opacity:0; transform: scale(.94) translateY(12px); } to { opacity:1; transform: scale(1) translateY(0); } }
+  .modal-header { padding: 22px 24px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: var(--surface); border-radius: 20px 20px 0 0; }
+  .modal-body { overflow-y: auto; flex: 1; padding: 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; flex-shrink: 0; }
+
+  /* ===== TOAST ===== */
+  #toast { position: fixed; bottom: 24px; right: 24px; z-index: 100; display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-radius: 14px; background: #0f1f17; color: #fff; font-size: .875rem; font-weight: 500; box-shadow: 0 8px 32px rgba(0,0,0,.25); max-width: 360px; animation: toastIn .3s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes toastIn { from { opacity:0; transform: translateY(20px) scale(.95); } to { opacity:1; transform: translateY(0) scale(1); } }
+
+  /* ===== AUTH SCREEN ===== */
+  #authScreen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--brand);
+    background-image:
+      radial-gradient(ellipse 80% 80% at 10% 90%, rgba(29,185,107,.25) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 60% at 90% 10%, rgba(29,185,107,.15) 0%, transparent 50%);
+    padding: 16px;
+  }
+  .auth-card {
+    background: rgba(255,255,255,.97);
+    border-radius: 24px;
+    box-shadow: 0 32px 80px rgba(0,0,0,.35);
+    width: 100%; max-width: 460px;
+    overflow: hidden;
+  }
+  .auth-header {
+    background: var(--brand);
+    background-image: radial-gradient(ellipse at bottom right, rgba(29,185,107,.4) 0%, transparent 60%);
+    padding: 36px 36px 28px;
+    color: #fff;
+  }
+  .auth-body { padding: 32px 36px 36px; }
+  .plane-icon { font-size: 2.5rem; margin-bottom: 12px; display: block; animation: float 3s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0) rotate(-5deg)} 50%{transform:translateY(-8px) rotate(5deg)} }
+
+  /* ===== FADE IN ===== */
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  .fade-up { animation: fadeUp .35s ease both; }
+  .fade-up-1 { animation-delay: .05s; }
+  .fade-up-2 { animation-delay: .1s; }
+  .fade-up-3 { animation-delay: .15s; }
+  .fade-up-4 { animation-delay: .2s; }
+
+  /* ===== STAT CARD ===== */
+  .stat-card { display: flex; flex-direction: column; gap: 16px; padding: 22px; }
+  .stat-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
+  .stat-bar { height: 6px; background: var(--surface); border-radius: 99px; overflow: hidden; margin-top: 4px; }
+  .stat-bar-fill { height: 100%; border-radius: 99px; transition: width .8s cubic-bezier(.34,1.56,.64,1); }
+
+  /* ===== APP ROW ===== */
+  .app-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px; border: 1px solid var(--border);
+    border-radius: 12px; cursor: pointer; transition: all .2s;
+    background: var(--card);
+  }
+  .app-row:hover { border-color: var(--brand-mid); box-shadow: 0 4px 16px rgba(13,92,58,.08); transform: translateY(-1px); }
+  .app-avatar { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, var(--brand-lite), var(--brand)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .95rem; flex-shrink: 0; font-family: 'Syne', sans-serif; }
+
+  /* ===== DRAG ZONE ===== */
+  .drop-zone {
+    border: 2px dashed var(--border); border-radius: 14px; padding: 36px 24px;
+    text-align: center; cursor: pointer; transition: all .2s;
+  }
+  .drop-zone:hover, .drop-zone.drag-active { border-color: var(--brand-mid); background: var(--brand-glow); }
+
+  /* ===== PROGRESS RING (dashboard) ===== */
+  .ring-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-text { position: absolute; font-family: 'Syne', sans-serif; font-weight: 700; }
+
+  /* ===== HIGHLIGHT ===== */
+  mark { background: #a7f3d0; padding: 0 2px; border-radius: 3px; }
+
+  /* ===== DIVIDER ===== */
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  /* ===== NOTE BUBBLE ===== */
+  .note-bubble { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); }
+  .note-bubble.admin  { border-left: 3px solid var(--admin-c); background: #faf5ff; }
+  .note-bubble.staff  { border-left: 3px solid var(--staff-c); background: #f0f9ff; }
+  .note-bubble.applicant { border-left: 3px solid var(--app-c); background: #f0fdf4; }
+
+  /* ===== SECTION TRANSITIONS ===== */
+  .section-page { animation: fadeUp .3s ease; }
+
+  /* ===== PROFILE CARD (user management) ===== */
+  .user-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); transition: all .2s; }
+  .user-row:hover { border-color: var(--border); box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+
+  /* ===== LOADING OVERLAY ===== */
+  #loadingOverlay { position: fixed; inset: 0; background: var(--brand); z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; transition: opacity .5s; }
+  #loadingOverlay .ldr-plane { font-size: 3rem; animation: float 1.5s ease-in-out infinite; }
+  @keyframes ldrSpin { 0%{stroke-dashoffset:200} 100%{stroke-dashoffset:0} }
+  .ldr-ring { animation: spin 1s linear infinite; }
+
+  /* ===== RESPONSIVE SIDEBAR ===== */
+  @media(max-width: 768px) {
+    .sidebar { position: fixed; left: 0; top: 0; height: 100%; z-index: 50; transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    main { margin-left: 0 !important; }
+    .mobile-menu-btn { display: flex !important; }
+  }
+</style>
 </head>
-<body class="text-gray-800 antialiased">
+<body>
+
+<!-- ===== LOADING OVERLAY ===== -->
+<div id="loadingOverlay">
+  <div class="ldr-plane">✈️</div>
+  <svg width="44" height="44" viewBox="0 0 44 44" class="ldr-ring">
+    <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="3"/>
+    <circle cx="22" cy="22" r="18" fill="none" stroke="#1db96b" stroke-width="3"
+      stroke-dasharray="30 90" stroke-linecap="round"/>
+  </svg>
+  <p style="color:rgba(255,255,255,.7);font-family:'Syne',sans-serif;font-size:.9rem;letter-spacing:.08em;">LOADING</p>
+</div>
 
 <!-- ===== AUTH SCREEN ===== -->
-<div id="authScreen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-100 p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 fade-in">
-        <div class="text-center mb-8">
-            <div class="text-5xl mb-4">✈️</div>
-            <h1 class="text-3xl font-bold text-emerald-800">NonStop Travels</h1>
-            <p class="text-gray-500 mt-2">Application Management System</p>
-        </div>
-        <div id="authError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm"></div>
-        <form id="authForm" class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                <input type="email" id="authEmail" required autocomplete="email"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <div class="relative">
-                    <input type="password" id="authPassword" required minlength="6" autocomplete="current-password"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition pr-10">
-                    <button type="button" onclick="togglePw('authPassword','pwIcon1')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                        <i id="pwIcon1" class="fas fa-eye"></i>
-                    </button>
-                </div>
-            </div>
-            <!-- Signup only fields -->
-            <div id="signupFields" class="hidden space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
-                    <div class="relative">
-                        <input type="password" id="authConfirmPassword" autocomplete="new-password"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition pr-10">
-                        <button type="button" onclick="togglePw('authConfirmPassword','pwIcon2')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                            <i id="pwIcon2" class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Security Question</label>
-                    <select id="securityQuestion" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
-                        <option value="">Select a question...</option>
-                        <option>What is your mother's maiden name?</option>
-                        <option>What was the name of your first pet?</option>
-                        <option>In what city were you born?</option>
-                        <option>What was the name of your first school?</option>
-                        <option>Who was your favorite teacher?</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Security Answer</label>
-                    <input type="text" id="securityAnswer" autocomplete="off" placeholder="Your answer"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Referral Code <span class="text-gray-400">(Optional)</span></label>
-                    <input type="text" id="referralCode" maxlength="8" style="text-transform:uppercase" placeholder="8 characters"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-mono">
-                </div>
-            </div>
-            <button type="submit" id="authSubmitBtn"
-                class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2">
-                <span id="authBtnText">Sign In</span>
-                <i class="fas fa-arrow-right"></i>
-            </button>
-        </form>
-        <div class="mt-6 text-center">
-            <button onclick="toggleAuthMode()" id="authToggleBtn" class="text-emerald-600 hover:text-emerald-700 font-medium text-sm">Create Account</button>
-        </div>
+<div id="authScreen" class="hidden">
+  <div class="auth-card">
+    <div class="auth-header">
+      <span class="plane-icon">✈️</span>
+      <h1 class="syne" style="font-size:1.75rem;font-weight:800;margin-bottom:4px;">NonStop Travels</h1>
+      <p style="opacity:.7;font-size:.875rem;" id="authSubtitle">Sign in to your account</p>
     </div>
+    <div class="auth-body">
+      <div id="authError" class="hidden" style="background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:12px 14px;border-radius:10px;font-size:.83rem;margin-bottom:18px;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-exclamation-circle"></i><span id="authErrorText"></span>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <form id="loginForm" class="space-y-4">
+        <div class="fade-up fade-up-1">
+          <label class="lbl">Email Address</label>
+          <input type="email" id="loginEmail" class="inp" placeholder="you@example.com" required autocomplete="email">
+        </div>
+        <div class="fade-up fade-up-2">
+          <label class="lbl">Password</label>
+          <div style="position:relative;">
+            <input type="password" id="loginPassword" class="inp" style="padding-right:44px;" placeholder="••••••••" required autocomplete="current-password">
+            <button type="button" onclick="togglePw('loginPassword','pwi1')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);background:none;border:none;cursor:pointer;font-size:.9rem;">
+              <i id="pwi1" class="fas fa-eye"></i>
+            </button>
+          </div>
+        </div>
+        <div class="fade-up fade-up-3" style="padding-top:4px;">
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" id="loginBtn">
+            <span>Sign In</span><i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+        <div class="fade-up fade-up-4" style="text-align:center;">
+          <button type="button" onclick="switchAuthMode('signup')" style="font-size:.83rem;color:var(--brand-mid);font-weight:600;background:none;border:none;cursor:pointer;">
+            Don't have an account? Create one →
+          </button>
+        </div>
+      </form>
+
+      <!-- SIGNUP FORM -->
+      <form id="signupForm" class="hidden space-y-4">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div>
+            <label class="lbl">Email Address</label>
+            <input type="email" id="signupEmail" class="inp" placeholder="you@example.com" required autocomplete="email">
+          </div>
+          <div>
+            <label class="lbl">Password</label>
+            <div style="position:relative;">
+              <input type="password" id="signupPassword" class="inp" style="padding-right:40px;" placeholder="Min 6 chars" required minlength="6">
+              <button type="button" onclick="togglePw('signupPassword','pwi2')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);background:none;border:none;cursor:pointer;font-size:.9rem;"><i id="pwi2" class="fas fa-eye"></i></button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="lbl">Confirm Password</label>
+          <div style="position:relative;">
+            <input type="password" id="signupConfirm" class="inp" style="padding-right:40px;" placeholder="Repeat password" required>
+            <button type="button" onclick="togglePw('signupConfirm','pwi3')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);background:none;border:none;cursor:pointer;font-size:.9rem;"><i id="pwi3" class="fas fa-eye"></i></button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div>
+            <label class="lbl">Security Question</label>
+            <select id="signupQuestion" class="inp" required>
+              <option value="">Select question…</option>
+              <option>What is your mother's maiden name?</option>
+              <option>What was the name of your first pet?</option>
+              <option>In what city were you born?</option>
+              <option>What was the name of your first school?</option>
+              <option>Who was your favourite teacher?</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Security Answer</label>
+            <input type="text" id="signupAnswer" class="inp" placeholder="Your answer" required autocomplete="off">
+          </div>
+        </div>
+        <div>
+          <label class="lbl">Referral Code <span style="text-transform:none;font-weight:400;color:#aaa;">(optional)</span></label>
+          <input type="text" id="signupReferral" class="inp" placeholder="8-char code" maxlength="8" style="text-transform:uppercase;font-family:monospace;letter-spacing:.1em;">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" id="signupBtn">
+          <span>Create Account</span><i class="fas fa-user-plus"></i>
+        </button>
+        <div style="text-align:center;">
+          <button type="button" onclick="switchAuthMode('login')" style="font-size:.83rem;color:var(--brand-mid);font-weight:600;background:none;border:none;cursor:pointer;">
+            Already have an account? Sign in →
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <!-- ===== MAIN APP ===== -->
-<div id="mainApp" class="hidden min-h-screen">
+<div id="mainApp" class="hidden" style="display:none;">
 
-    <!-- Sidebar -->
-    <aside class="sidebar fixed left-0 top-0 h-full text-white flex flex-col z-50">
-        <div class="p-6 border-b border-emerald-500/30">
-            <div class="flex items-center gap-3">
-                <span class="text-3xl">✈️</span>
-                <div>
-                    <h2 class="font-bold text-lg leading-tight">NonStop</h2>
-                    <p class="text-xs text-emerald-100">Travels</p>
-                </div>
-            </div>
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar" style="position:fixed;left:0;top:0;height:100vh;display:flex;flex-direction:column;z-index:50;">
+    <div style="padding:24px 20px 16px;border-bottom:1px solid rgba(255,255,255,.1);">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:1.6rem;">✈️</span>
+        <div>
+          <div class="syne" style="font-size:1.1rem;font-weight:800;color:#fff;line-height:1.1;">NonStop</div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.5);letter-spacing:.1em;text-transform:uppercase;">Travels AMS</div>
         </div>
-        <nav class="flex-1 p-4 space-y-2">
-            <button onclick="showSection('dashboard')" id="navDashboard"
-                class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition text-left bg-white/10">
-                <i class="fas fa-home w-5"></i><span>Dashboard</span>
-            </button>
-            <button onclick="showSection('applications')" id="navApplications"
-                class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition text-left">
-                <i class="fas fa-folder-open w-5"></i><span>Applications</span>
-            </button>
-            <button onclick="showSection('staff')" id="navStaff"
-                class="hidden w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition text-left">
-                <i class="fas fa-user-shield w-5"></i><span>Staff Portal</span>
-            </button>
-        </nav>
-        <div class="p-4 border-t border-emerald-500/30">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-lg" id="userAvatar">U</div>
-                <div class="flex-1 min-w-0">
-                    <p class="font-medium truncate" id="sidebarName">User</p>
-                    <span class="inline-block px-2 py-0.5 bg-emerald-400/30 rounded text-xs capitalize" id="sidebarRole">Applicant</span>
-                </div>
-            </div>
-            <button onclick="handleLogout()" class="w-full flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-white/10 transition text-sm text-emerald-100">
-                <i class="fas fa-sign-out-alt"></i> Sign Out
-            </button>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="ml-[240px] min-h-screen">
-        <header class="sticky top-0 bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between z-40">
-            <h1 id="pageTitle" class="text-2xl font-bold text-gray-800">Dashboard</h1>
-            <div class="flex items-center gap-4">
-                <span class="text-gray-600 text-sm" id="headerEmail"></span>
-                <span id="headerRole" class="px-3 py-1 rounded-full text-xs font-semibold capitalize bg-emerald-100 text-emerald-700">Applicant</span>
-            </div>
-        </header>
-
-        <div class="p-8">
-
-            <!-- DASHBOARD -->
-            <div id="dashboardSection" class="fade-in">
-                <div class="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-8 text-white mb-8 shadow-lg">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-emerald-100 mb-1" id="greetingText">Good morning,</p>
-                            <h2 class="text-3xl font-bold mb-4" id="heroName">User</h2>
-                            <div class="flex items-center gap-2 text-emerald-100">
-                                <i class="fas fa-file-alt"></i>
-                                <span id="activeAppsCount">0 active applications</span>
-                            </div>
-                        </div>
-                        <button onclick="openNewAppModal()" id="newAppBtn"
-                            class="bg-white text-emerald-700 px-6 py-3 rounded-lg font-semibold hover:bg-emerald-50 transition shadow-md flex items-center gap-2">
-                            <i class="fas fa-plus"></i> New Application
-                        </button>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 card-hover transition">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-3 bg-blue-100 text-blue-600 rounded-lg"><i class="fas fa-folder text-xl"></i></div>
-                            <span class="text-2xl font-bold" id="metricTotal">0</span>
-                        </div>
-                        <p class="text-gray-600 text-sm">Total Applications</p>
-                        <div class="mt-3 h-2 bg-gray-100 rounded-full"><div class="h-full bg-blue-500 rounded-full w-full"></div></div>
-                    </div>
-                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 card-hover transition">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-3 bg-green-100 text-green-600 rounded-lg"><i class="fas fa-check-circle text-xl"></i></div>
-                            <span class="text-2xl font-bold" id="metricApproved">0</span>
-                        </div>
-                        <p class="text-gray-600 text-sm">Approved</p>
-                        <div class="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden"><div id="progressApproved" class="h-full bg-green-500 rounded-full transition-all duration-500" style="width:0%"></div></div>
-                    </div>
-                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 card-hover transition">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-3 bg-yellow-100 text-yellow-600 rounded-lg"><i class="fas fa-clock text-xl"></i></div>
-                            <span class="text-2xl font-bold" id="metricPending">0</span>
-                        </div>
-                        <p class="text-gray-600 text-sm">Pending</p>
-                        <div class="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden"><div id="progressPending" class="h-full bg-yellow-500 rounded-full transition-all duration-500" style="width:0%"></div></div>
-                    </div>
-                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 card-hover transition">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-3 bg-red-100 text-red-600 rounded-lg"><i class="fas fa-times-circle text-xl"></i></div>
-                            <span class="text-2xl font-bold" id="metricRejected">0</span>
-                        </div>
-                        <p class="text-gray-600 text-sm">Rejected</p>
-                        <div class="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden"><div id="progressRejected" class="h-full bg-red-500 rounded-full transition-all duration-500" style="width:0%"></div></div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                        <div class="flex items-center justify-between mb-6">
-                            <h3 class="text-lg font-bold">Recent Applications</h3>
-                            <button onclick="showSection('applications')" class="text-emerald-600 hover:text-emerald-700 text-sm font-medium">View all →</button>
-                        </div>
-                        <div id="recentAppsList" class="space-y-3"></div>
-                    </div>
-                    <div class="space-y-6">
-                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                            <h3 class="text-lg font-bold mb-4">Approval Rate</h3>
-                            <div class="text-center">
-                                <div class="text-5xl font-bold text-emerald-600 mb-2" id="approvalRate">0%</div>
-                                <div class="w-full h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
-                                    <div id="approvalProgress" class="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500" style="width:0%"></div>
-                                </div>
-                                <p class="text-sm text-gray-500">Based on total applications</p>
-                            </div>
-                        </div>
-                        <div id="referralCard" class="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-200 p-6">
-                            <h3 class="text-lg font-bold text-emerald-800 mb-3">Your Referral Code</h3>
-                            <div class="bg-white rounded-lg p-4 border-2 border-dashed border-emerald-300 mb-3">
-                                <code class="text-2xl font-mono font-bold text-emerald-700 tracking-wider block text-center" id="referralCodeDisplay">--------</code>
-                            </div>
-                            <button onclick="copyReferralCode()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg transition flex items-center justify-center gap-2">
-                                <i class="fas fa-copy"></i> Copy Code
-                            </button>
-                            <p class="text-xs text-emerald-600 mt-3 text-center">Share this code with friends!</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- APPLICATIONS -->
-            <div id="applicationsSection" class="hidden fade-in">
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                        <div>
-                            <h2 class="text-xl font-bold">Applications</h2>
-                            <p class="text-sm text-gray-500 mt-1"><span id="appsCount">0</span> applications</p>
-                        </div>
-                        <div class="flex flex-col sm:flex-row gap-3">
-                            <select id="statusFilter" onchange="filterApplications()"
-                                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
-                                <option value="all">All Statuses</option>
-                                <option value="pending">Pending</option>
-                                <option value="review">Review</option>
-                                <option value="approved">Approved</option>
-                                <option value="rejected">Rejected</option>
-                            </select>
-                            <div class="relative">
-                                <input type="text" id="searchInput" oninput="filterApplications()" placeholder="Search applications..."
-                                    class="pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm w-64">
-                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                                <button onclick="clearSearch()" id="clearSearchBtn" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            <button onclick="openNewAppModal()" id="newAppBtn2"
-                                class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm font-medium">
-                                <i class="fas fa-plus"></i> New Application
-                            </button>
-                        </div>
-                    </div>
-                    <div id="applicationsList" class="space-y-3"></div>
-                    <div id="emptyState" class="hidden text-center py-12">
-                        <div class="text-6xl text-gray-300 mb-4">📁</div>
-                        <h3 class="text-lg font-medium text-gray-600 mb-2">No applications found</h3>
-                        <p class="text-gray-500 text-sm">Try adjusting your search or filter</p>
-                    </div>
-                    <div id="pagination" class="flex items-center justify-between mt-6 pt-6 border-t border-gray-100">
-                        <span class="text-sm text-gray-500" id="paginationInfo">Showing 0-0 of 0</span>
-                        <div class="flex gap-2" id="paginationBtns"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- STAFF PORTAL -->
-            <div id="staffSection" class="hidden fade-in">
-                <div class="flex gap-1 bg-gray-100 p-1 rounded-lg mb-6 w-fit">
-                    <button onclick="switchStaffTab('applicants')" id="tabApplicants"
-                        class="px-6 py-2 rounded-md text-sm font-medium bg-white text-emerald-700 shadow-sm">All Applicants</button>
-                    <button onclick="switchStaffTab('log')" id="tabLog"
-                        class="px-6 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-800">Activity Log</button>
-                </div>
-
-                <div id="applicantsTab" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                        <div>
-                            <h2 class="text-xl font-bold" id="staffViewTitle">All Applicants</h2>
-                            <p class="text-sm text-gray-500 mt-1"><span id="staffAppsCount">0</span> applications</p>
-                        </div>
-                        <div class="flex gap-3">
-                            <select id="staffStatusFilter" onchange="filterStaffApplications()"
-                                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
-                                <option value="all">All Statuses</option>
-                                <option value="pending">Pending</option>
-                                <option value="review">Review</option>
-                                <option value="approved">Approved</option>
-                                <option value="rejected">Rejected</option>
-                            </select>
-                            <div class="relative">
-                                <input type="text" id="staffSearchInput" oninput="filterStaffApplications()" placeholder="Search applicants..."
-                                    class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm w-64">
-                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="staffApplicationsList" class="space-y-3"></div>
-                    <div id="staffEmptyState" class="hidden text-center py-12">
-                        <div class="text-6xl text-gray-300 mb-4">👥</div>
-                        <h3 class="text-lg font-medium text-gray-600">No applications found</h3>
-                    </div>
-                    <div id="staffPagination" class="flex items-center justify-between mt-6 pt-6 border-t border-gray-100">
-                        <span class="text-sm text-gray-500" id="staffPaginationInfo">Showing 0-0 of 0</span>
-                        <div class="flex gap-2" id="staffPaginationBtns"></div>
-                    </div>
-                </div>
-
-                <div id="logTab" class="hidden bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                        <div>
-                            <h2 class="text-xl font-bold">Activity Log</h2>
-                            <p class="text-sm text-gray-500">Last 200 activities</p>
-                        </div>
-                        <div class="flex gap-3">
-                            <select id="logActionFilter" onchange="filterActivityLog()"
-                                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
-                                <option value="all">All Actions</option>
-                                <option value="view">View</option>
-                                <option value="status_update">Status Update</option>
-                                <option value="delete">Delete</option>
-                                <option value="upload">Upload</option>
-                                <option value="note">Note</option>
-                                <option value="assign">Assign</option>
-                                <option value="edit">Edit</option>
-                            </select>
-                            <div class="relative">
-                                <input type="text" id="logSearchInput" oninput="filterActivityLog()" placeholder="Search logs..."
-                                    class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm w-64">
-                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                            </div>
-                            <button onclick="loadActivityLog()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-sm">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div id="activityLogList" class="space-y-2 max-h-[600px] overflow-y-auto"></div>
-                </div>
-            </div>
-
-        </div>
-    </main>
-</div>
-
-<!-- ===== NEW APPLICATION MODAL ===== -->
-<div id="newAppModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div class="p-6 border-b border-gray-200 flex items-center justify-between">
-            <h3 class="text-xl font-bold">New Application</h3>
-            <button onclick="closeNewAppModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
-        </div>
-        <div class="p-6 overflow-y-auto flex-1">
-            <div id="newAppError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm"></div>
-            <div class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                        <input type="text" id="newAppName" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
-                        <input type="email" id="newAppEmail" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-                        <input type="tel" id="newAppPhone" placeholder="+1 (555) 000-0000" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Package *</label>
-                        <select id="newAppPackage" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
-                            <option value="">Select package...</option>
-                            <option>Canada PR</option>
-                            <option>USA Skilled Worker</option>
-                            <option>Student Visa</option>
-                            <option>UK Work Permit</option>
-                            <option>Australia PR</option>
-                            <option>Schengen Visa</option>
-                            <option>Other</option>
-                        </select>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Documents</label>
-                    <div id="dropZone" onclick="document.getElementById('newAppDocs').click()"
-                        ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"
-                        class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-emerald-500 transition cursor-pointer">
-                        <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
-                        <p class="text-gray-600 mb-1">Drag & drop files or click to browse</p>
-                        <p class="text-xs text-gray-400">PDF, JPG, PNG, DOC, DOCX (Max 10MB each)</p>
-                        <input type="file" id="newAppDocs" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="handleNewAppDocs(event)">
-                    </div>
-                    <div id="newAppDocsList" class="mt-4 space-y-2"></div>
-                </div>
-            </div>
-        </div>
-        <div class="p-6 border-t border-gray-200 flex justify-end gap-3">
-            <button onclick="closeNewAppModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium">Cancel</button>
-            <button onclick="createApplication()" id="submitNewAppBtn"
-                class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition font-medium flex items-center gap-2">
-                <span>Submit Application</span><i class="fas fa-paper-plane"></i>
-            </button>
-        </div>
+      </div>
     </div>
-</div>
 
-<!-- ===== DETAIL MODAL ===== -->
-<div id="detailModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div class="p-6 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+    <nav style="flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;">
+      <div id="navDashboard"    class="nav-item active" onclick="showSection('dashboard')"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
+      <div id="navApplications" class="nav-item" onclick="showSection('applications')"><i class="fas fa-folder-open"></i><span>Applications</span></div>
+      <!-- Staff Portal: admin + staff only -->
+      <div id="navStaff" class="nav-item hidden" onclick="showSection('staff')"><i class="fas fa-headset"></i><span>Staff Portal</span></div>
+      <!-- User Management: admin only -->
+      <div id="navUsers" class="nav-item hidden" onclick="showSection('users')"><i class="fas fa-users-cog"></i><span>User Management</span></div>
+    </nav>
+
+    <div style="padding:14px 12px;border-top:1px solid rgba(255,255,255,.1);">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.08);border-radius:12px;margin-bottom:8px;">
+        <div id="sidebarAvatar" style="width:36px;height:36px;border-radius:10px;background:var(--brand-lite);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;flex-shrink:0;font-family:'Syne',sans-serif;">U</div>
+        <div style="min-width:0;flex:1;">
+          <div id="sidebarName" style="color:#fff;font-weight:600;font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">User</div>
+          <span id="sidebarRoleBadge" class="badge badge-applicant" style="font-size:.65rem;">Applicant</span>
+        </div>
+      </div>
+      <button onclick="handleLogout()" class="nav-item" style="width:100%;border:none;background:none;cursor:pointer;">
+        <i class="fas fa-sign-out-alt" style="color:rgba(255,255,255,.5);"></i><span style="color:rgba(255,255,255,.5);">Sign Out</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main style="margin-left:260px;min-height:100vh;display:flex;flex-direction:column;">
+    <header style="position:sticky;top:0;background:rgba(244,247,245,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;z-index:40;">
+      <h1 id="pageTitle" class="syne" style="font-size:1.35rem;font-weight:700;">Dashboard</h1>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span id="headerEmail" style="font-size:.8rem;color:var(--muted);"></span>
+        <span id="headerRoleBadge" class="badge badge-applicant">Applicant</span>
+      </div>
+    </header>
+
+    <div style="padding:28px 32px;flex:1;">
+
+      <!-- ==================== DASHBOARD ==================== -->
+      <div id="dashboardSection" class="section-page">
+        <div style="background:linear-gradient(135deg,var(--brand),var(--brand-mid));border-radius:20px;padding:32px;color:#fff;margin-bottom:28px;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:rgba(29,185,107,.2);border-radius:50%;"></div>
+          <div style="position:absolute;bottom:-60px;right:80px;width:120px;height:120px;background:rgba(255,255,255,.05);border-radius:50%;"></div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;">
             <div>
-                <h3 class="text-xl font-bold" id="detailTitle">Application Details</h3>
-                <p class="text-sm text-gray-500 mt-1" id="detailSubtitle"></p>
+              <p id="greetText" style="color:rgba(255,255,255,.7);font-size:.875rem;margin-bottom:4px;"></p>
+              <h2 id="heroName" class="syne" style="font-size:2rem;font-weight:800;margin-bottom:8px;"></h2>
+              <p id="heroSub" style="color:rgba(255,255,255,.65);font-size:.875rem;"></p>
             </div>
-            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-200 rounded-lg transition">
-                <i class="fas fa-times text-xl"></i>
+            <button id="newAppHeroBtn" onclick="openNewAppModal()" class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.3);backdrop-filter:blur(8px);">
+              <i class="fas fa-plus"></i> New Application
             </button>
+          </div>
         </div>
-        <div class="overflow-y-auto flex-1 p-6">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 space-y-6">
 
-                    <!-- App Info -->
-                    <div class="bg-gray-50 rounded-xl p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h4 class="font-bold">Application Information</h4>
-                            <span id="detailStatus" class="px-3 py-1 rounded-full text-xs font-semibold"></span>
-                        </div>
-                        <div id="appInfoView" class="grid grid-cols-2 gap-4"></div>
-                        <div id="appInfoEdit" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-                        <button onclick="saveApplicationEdits()" id="editBtn"
-                            class="hidden mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
-                            <i class="fas fa-save mr-1"></i> Save Changes
-                        </button>
-                    </div>
+        <div id="statsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:28px;"></div>
 
-                    <!-- Staff Assignment -->
-                    <div id="staffAssignSection" class="hidden bg-blue-50 rounded-xl p-6 border border-blue-100">
-                        <h4 class="font-bold mb-3">Assign to Staff</h4>
-                        <select id="staffAssignSelect" onchange="assignStaff()"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                            <option value="">Unassigned</option>
-                        </select>
-                    </div>
-
-                    <!-- Status Update -->
-                    <div id="statusUpdateSection" class="hidden bg-emerald-50 rounded-xl p-6 border border-emerald-100">
-                        <h4 class="font-bold mb-3">Update Status</h4>
-                        <div class="flex flex-wrap gap-2">
-                            <button onclick="updateApplicationStatus('pending')" data-status="pending" class="status-btn px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition text-sm font-medium">Pending</button>
-                            <button onclick="updateApplicationStatus('review')" data-status="review" class="status-btn px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition text-sm font-medium">Review</button>
-                            <button onclick="updateApplicationStatus('approved')" data-status="approved" class="status-btn px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition text-sm font-medium">Approved</button>
-                            <button onclick="updateApplicationStatus('rejected')" data-status="rejected" class="status-btn px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition text-sm font-medium">Rejected</button>
-                        </div>
-                    </div>
-
-                    <!-- Documents -->
-                    <div class="bg-white border border-gray-200 rounded-xl p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h4 class="font-bold">Documents <span id="docCount" class="text-gray-500 font-normal">(0)</span></h4>
-                            <div id="uploadZone" class="hidden">
-                                <input type="file" id="detailDocUpload" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="handleFileUpload(event)">
-                                <button onclick="document.getElementById('detailDocUpload').click()" class="text-emerald-600 hover:text-emerald-700 text-sm font-medium">
-                                    <i class="fas fa-upload mr-1"></i> Upload
-                                </button>
-                            </div>
-                        </div>
-                        <div id="documentsList" class="space-y-2"></div>
-                    </div>
-
-                    <!-- Notes -->
-                    <div class="bg-white border border-gray-200 rounded-xl p-6">
-                        <h4 class="font-bold mb-4">Notes & Updates</h4>
-                        <div id="notesList" class="space-y-3 max-h-64 overflow-y-auto mb-4"></div>
-                        <div class="flex gap-2">
-                            <textarea id="newNoteInput" rows="2" placeholder="Add a note..."
-                                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none resize-none"></textarea>
-                            <button onclick="addNote()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Column -->
-                <div class="space-y-6">
-                    <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-100">
-                        <h4 class="font-bold text-purple-800 mb-3">Referral Information</h4>
-                        <div class="space-y-2 text-sm">
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Referral Code:</span>
-                                <code class="font-mono font-bold text-purple-700" id="detailReferralCode">-</code>
-                            </div>
-                            <div id="referredBySection" class="hidden pt-2 border-t border-purple-200">
-                                <span class="text-gray-600">Referred by:</span>
-                                <button onclick="viewReferrerProfile()" id="referrerLink" class="block mt-1 text-purple-700 hover:text-purple-800 font-medium">View Referrer</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-gray-50 rounded-xl p-6">
-                        <h4 class="font-bold mb-4">Actions</h4>
-                        <div class="space-y-2">
-                            <button onclick="closeModal()" class="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-white transition text-sm">Close</button>
-                            <button onclick="deleteApplication()" id="deleteAppBtn"
-                                class="hidden w-full px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition text-sm font-medium">
-                                <i class="fas fa-trash-alt mr-2"></i>Delete Application
-                            </button>
-                        </div>
-                    </div>
-                </div>
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;">
+          <div class="card">
+            <div style="padding:22px 22px 14px;display:flex;align-items:center;justify-content:space-between;">
+              <h3 class="syne" style="font-size:1rem;font-weight:700;">Recent Applications</h3>
+              <button onclick="showSection('applications')" style="font-size:.8rem;color:var(--brand-mid);font-weight:600;background:none;border:none;cursor:pointer;">View all →</button>
             </div>
+            <div id="recentList" style="padding:0 16px 16px;display:flex;flex-direction:column;gap:8px;"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:18px;">
+            <div class="card" style="padding:22px;">
+              <h3 class="syne" style="font-size:.95rem;font-weight:700;margin-bottom:16px;">Approval Rate</h3>
+              <div style="text-align:center;">
+                <div class="ring-wrap">
+                  <svg width="100" height="100" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="38" fill="none" stroke="#e8f0ec" stroke-width="8"/>
+                    <circle id="ringFill" cx="50" cy="50" r="38" fill="none" stroke="var(--brand-lite)" stroke-width="8" stroke-linecap="round" stroke-dasharray="239" stroke-dashoffset="239" style="transition:stroke-dashoffset .8s cubic-bezier(.34,1.56,.64,1);"/>
+                  </svg>
+                  <span id="ringPct" class="ring-text syne" style="font-size:1.2rem;color:var(--brand);">0%</span>
+                </div>
+                <p style="font-size:.78rem;color:var(--muted);margin-top:8px;">Based on resolved applications</p>
+              </div>
+            </div>
+            <div id="referralWidget" class="card" style="padding:22px;background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border-color:#a7f3d0;">
+              <h3 class="syne" style="font-size:.9rem;font-weight:700;color:var(--brand);margin-bottom:12px;">Your Referral Code</h3>
+              <div style="background:#fff;border:2px dashed #6ee7b7;border-radius:12px;padding:14px;text-align:center;margin-bottom:12px;">
+                <code id="referralDisplay" style="font-size:1.5rem;font-family:monospace;font-weight:700;color:var(--brand);letter-spacing:.18em;">--------</code>
+              </div>
+              <button onclick="copyReferral()" class="btn btn-primary" style="width:100%;justify-content:center;font-size:.8rem;">
+                <i class="fas fa-copy"></i> Copy Code
+              </button>
+              <p style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:8px;">Share and earn bonuses!</p>
+            </div>
+          </div>
         </div>
-    </div>
-</div>
+      </div>
 
-<!-- ===== REFERRER MODAL ===== -->
-<div id="referrerModal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl w-full max-w-md p-6">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-bold">Referrer Profile</h3>
-            <button onclick="document.getElementById('referrerModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+      <!-- ==================== APPLICATIONS ==================== -->
+      <div id="applicationsSection" class="section-page hidden">
+        <div class="card" style="padding:24px;">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;">
+            <div>
+              <h2 class="syne" style="font-size:1.15rem;font-weight:700;">Applications</h2>
+              <p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="appsCount">0</span> total</p>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+              <select id="appStatusFilter" class="inp inp-sm" style="width:auto;" onchange="renderAppList()">
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="review">Review</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <div style="position:relative;">
+                <input type="text" id="appSearch" class="inp inp-sm" style="padding-left:32px;width:220px;" placeholder="Search…" oninput="renderAppList()">
+                <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i>
+              </div>
+              <button id="appNewBtn" onclick="openNewAppModal()" class="btn btn-primary" style="padding:8px 16px;font-size:.83rem;">
+                <i class="fas fa-plus"></i> New
+              </button>
+            </div>
+          </div>
+          <div id="appList" style="display:flex;flex-direction:column;gap:8px;"></div>
+          <div id="appEmpty" class="hidden" style="text-align:center;padding:48px 24px;color:var(--muted);">
+            <div style="font-size:3rem;margin-bottom:12px;">📁</div>
+            <p style="font-weight:600;">No applications found</p>
+            <p style="font-size:.83rem;margin-top:4px;">Try adjusting your filters</p>
+          </div>
+          <div id="appPagination" style="display:flex;align-items:center;justify-content:space-between;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+            <span id="appPageInfo" style="font-size:.8rem;color:var(--muted);"></span>
+            <div id="appPageBtns" style="display:flex;gap:6px;"></div>
+          </div>
         </div>
-        <div id="referrerContent"></div>
+      </div>
+
+      <!-- ==================== STAFF PORTAL ==================== -->
+      <div id="staffSection" class="section-page hidden">
+        <div id="staffTabBar" class="tab-bar" style="margin-bottom:22px;width:fit-content;"></div>
+
+        <!-- Assigned Applications (Staff view) -->
+        <div id="staffAppsTab" class="hidden">
+          <div class="card" style="padding:24px;">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
+              <div>
+                <h2 class="syne" style="font-size:1.1rem;font-weight:700;">My Assigned Applications</h2>
+                <p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="staffAppsCount">0</span> assigned</p>
+              </div>
+              <div style="display:flex;gap:10px;">
+                <select id="staffAppStatusFilter" class="inp inp-sm" style="width:auto;" onchange="renderStaffAppList()">
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="review">Review</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+                <div style="position:relative;">
+                  <input type="text" id="staffAppSearch" class="inp inp-sm" style="padding-left:32px;width:200px;" placeholder="Search…" oninput="renderStaffAppList()">
+                  <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i>
+                </div>
+              </div>
+            </div>
+            <div id="staffAppList" style="display:flex;flex-direction:column;gap:8px;"></div>
+            <div id="staffAppEmpty" class="hidden" style="text-align:center;padding:40px;color:var(--muted);">
+              <div style="font-size:3rem;margin-bottom:12px;">👤</div>
+              <p style="font-weight:600;">No assigned applications</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin: All Applicants -->
+        <div id="allApplicantsTab" class="hidden">
+          <div class="card" style="padding:24px;">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
+              <div>
+                <h2 class="syne" style="font-size:1.1rem;font-weight:700;">All Applications</h2>
+                <p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="adminAppsCount">0</span> total</p>
+              </div>
+              <div style="display:flex;gap:10px;">
+                <select id="adminAppStatusFilter" class="inp inp-sm" style="width:auto;" onchange="renderAdminAppList()">
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="review">Review</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+                <div style="position:relative;">
+                  <input type="text" id="adminAppSearch" class="inp inp-sm" style="padding-left:32px;width:220px;" placeholder="Search…" oninput="renderAdminAppList()">
+                  <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i>
+                </div>
+              </div>
+            </div>
+            <div id="adminAppList" style="display:flex;flex-direction:column;gap:8px;"></div>
+            <div id="adminAppEmpty" class="hidden" style="text-align:center;padding:40px;color:var(--muted);">
+              <div style="font-size:3rem;margin-bottom:12px;">📂</div>
+              <p style="font-weight:600;">No applications found</p>
+            </div>
+            <div id="adminAppPagination" style="display:flex;align-items:center;justify-content:space-between;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+              <span id="adminAppPageInfo" style="font-size:.8rem;color:var(--muted);"></span>
+              <div id="adminAppPageBtns" style="display:flex;gap:6px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity Log (Admin only) -->
+        <div id="activityLogTab" class="hidden">
+          <div class="card" style="padding:24px;">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
+              <div>
+                <h2 class="syne" style="font-size:1.1rem;font-weight:700;">Activity Log</h2>
+                <p style="font-size:.8rem;color:var(--muted);">Last 200 activities</p>
+              </div>
+              <div style="display:flex;gap:10px;">
+                <select id="logTypeFilter" class="inp inp-sm" style="width:auto;" onchange="renderLogList()">
+                  <option value="all">All Actions</option>
+                  <option value="view">View</option>
+                  <option value="status_update">Status Update</option>
+                  <option value="delete">Delete</option>
+                  <option value="upload">Upload</option>
+                  <option value="note">Note</option>
+                  <option value="assign">Assign</option>
+                  <option value="edit">Edit</option>
+                  <option value="promote">Promote</option>
+                </select>
+                <div style="position:relative;">
+                  <input type="text" id="logSearch" class="inp inp-sm" style="padding-left:32px;width:200px;" placeholder="Search logs…" oninput="renderLogList()">
+                  <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i>
+                </div>
+                <button onclick="loadLogs()" class="btn btn-ghost" style="padding:8px 12px;"><i class="fas fa-sync-alt"></i></button>
+              </div>
+            </div>
+            <div id="logList" style="display:flex;flex-direction:column;gap:6px;max-height:600px;overflow-y:auto;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== USER MANAGEMENT (Admin) ==================== -->
+      <div id="usersSection" class="section-page hidden">
+        <div class="tab-bar" style="margin-bottom:22px;width:fit-content;">
+          <button class="tab-btn active" id="tabApplicants" onclick="switchUserTab('applicants')">Applicants</button>
+          <button class="tab-btn" id="tabStaffList"  onclick="switchUserTab('staff')">Staff Members</button>
+        </div>
+
+        <!-- Applicants list -->
+        <div id="userApplicantsTab">
+          <div class="card" style="padding:24px;">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
+              <div>
+                <h2 class="syne" style="font-size:1.1rem;font-weight:700;">All Applicants</h2>
+                <p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="applicantCount">0</span> accounts</p>
+              </div>
+              <div style="position:relative;">
+                <input type="text" id="userSearch" class="inp inp-sm" style="padding-left:32px;width:220px;" placeholder="Search…" oninput="renderUserList()">
+                <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i>
+              </div>
+            </div>
+            <div id="applicantList" style="display:flex;flex-direction:column;gap:8px;"></div>
+          </div>
+        </div>
+
+        <!-- Staff list -->
+        <div id="userStaffTab" class="hidden">
+          <div class="card" style="padding:24px;">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
+              <div>
+                <h2 class="syne" style="font-size:1.1rem;font-weight:700;">Staff Members</h2>
+                <p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="staffCount">0</span> members</p>
+              </div>
+              <div style="position:relative;">
+                <input type="text" id="staffSearch" class="inp inp-sm" style="padding-left:32px;width:220px;" placeholder="Search…" oninput="renderStaffList()">
+                <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i>
+              </div>
+            </div>
+            <div id="staffMemberList" style="display:flex;flex-direction:column;gap:8px;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /padding -->
+  </main>
+</div>
+
+<!-- ==================== NEW APP MODAL ==================== -->
+<div id="newAppModal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:680px;">
+    <div class="modal-header">
+      <div>
+        <h3 class="syne" style="font-size:1.1rem;font-weight:700;">New Application</h3>
+        <p style="font-size:.8rem;color:var(--muted);margin-top:2px;">Fill in the applicant details below</p>
+      </div>
+      <button onclick="closeNewAppModal()" class="btn btn-ghost" style="padding:8px;"><i class="fas fa-times" style="font-size:1rem;"></i></button>
     </div>
+    <div class="modal-body">
+      <div id="newAppErr" class="hidden" style="background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:12px 14px;border-radius:10px;font-size:.83rem;margin-bottom:18px;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        <div><label class="lbl">Full Name *</label><input type="text" id="naName" class="inp" placeholder="John Doe"></div>
+        <div><label class="lbl">Email *</label><input type="email" id="naEmail" class="inp" placeholder="john@example.com"></div>
+        <div><label class="lbl">Phone *</label><input type="tel" id="naPhone" class="inp" placeholder="+234 800 000 0000"></div>
+        <div><label class="lbl">Package *</label>
+          <select id="naPkg" class="inp">
+            <option value="">Select package…</option>
+            <option>Canada PR</option>
+            <option>USA Skilled Worker</option>
+            <option>Student Visa</option>
+            <option>UK Work Permit</option>
+            <option>Australia PR</option>
+            <option>Schengen Visa</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="lbl" style="margin-bottom:8px;">Documents</label>
+        <div id="naDropZone" class="drop-zone" onclick="$('naFileInput').click()" ondragover="event.preventDefault();this.classList.add('drag-active')" ondragleave="this.classList.remove('drag-active')" ondrop="handleNaDrop(event)">
+          <i class="fas fa-cloud-upload-alt" style="font-size:2rem;color:var(--muted);margin-bottom:8px;display:block;"></i>
+          <p style="color:var(--muted);font-size:.875rem;margin-bottom:4px;">Drag & drop or click to upload</p>
+          <p style="font-size:.75rem;color:#aaa;">PDF, JPG, PNG, DOC, DOCX · Max 10 MB each</p>
+          <input type="file" id="naFileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="handleNaFiles(event)">
+        </div>
+        <div id="naFileList" style="margin-top:12px;display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeNewAppModal()" class="btn btn-ghost">Cancel</button>
+      <button onclick="createApplication()" id="naSubmitBtn" class="btn btn-primary"><span>Submit Application</span><i class="fas fa-paper-plane"></i></button>
+    </div>
+  </div>
 </div>
 
-<!-- ===== TOAST ===== -->
-<div id="toast" class="hidden fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg z-[70] flex items-center gap-3">
-    <i id="toastIcon" class="fas fa-check-circle text-emerald-400"></i>
-    <span id="toastMessage">Success!</span>
+<!-- ==================== APPLICATION DETAIL MODAL ==================== -->
+<div id="detailModal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:900px;">
+    <div class="modal-header">
+      <div>
+        <h3 id="detailTitle" class="syne" style="font-size:1.1rem;font-weight:700;"></h3>
+        <p id="detailSubtitle" style="font-size:.8rem;color:var(--muted);margin-top:2px;"></p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span id="detailStatusBadge" class="badge"></span>
+        <button onclick="closeDetailModal()" class="btn btn-ghost" style="padding:8px;"><i class="fas fa-times" style="font-size:1rem;"></i></button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:24px;">
+        <!-- LEFT -->
+        <div style="display:flex;flex-direction:column;gap:20px;">
+
+          <!-- App Info -->
+          <div style="background:var(--surface);border-radius:14px;padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+              <h4 class="syne" style="font-weight:700;font-size:.95rem;">Application Details</h4>
+              <button id="detailEditBtn" onclick="toggleDetailEdit()" class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem;" style="display:none;"></button>
+            </div>
+            <div id="detailViewGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;"></div>
+            <div id="detailEditGrid" class="hidden" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;"></div>
+            <div id="detailSaveRow" class="hidden" style="margin-top:14px;display:flex;gap:10px;">
+              <button onclick="saveDetailEdits()" id="detailSaveBtn" class="btn btn-primary" style="font-size:.83rem;padding:8px 18px;"><i class="fas fa-save"></i> Save Changes</button>
+              <button onclick="cancelDetailEdit()" class="btn btn-ghost" style="font-size:.83rem;">Cancel</button>
+            </div>
+          </div>
+
+          <!-- Assign Staff (admin only) -->
+          <div id="assignSection" class="hidden" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:20px;">
+            <h4 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:12px;color:#1e40af;">Assign to Staff</h4>
+            <select id="assignSelect" onchange="assignStaff()" class="inp">
+              <option value="">— Unassigned —</option>
+            </select>
+          </div>
+
+          <!-- Status Update (staff/admin only) -->
+          <div id="statusSection" class="hidden" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:20px;">
+            <h4 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:12px;color:var(--brand);">Update Status</h4>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <button onclick="updateStatus('pending')"  data-s="pending"  class="sts-btn btn badge-pending"  style="font-size:.83rem;padding:8px 16px;cursor:pointer;border:1.5px solid #f59e0b;">Pending</button>
+              <button onclick="updateStatus('review')"   data-s="review"   class="sts-btn btn badge-review"   style="font-size:.83rem;padding:8px 16px;cursor:pointer;border:1.5px solid #f97316;">Review</button>
+              <button onclick="updateStatus('approved')" data-s="approved" class="sts-btn btn badge-approved" style="font-size:.83rem;padding:8px 16px;cursor:pointer;border:1.5px solid #22c55e;">Approved</button>
+              <button onclick="updateStatus('rejected')" data-s="rejected" class="sts-btn btn badge-rejected" style="font-size:.83rem;padding:8px 16px;cursor:pointer;border:1.5px solid #ef4444;">Rejected</button>
+            </div>
+          </div>
+
+          <!-- Documents -->
+          <div style="border:1px solid var(--border);border-radius:14px;padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <h4 class="syne" style="font-weight:700;font-size:.95rem;">Documents <span id="docCountBadge" style="font-size:.75rem;color:var(--muted);font-family:'DM Sans';font-weight:400;"></span></h4>
+              <div id="uploadBtn" class="hidden">
+                <input type="file" id="uploadInput" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="handleDocUpload(event)">
+                <button onclick="$('uploadInput').click()" class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem;"><i class="fas fa-upload"></i> Upload</button>
+              </div>
+            </div>
+            <div id="docList" style="display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+
+          <!-- Notes -->
+          <div style="border:1px solid var(--border);border-radius:14px;padding:20px;">
+            <h4 class="syne" style="font-weight:700;font-size:.95rem;margin-bottom:14px;">Notes & Messages</h4>
+            <div id="notesList" style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;margin-bottom:14px;"></div>
+            <div style="display:flex;gap:8px;">
+              <textarea id="noteInput" class="inp" rows="2" style="resize:none;flex:1;" placeholder="Write a note…"></textarea>
+              <button onclick="addNote()" class="btn btn-primary" style="padding:10px 14px;align-self:flex-end;"><i class="fas fa-paper-plane"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT -->
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <!-- Referral Info -->
+          <div style="background:linear-gradient(135deg,#faf5ff,#ede9fe);border:1px solid #ddd6fe;border-radius:14px;padding:18px;">
+            <h4 class="syne" style="font-weight:700;font-size:.9rem;color:#5b21b6;margin-bottom:12px;">Referral Information</h4>
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:.83rem;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:var(--muted);">Code:</span>
+                <code id="detailRefCode" style="font-family:monospace;font-weight:700;color:#7c3aed;background:#ede9fe;padding:2px 8px;border-radius:6px;"></code>
+              </div>
+              <div id="referredByRow" class="hidden" style="padding-top:8px;border-top:1px solid #ddd6fe;">
+                <span style="color:var(--muted);">Referred by:</span>
+                <button onclick="openReferrerModal()" id="referrerBtn" class="btn btn-ghost" style="padding:4px 0;color:#7c3aed;font-size:.83rem;font-weight:600;display:block;margin-top:2px;">View Referrer Profile →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div style="background:var(--surface);border-radius:14px;padding:18px;">
+            <h4 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:12px;">Actions</h4>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <button onclick="closeDetailModal()" class="btn btn-ghost" style="justify-content:center;width:100%;font-size:.83rem;">Close</button>
+              <button id="deleteAppBtn" onclick="deleteApplication()" class="btn btn-danger hidden" style="justify-content:center;width:100%;font-size:.83rem;">
+                <i class="fas fa-trash-alt"></i> Delete Application
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
+<!-- ==================== USER PROFILE MODAL (Admin view of user) ==================== -->
+<div id="userProfileModal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:640px;">
+    <div class="modal-header">
+      <h3 id="upTitle" class="syne" style="font-size:1.1rem;font-weight:700;"></h3>
+      <button onclick="closeUserModal()" class="btn btn-ghost" style="padding:8px;"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="upBody"></div>
+    <div class="modal-footer" id="upFooter"></div>
+  </div>
+</div>
+
+<!-- ==================== REFERRER MODAL ==================== -->
+<div id="referrerModal" class="modal-overlay hidden" style="z-index:70;">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header">
+      <h3 class="syne" style="font-size:1.05rem;font-weight:700;">Referrer Profile</h3>
+      <button onclick="closeReferrerModal()" class="btn btn-ghost" style="padding:8px;"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="referrerBody"></div>
+  </div>
+</div>
+
+<!-- ==================== TOAST ==================== -->
+<div id="toast" class="hidden"></div>
+
+<!-- ==================== SCRIPTS ==================== -->
 <script>
-// ==================== CONFIG ====================
+// =========================================================
+//  CONFIG
+// =========================================================
 const SUPABASE_URL = 'https://lveejxxuvwikbitdbmbw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_5wqWoM5FlCNJDNRhxgMFdA_9vzgwd6U';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ==================== STATE ====================
-let currentUser = null;
-let currentProfile = null;
-let selectedAppId = null;
-let allApplications = [];
-let allStaffMembers = [];
-let allLogs = [];
-let isSignupMode = false;
-let tempUploadedDocs = [];
-let currentPage = 1;
-let staffPage = 1;
-let currentStaffTab = 'applicants';
-const PER_PAGE = 10;
-const STAFF_PER_PAGE = 15;
+// =========================================================
+//  STATE
+// =========================================================
+let CU  = null;   // currentUser (auth)
+let CP  = null;   // currentProfile (from profiles table)
+let allApps   = [];
+let allUsers  = [];   // all profiles (admin only)
+let allStaff  = [];   // staff/admin profiles
+let allLogs   = [];
+let tempFiles = [];
+let selAppId  = null;
+let editMode  = false;
+let appPage   = 1;
+let adminPage = 1;
+const PER = 12;
+let currentUserTab = 'applicants';
+let referrerCode   = null;
 
-// ==================== HELPERS ====================
+// =========================================================
+//  UTILITIES
+// =========================================================
 const $ = id => document.getElementById(id);
-const sanitize = str => str ? String(str).replace(/[<>]/g, '') : '';
-const fmtDate = s => s ? new Date(s).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }) : 'N/A';
-const greeting = () => { const h = new Date().getHours(); return h<12?'Good morning':h<18?'Good afternoon':'Good evening'; };
+const san = s => s ? String(s).replace(/[<>"'&]/g, c => ({'<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','&':'&amp;'}[c])) : '';
+const fmt = s => s ? new Date(s).toLocaleDateString('en-NG', {year:'numeric',month:'short',day:'numeric'}) : 'N/A';
+const greet = () => { const h = new Date().getHours(); return h<12?'Good morning':h<18?'Good afternoon':'Good evening'; };
+const genCode = () => { const c='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; return Array.from({length:8},()=>c[Math.floor(Math.random()*c.length)]).join(''); };
+const sid = id => String(id || '').slice(-4).toUpperCase();
+const sstr = s => String(s || '');
 
 function hl(text, q) {
-    if (!q || !text) return sanitize(text);
-    return sanitize(text).replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<mark>$1</mark>');
+  if (!q || !text) return san(text);
+  return san(text).replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<mark>$1</mark>');
 }
 
 function toast(msg, type='success') {
-    $('toastMessage').textContent = msg;
-    $('toastIcon').className = type==='error' ? 'fas fa-exclamation-circle text-red-400' : 'fas fa-check-circle text-emerald-400';
-    $('toast').classList.remove('hidden');
-    setTimeout(() => $('toast').classList.add('hidden'), 3500);
+  const el = $('toast');
+  const icons = { success:'fas fa-check-circle', error:'fas fa-exclamation-circle', info:'fas fa-info-circle' };
+  const colors = { success:'#1db96b', error:'#ef4444', info:'#3b82f6' };
+  el.innerHTML = `<i class="${icons[type]||icons.success}" style="color:${colors[type]||colors.success};font-size:1rem;flex-shrink:0;"></i><span>${san(msg)}</span>`;
+  el.classList.remove('hidden');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.add('hidden'), 3600);
 }
 
-function genCode() {
-    const c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    return Array.from({length:8}, () => c[Math.floor(Math.random()*c.length)]).join('');
+function showLoading(show) {
+  const ol = $('loadingOverlay');
+  if (!show) { ol.style.opacity='0'; setTimeout(()=>ol.style.display='none',500); }
+  else { ol.style.display='flex'; ol.style.opacity='1'; }
 }
 
-// ==================== AUTH ====================
+function setBtnLoading(btn, loading, origHtml) {
+  if (loading) {
+    btn.dataset.orig = btn.innerHTML;
+    btn.innerHTML = `<span class="spinner" style="width:16px;height:16px;"></span> Loading…`;
+    btn.disabled = true;
+  } else {
+    btn.innerHTML = origHtml || btn.dataset.orig || btn.innerHTML;
+    btn.disabled = false;
+  }
+}
+
+// =========================================================
+//  AUTH
+// =========================================================
 function togglePw(id, iconId) {
-    const inp = $(id);
-    inp.type = inp.type==='password' ? 'text' : 'password';
-    $(iconId).className = inp.type==='password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+  const el = $(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+  $(iconId).className = el.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
 }
 
-function toggleAuthMode() {
-    isSignupMode = !isSignupMode;
-    $('signupFields').classList.toggle('hidden', !isSignupMode);
-    $('authBtnText').textContent = isSignupMode ? 'Create Account' : 'Sign In';
-    $('authToggleBtn').textContent = isSignupMode ? 'Already have an account? Sign in' : 'Create Account';
-    $('authEmail').value = '';
-    $('authPassword').value = '';
-    $('authError').classList.add('hidden');
+function switchAuthMode(mode) {
+  $('loginForm').classList.toggle('hidden', mode !== 'login');
+  $('signupForm').classList.toggle('hidden', mode !== 'signup');
+  $('authSubtitle').textContent = mode === 'login' ? 'Sign in to your account' : 'Create a new account';
+  $('authError').classList.add('hidden');
 }
 
 function showAuthErr(msg) {
-    $('authError').textContent = msg;
-    $('authError').classList.remove('hidden');
+  $('authErrorText').textContent = msg;
+  $('authError').classList.remove('hidden');
+  $('authError').style.display = 'flex';
 }
 
-$('authForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const btn = $('authSubmitBtn');
-    const orig = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-    try {
-        if (isSignupMode) await handleSignup();
-        else await handleLogin();
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = orig;
-    }
+// Login
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = $('loginBtn');
+  setBtnLoading(btn, true);
+  try {
+    const email    = $('loginEmail').value.trim();
+    const password = $('loginPassword').value;
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { showAuthErr(error.message); return; }
+    await bootApp(data.user);
+  } finally { setBtnLoading(btn, false); }
 });
 
-async function handleSignup() {
-    const email    = $('authEmail').value.trim();
-    const password = $('authPassword').value;
-    const confirm  = $('authConfirmPassword').value;
-    const question = $('securityQuestion').value;
-    const answer   = $('securityAnswer').value.trim();
-    const refCode  = $('referralCode').value.trim().toUpperCase();
+// Signup
+$('signupForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = $('signupBtn');
+  setBtnLoading(btn, true);
+  try {
+    const email    = $('signupEmail').value.trim();
+    const password = $('signupPassword').value;
+    const confirm  = $('signupConfirm').value;
+    const question = $('signupQuestion').value;
+    const answer   = $('signupAnswer').value.trim();
+    const refCode  = $('signupReferral').value.trim().toUpperCase();
 
-    if (password !== confirm)  { showAuthErr('Passwords do not match'); return; }
-    if (password.length < 6)   { showAuthErr('Password must be at least 6 characters'); return; }
-    if (!question)             { showAuthErr('Please select a security question'); return; }
-    if (!answer)               { showAuthErr('Please provide a security answer'); return; }
+    if (password !== confirm) { showAuthErr('Passwords do not match'); return; }
+    if (!question)            { showAuthErr('Please select a security question'); return; }
+    if (!answer)              { showAuthErr('Please enter your security answer'); return; }
 
-    // Validate referral code if provided
     if (refCode) {
-        const { data: ref } = await supabase.from('profiles').select('id').eq('referral_code', refCode).single();
-        if (!ref) { showAuthErr('Invalid referral code'); return; }
+      const { data: ref } = await sb.from('profiles').select('id').eq('referral_code', refCode).single();
+      if (!ref) { showAuthErr('Invalid referral code'); return; }
     }
 
-    // Sign up
-    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
-
-    if (authError) {
-        const msg = authError.message.toLowerCase();
-        if (msg.includes('already registered') || msg.includes('already exists')) {
-            showAuthErr('This email is already registered. Please sign in instead.');
-        } else {
-            showAuthErr(authError.message);
-        }
-        return;
+    const { data: authData, error: authErr } = await sb.auth.signUp({ email, password });
+    if (authErr) {
+      const m = authErr.message.toLowerCase();
+      if (m.includes('already') || m.includes('exists')) {
+        showAuthErr('This email is already registered. Please sign in.');
+      } else showAuthErr(authErr.message);
+      return;
     }
-
-    // Supabase returns identities:[] when user already exists
     if (!authData.user || authData.user.identities?.length === 0) {
-        showAuthErr('This email is already registered. Please sign in instead.');
-        return;
+      showAuthErr('This email is already registered. Please sign in.');
+      return;
     }
 
     const newCode  = genCode();
     const hashed   = CryptoJS.SHA256(answer.toLowerCase().trim()).toString();
-    const fullName = email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g, l=>l.toUpperCase());
+    const fullName = email.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
 
-    // Upsert profile (safe against duplicates)
-    const { error: profileError } = await supabase.from('profiles').upsert([{
-        id: authData.user.id,
-        full_name: fullName,
-        email: email,
-        role: 'applicant',
-        referral_code: newCode,
-        referred_by_code: refCode || null,
-        security_question: question,
-        security_answer_hash: hashed
-    }], { onConflict: 'id', ignoreDuplicates: true });
+    const { error: pErr } = await sb.from('profiles').upsert([{
+      id: authData.user.id, full_name: fullName, email,
+      role: 'applicant', referral_code: newCode,
+      referred_by_code: refCode || null,
+      security_question: question, security_answer_hash: hashed
+    }], { onConflict:'id', ignoreDuplicates:true });
 
-    if (profileError) { showAuthErr('Error creating profile: ' + profileError.message); return; }
-
-    toast('Account created! You can now sign in.');
-    toggleAuthMode();
-}
-
-async function handleLogin() {
-    const email    = $('authEmail').value.trim();
-    const password = $('authPassword').value;
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { showAuthErr(error.message); return; }
-    await bootApp(data.user);
-}
+    if (pErr) { showAuthErr('Profile error: ' + pErr.message); return; }
+    toast('Account created! Please sign in.');
+    switchAuthMode('login');
+    $('loginEmail').value = email;
+  } finally { setBtnLoading(btn, false); }
+});
 
 async function handleLogout() {
-    await supabase.auth.signOut();
-    location.reload();
+  await sb.auth.signOut();
+  location.reload();
 }
 
-// ==================== BOOT ====================
+// =========================================================
+//  BOOT
+// =========================================================
 async function bootApp(user) {
-    currentUser = user;
+  CU = user;
+  const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  if (!profile) {
+    showLoading(false);
+    $('authScreen').classList.remove('hidden');
+    showAuthErr('Profile not found. Please contact support.');
+    return;
+  }
+  CP = profile;
 
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-    if (!profile) { showAuthErr('Profile not found. Please contact support.'); await supabase.auth.signOut(); return; }
+  // UI setup
+  const name = profile.full_name || user.email.split('@')[0];
+  $('sidebarAvatar').textContent = name.charAt(0).toUpperCase();
+  $('sidebarName').textContent   = name;
+  $('headerEmail').textContent   = user.email;
+  $('heroName').textContent      = name.split(' ')[0];
+  $('greetText').textContent     = greet() + ',';
 
-    currentProfile = profile;
-    $('authScreen').classList.add('hidden');
-    $('mainApp').classList.remove('hidden');
+  const roleBadgeClass = profile.role==='admin' ? 'badge-admin' : profile.role==='staff' ? 'badge-staff' : 'badge-applicant';
+  $('sidebarRoleBadge').className = `badge ${roleBadgeClass}`;
+  $('sidebarRoleBadge').textContent = profile.role.charAt(0).toUpperCase() + profile.role.slice(1);
+  $('headerRoleBadge').className = `badge ${roleBadgeClass}`;
+  $('headerRoleBadge').textContent = profile.role.charAt(0).toUpperCase() + profile.role.slice(1);
 
-    const name = profile.full_name || user.email.split('@')[0];
-    $('sidebarName').textContent = name;
-    $('sidebarRole').textContent = profile.role;
-    $('userAvatar').textContent  = name.charAt(0).toUpperCase();
-    $('headerEmail').textContent = user.email;
-    $('heroName').textContent    = name.split(' ')[0];
-    $('greetingText').textContent = greeting() + ',';
+  // Role-specific nav
+  if (profile.role === 'admin') {
+    $('navStaff').classList.remove('hidden');
+    $('navStaff').style.display = 'flex';
+    $('navUsers').classList.remove('hidden');
+    $('navUsers').style.display = 'flex';
+    $('appNewBtn').classList.add('hidden');
+    $('newAppHeroBtn').classList.add('hidden');
+    $('referralWidget').classList.add('hidden');
+  } else if (profile.role === 'staff') {
+    $('navStaff').classList.remove('hidden');
+    $('navStaff').style.display = 'flex';
+    $('appNewBtn').classList.add('hidden');
+    $('newAppHeroBtn').classList.add('hidden');
+    $('referralWidget').classList.add('hidden');
+  } else {
+    $('referralWidget').classList.remove('hidden');
+    $('referralDisplay').textContent = profile.referral_code || '--------';
+  }
 
-    const hr = $('headerRole');
-    hr.textContent = profile.role;
-    hr.className = `px-3 py-1 rounded-full text-xs font-semibold capitalize ${
-        profile.role==='admin' ? 'bg-red-100 text-red-700' :
-        profile.role==='staff' ? 'bg-blue-100 text-blue-700' :
-        'bg-emerald-100 text-emerald-700'}`;
+  // Load data
+  await loadApps();
+  if (profile.role === 'admin') {
+    await loadAllUsers();
+    buildStaffTabs(['applications', 'log']);
+  } else if (profile.role === 'staff') {
+    buildStaffTabs(['myapps']);
+  }
+  if (profile.role === 'admin' || profile.role === 'staff') {
+    await loadStaff();
+  }
 
-    if (profile.role === 'staff' || profile.role === 'admin') {
-        $('navStaff').classList.remove('hidden');
-        $('newAppBtn').classList.add('hidden');
-        $('newAppBtn2').classList.add('hidden');
-        $('referralCard').classList.add('hidden');
-        await loadStaffMembers();
-    } else {
-        $('referralCard').classList.remove('hidden');
-        $('referralCodeDisplay').textContent = profile.referral_code || '--------';
-    }
-
-    await loadAllApplications();
-    renderDashboard();
-    showSection('dashboard');
+  renderDashboard();
+  showSection('dashboard');
+  showLoading(false);
+  $('authScreen').classList.add('hidden');
+  $('mainApp').style.display = 'flex';
 }
 
-// ==================== DATA ====================
-async function loadAllApplications() {
-    let q = supabase.from('applications').select('*').order('created_at', { ascending: false });
-    if (currentProfile.role === 'applicant') q = q.eq('user_id', currentUser.id);
-    else if (currentProfile.role === 'staff') q = q.eq('assigned_staff_id', currentUser.id);
-
-    const { data, error } = await q;
-    if (error) { toast('Error loading applications: ' + error.message, 'error'); return; }
-    allApplications = data || [];
-
-    if ((currentProfile.role === 'staff' || currentProfile.role === 'admin') && allApplications.length) {
-        const ids = [...new Set(allApplications.map(a => a.user_id).filter(Boolean))];
-        const { data: profiles } = await supabase.from('profiles')
-            .select('id, full_name, email, referral_code, referred_by_code, role').in('id', ids);
-        if (profiles?.length) {
-            const map = {};
-            profiles.forEach(p => { map[p.id] = p; });
-            allApplications = allApplications.map(a => ({ ...a, profiles: map[a.user_id] || null }));
-        }
-    }
-}
-
-async function loadStaffMembers() {
-    const { data } = await supabase.from('profiles').select('id, full_name, email, role').in('role', ['staff','admin']);
-    allStaffMembers = data || [];
-}
-
-async function loadDocuments(appId) {
-    const { data } = await supabase.from('application_documents').select('*')
-        .eq('application_id', appId).order('created_at', { ascending: false });
-    return data || [];
-}
-
-async function loadNotes(appId) {
-    const { data } = await supabase.from('notes')
-        .select('*, profiles:user_id (full_name, role)')
-        .eq('application_id', appId).order('created_at', { ascending: true });
-    return data || [];
-}
-
-async function loadActivityLog() {
-    const { data } = await supabase.from('activity_logs').select('*')
-        .order('created_at', { ascending: false }).limit(200);
-    allLogs = data || [];
-    renderActivityLog();
-}
-
-// ==================== DASHBOARD ====================
-function renderDashboard() {
-    const total    = allApplications.length;
-    const approved = allApplications.filter(a => a.status==='approved').length;
-    const pending  = allApplications.filter(a => a.status==='pending').length;
-    const rejected = allApplications.filter(a => a.status==='rejected').length;
-    const review   = allApplications.filter(a => a.status==='review').length;
-
-    $('metricTotal').textContent    = total;
-    $('metricApproved').textContent = approved;
-    $('metricPending').textContent  = pending;
-    $('metricRejected').textContent = rejected;
-
-    if (total > 0) {
-        $('progressApproved').style.width = (approved/total*100)+'%';
-        $('progressPending').style.width  = (pending/total*100)+'%';
-        $('progressRejected').style.width = (rejected/total*100)+'%';
-    }
-
-    const rate = total > 0 ? Math.round(approved/total*100) : 0;
-    $('approvalRate').textContent      = rate+'%';
-    $('approvalProgress').style.width  = rate+'%';
-    $('activeAppsCount').textContent   = `${pending+review} active application${(pending+review)!==1?'s':''}`;
-
-    $('recentAppsList').innerHTML = allApplications.slice(0,5).map(a => `
-        <div onclick="openApplicationModal('${a.id}')"
-            class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition border border-gray-100">
-            <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-sm">
-                    ${sanitize(a.applicant_name).charAt(0).toUpperCase()}
-                </div>
-                <div>
-                    <p class="font-medium">${sanitize(a.applicant_name)}</p>
-                    <p class="text-xs text-gray-500">${sanitize(a.package)} • ${fmtDate(a.created_at)}</p>
-                </div>
-            </div>
-            <span class="px-3 py-1 rounded-full text-xs font-semibold status-${a.status}">
-                ${a.status.charAt(0).toUpperCase()+a.status.slice(1)}
-            </span>
-        </div>`).join('') || '<p class="text-gray-500 text-center py-4">No applications yet</p>';
-}
-
-// ==================== APPLICATIONS LIST ====================
-function getFiltered() {
-    const q = $('searchInput').value.trim().toLowerCase();
-    const s = $('statusFilter').value;
-    return allApplications.filter(a =>
-        (s==='all'||a.status===s) &&
-        (!q || a.applicant_name.toLowerCase().includes(q) ||
-               (a.email&&a.email.toLowerCase().includes(q)) ||
-               (a.phone&&a.phone.includes(q)) ||
-               (a.package&&a.package.toLowerCase().includes(q))));
-}
-
-function getStaffFiltered() {
-    const q = $('staffSearchInput').value.trim().toLowerCase();
-    const s = $('staffStatusFilter').value;
-    return allApplications.filter(a => {
-        const p = a.profiles||{};
-        return (s==='all'||a.status===s) &&
-            (!q || a.applicant_name.toLowerCase().includes(q) ||
-                   (a.email&&a.email.toLowerCase().includes(q)) ||
-                   (a.phone&&a.phone.includes(q)) ||
-                   (a.package&&a.package.toLowerCase().includes(q)) ||
-                   (p.email&&p.email.toLowerCase().includes(q)));
-    });
-}
-
-function renderApplicationsGrid() {
-    const filtered = getFiltered();
-    const total = filtered.length;
-    const start = (currentPage-1)*PER_PAGE;
-    const items = filtered.slice(start, start+PER_PAGE);
-    const pages = Math.ceil(total/PER_PAGE);
-    const q     = $('searchInput').value.trim();
-
-    $('appsCount').textContent = total;
-    if (!items.length) {
-        $('applicationsList').innerHTML = '';
-        $('emptyState').classList.remove('hidden');
-        $('pagination').classList.add('hidden');
-        return;
-    }
-    $('emptyState').classList.add('hidden');
-    $('pagination').classList.remove('hidden');
-    $('applicationsList').innerHTML = items.map(a => `
-        <div onclick="openApplicationModal('${a.id}')"
-            class="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:border-emerald-500 hover:shadow-md cursor-pointer transition card-hover">
-            <div class="flex items-center gap-4">
-                <div class="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-1 rounded">#${a.id.toString().slice(-4).toUpperCase()}</div>
-                <div>
-                    <p class="font-medium">${hl(a.applicant_name,q)}</p>
-                    <p class="text-xs text-gray-500">${hl(a.package,q)} • ${fmtDate(a.created_at)}</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-3">
-                <span class="w-2 h-2 rounded-full ${a.status==='approved'?'bg-green-500':a.status==='rejected'?'bg-red-500':a.status==='review'?'bg-orange-500':'bg-yellow-500'}"></span>
-                <span class="px-3 py-1 rounded-full text-xs font-semibold status-${a.status}">${a.status.charAt(0).toUpperCase()+a.status.slice(1)}</span>
-                <i class="fas fa-chevron-right text-gray-400"></i>
-            </div>
-        </div>`).join('');
-    $('paginationInfo').textContent = `Showing ${start+1}-${Math.min(start+PER_PAGE,total)} of ${total}`;
-    renderPages(pages, 'paginationBtns', 'goPage', currentPage);
-}
-
-function renderStaffApplicants() {
-    const filtered = getStaffFiltered();
-    const total = filtered.length;
-    const start = (staffPage-1)*STAFF_PER_PAGE;
-    const items = filtered.slice(start, start+STAFF_PER_PAGE);
-    const pages = Math.ceil(total/STAFF_PER_PAGE);
-    const q = $('staffSearchInput').value.trim();
-
-    $('staffAppsCount').textContent = total;
-    $('staffViewTitle').textContent = currentProfile.role==='admin' ? 'All Applicants' : 'My Assigned Applications';
-
-    if (!items.length) {
-        $('staffApplicationsList').innerHTML = '';
-        $('staffEmptyState').classList.remove('hidden');
-        $('staffPagination').classList.add('hidden');
-        return;
-    }
-    $('staffEmptyState').classList.add('hidden');
-    $('staffPagination').classList.remove('hidden');
-    $('staffApplicationsList').innerHTML = items.map(a => {
-        const p = a.profiles||{};
-        return `
-        <div onclick="openApplicationModal('${a.id}')"
-            class="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:border-emerald-500 hover:shadow-md cursor-pointer transition card-hover">
-            <div class="flex items-center gap-4">
-                <div class="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-1 rounded">#${a.id.toString().slice(-4).toUpperCase()}</div>
-                <div>
-                    <p class="font-medium">${hl(a.applicant_name,q)}</p>
-                    <p class="text-xs text-gray-500">${p.email||a.email||''} • ${hl(a.package,q)}</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-4">
-                <span class="text-xs text-gray-500">${fmtDate(a.created_at)}</span>
-                <span class="px-3 py-1 rounded-full text-xs font-semibold status-${a.status}">${a.status.charAt(0).toUpperCase()+a.status.slice(1)}</span>
-            </div>
-        </div>`;
-    }).join('');
-    $('staffPaginationInfo').textContent = `Showing ${start+1}-${Math.min(start+STAFF_PER_PAGE,total)} of ${total}`;
-    renderPages(pages, 'staffPaginationBtns', 'goStaffPage', staffPage);
-}
-
-function renderPages(total, containerId, fn, current) {
-    if (total<=1) { $(containerId).innerHTML=''; return; }
-    let h = `<button onclick="${fn}(${current-1})" ${current===1?'disabled':''} class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 text-sm"><i class="fas fa-chevron-left"></i></button>`;
-    for (let i=1;i<=total;i++) {
-        if (i===1||i===total||(i>=current-1&&i<=current+1))
-            h += `<button onclick="${fn}(${i})" class="px-3 py-1 border ${i===current?'bg-emerald-600 text-white border-emerald-600':'border-gray-300 hover:bg-gray-50'} rounded text-sm min-w-[32px]">${i}</button>`;
-        else if (i===current-2||i===current+2) h += `<span class="px-2 text-gray-400">...</span>`;
-    }
-    h += `<button onclick="${fn}(${current+1})" ${current===total?'disabled':''} class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 text-sm"><i class="fas fa-chevron-right"></i></button>`;
-    $(containerId).innerHTML = h;
-}
-
-function renderActivityLog() {
-    const q = $('logSearchInput').value.trim().toLowerCase();
-    const f = $('logActionFilter').value;
-    const filtered = allLogs.filter(l =>
-        (f==='all'||l.action===f) &&
-        (!q||(l.staff_email&&l.staff_email.toLowerCase().includes(q))||
-              (l.detail&&l.detail.toLowerCase().includes(q))));
-    $('activityLogList').innerHTML = filtered.map(l => `
-        <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border-l-4 log-${l.action}">
-            <div class="flex-1">
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="font-medium text-sm">${sanitize(l.staff_email)}</span>
-                    <span class="px-2 py-0.5 bg-gray-200 text-gray-700 rounded text-xs capitalize">${l.action.replace('_',' ')}</span>
-                </div>
-                <p class="text-sm text-gray-600">${sanitize(l.detail)}</p>
-                <p class="text-xs text-gray-400 mt-1">${fmtDate(l.created_at)} • ${new Date(l.created_at).toLocaleTimeString()}</p>
-            </div>
-        </div>`).join('') || '<p class="text-center text-gray-500 py-8">No activity logs found</p>';
-}
-
-// ==================== FILTERS ====================
-function filterApplications() {
-    currentPage = 1;
-    $('clearSearchBtn').classList.toggle('hidden', !$('searchInput').value.trim());
-    renderApplicationsGrid();
-}
-function filterStaffApplications() { staffPage=1; renderStaffApplicants(); }
-function filterActivityLog() { renderActivityLog(); }
-function clearSearch() { $('searchInput').value=''; filterApplications(); }
-function goPage(p) { currentPage=p; renderApplicationsGrid(); scrollTo(0,0); }
-function goStaffPage(p) { staffPage=p; renderStaffApplicants(); scrollTo(0,0); }
-
-// ==================== NAVIGATION ====================
-function showSection(name) {
-    ['dashboard','applications','staff'].forEach(s => {
-        $(s+'Section').classList.add('hidden');
-        $('nav'+s.charAt(0).toUpperCase()+s.slice(1)).classList.remove('bg-white/10');
-    });
-    $(name+'Section').classList.remove('hidden');
-    $('nav'+name.charAt(0).toUpperCase()+name.slice(1)).classList.add('bg-white/10');
-    const titles = { dashboard:'Dashboard', applications:'Applications', staff:'Staff Portal' };
-    $('pageTitle').textContent = titles[name];
-    if (name==='dashboard') renderDashboard();
-    else if (name==='applications') renderApplicationsGrid();
-    else if (name==='staff') { currentStaffTab==='applicants' ? renderStaffApplicants() : loadActivityLog(); }
+function buildStaffTabs(tabs) {
+  const bar = $('staffTabBar');
+  bar.innerHTML = '';
+  if (tabs.includes('myapps')) {
+    bar.innerHTML += `<button class="tab-btn active" id="stab-myapps" onclick="switchStaffTab('myapps')">My Applications</button>`;
+  }
+  if (tabs.includes('applications')) {
+    bar.innerHTML += `<button class="tab-btn active" id="stab-applications" onclick="switchStaffTab('applications')">All Applications</button>`;
+    bar.innerHTML += `<button class="tab-btn" id="stab-log" onclick="switchStaffTab('log')">Activity Log</button>`;
+  }
 }
 
 function switchStaffTab(tab) {
-    currentStaffTab = tab;
-    const active = 'px-6 py-2 rounded-md text-sm font-medium bg-white text-emerald-700 shadow-sm';
-    const inactive = 'px-6 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-800';
-    $('tabApplicants').className = tab==='applicants' ? active : inactive;
-    $('tabLog').className        = tab==='log'        ? active : inactive;
-    $('applicantsTab').classList.toggle('hidden', tab!=='applicants');
-    $('logTab').classList.toggle('hidden', tab!=='log');
-    tab==='applicants' ? renderStaffApplicants() : loadActivityLog();
+  $('staffAppsTab').classList.add('hidden');
+  $('allApplicantsTab').classList.add('hidden');
+  $('activityLogTab').classList.add('hidden');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+  if (tab === 'myapps') {
+    $('staffAppsTab').classList.remove('hidden');
+    $('stab-myapps')?.classList.add('active');
+    renderStaffAppList();
+  } else if (tab === 'applications') {
+    $('allApplicantsTab').classList.remove('hidden');
+    $('stab-applications')?.classList.add('active');
+    renderAdminAppList();
+  } else if (tab === 'log') {
+    $('activityLogTab').classList.remove('hidden');
+    $('stab-log')?.classList.add('active');
+    loadLogs();
+  }
 }
 
-// ==================== NEW APPLICATION ====================
-function openNewAppModal() {
-    $('newAppModal').classList.remove('hidden');
-    tempUploadedDocs = [];
-    renderDocList();
-    $('newAppName').value = $('newAppEmail').value = $('newAppPhone').value = '';
-    $('newAppPackage').value = '';
-    $('newAppError').classList.add('hidden');
-}
-function closeNewAppModal() { $('newAppModal').classList.add('hidden'); tempUploadedDocs=[]; }
-function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-active'); }
-function handleDragLeave(e) { e.currentTarget.classList.remove('drag-active'); }
-function handleDrop(e) { e.preventDefault(); e.currentTarget.classList.remove('drag-active'); addFiles(Array.from(e.dataTransfer.files)); }
-function handleNewAppDocs(e) { addFiles(Array.from(e.target.files)); }
-
-function addFiles(files) {
-    const valid = ['.pdf','.jpg','.jpeg','.png','.doc','.docx'];
-    tempUploadedDocs.push(...files.filter(f => valid.includes('.'+f.name.split('.').pop().toLowerCase()) && f.size<=10*1024*1024));
-    renderDocList();
+function switchUserTab(tab) {
+  currentUserTab = tab;
+  $('userApplicantsTab').classList.toggle('hidden', tab !== 'applicants');
+  $('userStaffTab').classList.toggle('hidden', tab !== 'staff');
+  $('tabApplicants').classList.toggle('active', tab === 'applicants');
+  $('tabStaffList').classList.toggle('active', tab === 'staff');
+  if (tab === 'applicants') renderUserList();
+  else renderStaffList();
 }
 
-function renderDocList() {
-    $('newAppDocsList').innerHTML = tempUploadedDocs.map((f,i) => `
-        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div class="flex items-center gap-3">
-                <i class="fas fa-file text-emerald-600"></i>
-                <div>
-                    <p class="text-sm font-medium truncate max-w-[200px]">${sanitize(f.name)}</p>
-                    <p class="text-xs text-gray-500">${(f.size/1024/1024).toFixed(2)} MB</p>
-                </div>
-            </div>
-            <button onclick="removeDoc(${i})" class="text-red-500 hover:text-red-700 p-1"><i class="fas fa-times"></i></button>
-        </div>`).join('') || '<p class="text-sm text-gray-400 italic">No files selected</p>';
-}
+// =========================================================
+//  DATA LOADING
+// =========================================================
+async function loadApps() {
+  let q = sb.from('applications').select('*').order('created_at', { ascending: false });
+  if (CP.role === 'applicant') q = q.eq('user_id', CU.id);
+  else if (CP.role === 'staff') q = q.eq('assigned_staff_id', CU.id);
 
-function removeDoc(i) { tempUploadedDocs.splice(i,1); renderDocList(); }
+  const { data, error } = await q;
+  if (error) { toast('Failed to load applications: ' + error.message, 'error'); return; }
+  allApps = data || [];
 
-async function createApplication() {
-    const name = $('newAppName').value.trim();
-    const email = $('newAppEmail').value.trim();
-    const phone = $('newAppPhone').value.trim();
-    const pkg   = $('newAppPackage').value;
-
-    if (!name||!email||!phone||!pkg) {
-        $('newAppError').textContent = 'Please fill in all required fields';
-        $('newAppError').classList.remove('hidden');
-        return;
+  // Enrich with profile data for staff/admin
+  if ((CP.role === 'admin' || CP.role === 'staff') && allApps.length) {
+    const ids = [...new Set(allApps.map(a => a.user_id).filter(Boolean))];
+    const { data: profs } = await sb.from('profiles').select('id,full_name,email,referral_code,referred_by_code,role').in('id', ids);
+    if (profs?.length) {
+      const map = {};
+      profs.forEach(p => { map[p.id] = p; });
+      allApps = allApps.map(a => ({ ...a, _profile: map[a.user_id] || null }));
     }
-    const btn = $('submitNewAppBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+  }
+}
 
-    try {
-        const { data: app, error } = await supabase.from('applications')
-            .insert([{ user_id:currentUser.id, applicant_name:name, email, phone, package:pkg, status:'pending' }])
-            .select().single();
-        if (error) throw error;
+async function loadStaff() {
+  const { data } = await sb.from('profiles').select('id,full_name,email,role').in('role', ['staff','admin']);
+  allStaff = data || [];
+}
 
-        for (const f of tempUploadedDocs) {
-            const path = `${app.id}/${Date.now()}_${f.name}`;
-            const { error: ue } = await supabase.storage.from('documents').upload(path, f);
-            if (ue) continue;
-            await supabase.from('application_documents').insert([{
-                application_id:app.id, document_type:f.name.split('.').pop().toLowerCase(),
-                file_name:f.name, file_path:path, file_size:f.size, uploaded_by:currentUser.id
-            }]);
+async function loadAllUsers() {
+  const { data } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
+  allUsers = data || [];
+}
+
+async function loadLogs() {
+  const { data } = await sb.from('activity_logs').select('*').order('created_at', { ascending: false }).limit(200);
+  allLogs = data || [];
+  renderLogList();
+}
+
+// =========================================================
+//  LOG
+// =========================================================
+async function logAct(action, appId, detail) {
+  try {
+    await sb.from('activity_logs').insert([{
+      staff_user_id: CU.id, staff_email: CU.email,
+      application_id: appId || null, action, detail
+    }]);
+  } catch(e) { console.warn('Log failed', e); }
+}
+
+// =========================================================
+//  NAVIGATION
+// =========================================================
+function showSection(name) {
+  ['dashboard','applications','staff','users'].forEach(s => {
+    const el = $(s+'Section');
+    if (el) el.classList.add('hidden');
+    const nav = $('nav'+s.charAt(0).toUpperCase()+s.slice(1));
+    if (nav) nav.classList.remove('active');
+  });
+
+  const sect = $(name+'Section');
+  if (sect) sect.classList.remove('hidden');
+  const nav = $('nav'+name.charAt(0).toUpperCase()+name.slice(1));
+  if (nav) nav.classList.add('active');
+
+  const titles = { dashboard:'Dashboard', applications:'Applications', staff:'Staff Portal', users:'User Management' };
+  $('pageTitle').textContent = titles[name] || name;
+
+  if (name === 'dashboard')    renderDashboard();
+  if (name === 'applications') renderAppList();
+  if (name === 'staff') {
+    if (CP.role === 'admin') switchStaffTab('applications');
+    else switchStaffTab('myapps');
+  }
+  if (name === 'users') { switchUserTab('applicants'); renderUserList(); }
+}
+
+// =========================================================
+//  DASHBOARD
+// =========================================================
+function renderDashboard() {
+  const total    = allApps.length;
+  const approved = allApps.filter(a => a.status === 'approved').length;
+  const pending  = allApps.filter(a => a.status === 'pending').length;
+  const rejected = allApps.filter(a => a.status === 'rejected').length;
+  const review   = allApps.filter(a => a.status === 'review').length;
+
+  const active = pending + review;
+  $('heroSub').textContent = `${active} active application${active !== 1 ? 's' : ''}`;
+
+  const rate = total > 0 ? Math.round(approved / total * 100) : 0;
+  const circ = 2 * Math.PI * 38;
+  const fill = circ - (rate / 100 * circ);
+  $('ringFill').setAttribute('stroke-dashoffset', fill);
+  $('ringPct').textContent = rate + '%';
+
+  const statsData = [
+    { label:'Total', val:total,    color:'#3b82f6', icon:'fa-folder', bg:'#eff6ff' },
+    { label:'Approved', val:approved, color:'#22c55e', icon:'fa-check-circle', bg:'#f0fdf4' },
+    { label:'Pending',  val:pending,  color:'#f59e0b', icon:'fa-clock', bg:'#fffbeb' },
+    { label:'Rejected', val:rejected, color:'#ef4444', icon:'fa-times-circle', bg:'#fef2f2' },
+  ];
+  $('statsGrid').innerHTML = statsData.map((s,i) => `
+    <div class="card stat-card fade-up" style="animation-delay:${i*.06}s;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="stat-icon" style="background:${s.bg};color:${s.color};"><i class="fas ${s.icon}"></i></div>
+        <span class="syne" style="font-size:1.75rem;font-weight:800;color:${s.color};">${s.val}</span>
+      </div>
+      <div>
+        <p style="font-size:.83rem;color:var(--muted);font-weight:500;">${s.label}</p>
+        <div class="stat-bar"><div class="stat-bar-fill" style="background:${s.color};width:${total>0?Math.round(s.val/total*100):0}%;"></div></div>
+      </div>
+    </div>`).join('');
+
+  $('recentList').innerHTML = allApps.slice(0, 5).map(a => `
+    <div class="app-row" onclick="openDetail('${a.id}')">
+      <div class="app-avatar">${san(a.applicant_name).charAt(0).toUpperCase()}</div>
+      <div style="flex:1;min-width:0;">
+        <p style="font-weight:600;font-size:.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${san(a.applicant_name)}</p>
+        <p style="font-size:.75rem;color:var(--muted);">${san(a.package)} · ${fmt(a.created_at)}</p>
+      </div>
+      <span class="badge badge-${a.status}">${a.status.charAt(0).toUpperCase()+a.status.slice(1)}</span>
+    </div>`).join('') || '<p style="color:var(--muted);font-size:.875rem;text-align:center;padding:20px;">No applications yet</p>';
+}
+
+// =========================================================
+//  APPLICATION LIST (Applicant)
+// =========================================================
+function getFilteredApps() {
+  const q = $('appSearch').value.trim().toLowerCase();
+  const s = $('appStatusFilter').value;
+  return allApps.filter(a =>
+    (s === 'all' || a.status === s) &&
+    (!q || a.applicant_name.toLowerCase().includes(q) ||
+           (a.email || '').toLowerCase().includes(q) ||
+           (a.phone || '').includes(q) ||
+           (a.package || '').toLowerCase().includes(q)));
+}
+
+function renderAppList() {
+  const filtered = getFilteredApps();
+  const total = filtered.length;
+  const start = (appPage - 1) * PER;
+  const items = filtered.slice(start, start + PER);
+  const pages = Math.ceil(total / PER);
+  const q = $('appSearch').value.trim();
+
+  $('appsCount').textContent = total;
+
+  if (!items.length) {
+    $('appList').innerHTML = '';
+    $('appEmpty').classList.remove('hidden');
+    $('appPagination').style.display = 'none';
+    return;
+  }
+  $('appEmpty').classList.add('hidden');
+  $('appPagination').style.display = 'flex';
+
+  $('appList').innerHTML = items.map(a => `
+    <div class="app-row" onclick="openDetail('${a.id}')">
+      <div style="font-size:.72rem;font-family:monospace;color:var(--muted);background:var(--surface);padding:4px 8px;border-radius:6px;white-space:nowrap;">#${sid(a.id)}</div>
+      <div class="app-avatar">${san(a.applicant_name).charAt(0).toUpperCase()}</div>
+      <div style="flex:1;min-width:0;">
+        <p style="font-weight:600;font-size:.875rem;">${hl(a.applicant_name, q)}</p>
+        <p style="font-size:.75rem;color:var(--muted);">${hl(a.package, q)} · ${fmt(a.created_at)}</p>
+      </div>
+      <span class="badge badge-${a.status}">${a.status.charAt(0).toUpperCase()+a.status.slice(1)}</span>
+      <i class="fas fa-chevron-right" style="color:var(--muted);font-size:.75rem;"></i>
+    </div>`).join('');
+
+  $('appPageInfo').textContent = `Showing ${start+1}–${Math.min(start+PER, total)} of ${total}`;
+  renderPagination('appPageBtns', pages, appPage, p => { appPage = p; renderAppList(); });
+}
+
+// Staff: my assigned apps
+function renderStaffAppList() {
+  const q = $('staffAppSearch').value.trim().toLowerCase();
+  const s = $('staffAppStatusFilter').value;
+  const filtered = allApps.filter(a =>
+    (s === 'all' || a.status === s) &&
+    (!q || a.applicant_name.toLowerCase().includes(q) ||
+           (a.email || '').toLowerCase().includes(q) ||
+           (a.package || '').toLowerCase().includes(q)));
+
+  $('staffAppsCount').textContent = filtered.length;
+  if (!filtered.length) { $('staffAppList').innerHTML = ''; $('staffAppEmpty').classList.remove('hidden'); return; }
+  $('staffAppEmpty').classList.add('hidden');
+
+  $('staffAppList').innerHTML = filtered.map(a => `
+    <div class="app-row" onclick="openDetail('${a.id}')">
+      <div style="font-size:.72rem;font-family:monospace;color:var(--muted);background:var(--surface);padding:4px 8px;border-radius:6px;">#${sid(a.id)}</div>
+      <div class="app-avatar">${san(a.applicant_name).charAt(0).toUpperCase()}</div>
+      <div style="flex:1;min-width:0;">
+        <p style="font-weight:600;font-size:.875rem;">${hl(a.applicant_name, q)}</p>
+        <p style="font-size:.75rem;color:var(--muted);">${(a._profile?.email || a.email || '')} · ${san(a.package)}</p>
+      </div>
+      <span style="font-size:.75rem;color:var(--muted);">${fmt(a.created_at)}</span>
+      <span class="badge badge-${a.status}">${a.status.charAt(0).toUpperCase()+a.status.slice(1)}</span>
+    </div>`).join('');
+}
+
+// Admin: all apps
+function renderAdminAppList() {
+  const q = $('adminAppSearch').value.trim().toLowerCase();
+  const s = $('adminAppStatusFilter').value;
+  const filtered = allApps.filter(a => {
+    const p = a._profile || {};
+    return (s === 'all' || a.status === s) &&
+      (!q || a.applicant_name.toLowerCase().includes(q) ||
+             (a.email || '').toLowerCase().includes(q) ||
+             (p.email || '').toLowerCase().includes(q) ||
+             (a.package || '').toLowerCase().includes(q));
+  });
+
+  const total = filtered.length;
+  const start = (adminPage - 1) * PER;
+  const items = filtered.slice(start, start + PER);
+  const pages = Math.ceil(total / PER);
+
+  $('adminAppsCount').textContent = total;
+  if (!items.length) { $('adminAppList').innerHTML = ''; $('adminAppEmpty').classList.remove('hidden'); $('adminAppPagination').style.display='none'; return; }
+  $('adminAppEmpty').classList.add('hidden');
+  $('adminAppPagination').style.display = 'flex';
+
+  $('adminAppList').innerHTML = items.map(a => {
+    const p = a._profile || {};
+    const assignedStaff = allStaff.find(s => sstr(s.id) === sstr(a.assigned_staff_id));
+    return `
+    <div class="app-row" onclick="openDetail('${a.id}')">
+      <div style="font-size:.72rem;font-family:monospace;color:var(--muted);background:var(--surface);padding:4px 8px;border-radius:6px;">#${sid(a.id)}</div>
+      <div class="app-avatar">${san(a.applicant_name).charAt(0).toUpperCase()}</div>
+      <div style="flex:1;min-width:0;">
+        <p style="font-weight:600;font-size:.875rem;">${hl(a.applicant_name, q)}</p>
+        <p style="font-size:.75rem;color:var(--muted);">${p.email || a.email || ''} · ${hl(a.package, q)}</p>
+      </div>
+      ${assignedStaff ? `<span style="font-size:.72rem;background:#e0f2fe;color:#075985;padding:3px 8px;border-radius:99px;white-space:nowrap;">${san(assignedStaff.full_name)}</span>` : ''}
+      <span style="font-size:.75rem;color:var(--muted);white-space:nowrap;">${fmt(a.created_at)}</span>
+      <span class="badge badge-${a.status}">${a.status.charAt(0).toUpperCase()+a.status.slice(1)}</span>
+    </div>`;
+  }).join('');
+
+  $('adminAppPageInfo').textContent = `Showing ${start+1}–${Math.min(start+PER, total)} of ${total}`;
+  renderPagination('adminAppPageBtns', pages, adminPage, p => { adminPage = p; renderAdminAppList(); });
+}
+
+// =========================================================
+//  USER MANAGEMENT (Admin)
+// =========================================================
+function renderUserList() {
+  const q = ($('userSearch')?.value || '').trim().toLowerCase();
+  const applicants = allUsers.filter(u => u.role === 'applicant' &&
+    (!q || (u.full_name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q)));
+  $('applicantCount').textContent = applicants.length;
+  $('applicantList').innerHTML = applicants.map(u => buildUserRow(u)).join('') ||
+    '<p style="color:var(--muted);text-align:center;padding:32px;">No applicants found</p>';
+}
+
+function renderStaffList() {
+  const q = ($('staffSearch')?.value || '').trim().toLowerCase();
+  const members = allUsers.filter(u => (u.role === 'staff' || u.role === 'admin') &&
+    (!q || (u.full_name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q)));
+  $('staffCount').textContent = members.length;
+  $('staffMemberList').innerHTML = members.map(u => buildUserRow(u)).join('') ||
+    '<p style="color:var(--muted);text-align:center;padding:32px;">No staff members found</p>';
+}
+
+function buildUserRow(u) {
+  const assignedCount = allApps.filter(a => sstr(a.user_id) === sstr(u.id)).length;
+  return `
+  <div class="user-row">
+    <div style="width:40px;height:40px;border-radius:12px;background:${u.role==='admin'?'#ede9fe':u.role==='staff'?'#e0f2fe':'#d1fae5'};color:${u.role==='admin'?'#7c3aed':u.role==='staff'?'#0369a1':'#047857'};display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Syne',sans-serif;flex-shrink:0;">
+      ${san(u.full_name||'?').charAt(0).toUpperCase()}
+    </div>
+    <div style="flex:1;min-width:0;">
+      <p style="font-weight:600;font-size:.875rem;">${san(u.full_name)}</p>
+      <p style="font-size:.75rem;color:var(--muted);">${san(u.email)} · ${assignedCount} application${assignedCount!==1?'s':''}</p>
+    </div>
+    <span class="badge badge-${u.role}">${u.role.charAt(0).toUpperCase()+u.role.slice(1)}</span>
+    <button onclick="openUserProfile('${u.id}')" class="btn btn-ghost" style="padding:6px 12px;font-size:.78rem;"><i class="fas fa-eye"></i></button>
+  </div>`;
+}
+
+async function openUserProfile(userId) {
+  const u = allUsers.find(u => sstr(u.id) === sstr(userId));
+  if (!u) return;
+
+  const userApps = allApps.filter(a => sstr(a.user_id) === sstr(userId));
+  const { data: pNotes } = await sb.from('profile_notes')
+    .select('*, author:author_id(full_name,role)')
+    .eq('profile_id', userId).order('created_at', { ascending: true });
+
+  $('upTitle').textContent = (u.full_name || u.email) + ' — Profile';
+  $('upBody').innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:22px;padding:18px;background:var(--surface);border-radius:14px;">
+      <div style="width:56px;height:56px;border-radius:16px;background:${u.role==='admin'?'#ede9fe':u.role==='staff'?'#e0f2fe':'#d1fae5'};color:${u.role==='admin'?'#7c3aed':u.role==='staff'?'#0369a1':'#047857'};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.4rem;font-family:'Syne',sans-serif;">
+        ${san(u.full_name||'?').charAt(0).toUpperCase()}
+      </div>
+      <div>
+        <h4 class="syne" style="font-size:1.1rem;font-weight:700;">${san(u.full_name)}</h4>
+        <p style="font-size:.83rem;color:var(--muted);">${san(u.email)}</p>
+        <div style="margin-top:4px;display:flex;gap:6px;align-items:center;">
+          <span class="badge badge-${u.role}">${u.role}</span>
+          <span style="font-size:.75rem;color:var(--muted);">Since ${fmt(u.created_at)}</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+      <div style="background:var(--surface);border-radius:12px;padding:14px;">
+        <p style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;">Referral Code</p>
+        <code style="font-family:monospace;font-weight:700;color:var(--brand);font-size:1rem;">${san(u.referral_code || '—')}</code>
+      </div>
+      <div style="background:var(--surface);border-radius:12px;padding:14px;">
+        <p style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;">Applications</p>
+        <span class="syne" style="font-size:1.2rem;font-weight:700;color:var(--brand);">${userApps.length}</span>
+      </div>
+    </div>
+
+    <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+      <h5 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:12px;">Notes from Admin</h5>
+      <div id="pNotesContainer" style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;margin-bottom:12px;">
+        ${(pNotes||[]).map(n => `
+          <div class="note-bubble ${n.author?.role||'applicant'}">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <span style="font-size:.75rem;font-weight:600;color:var(--muted);">${san(n.author?.full_name||'Admin')}</span>
+              <span style="font-size:.72rem;color:var(--muted);">${fmt(n.created_at)}</span>
+            </div>
+            <p style="font-size:.83rem;">${san(n.content)}</p>
+          </div>`).join('') || '<p style="font-size:.83rem;color:var(--muted);text-align:center;padding:12px;">No notes yet</p>'}
+      </div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="pNoteInput" class="inp inp-sm" style="flex:1;" placeholder="Add a note about this user…">
+        <button onclick="addProfileNote('${userId}')" class="btn btn-primary" style="padding:8px 14px;font-size:.8rem;"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
+  `;
+
+  $('upFooter').innerHTML = `
+    <button onclick="closeUserModal()" class="btn btn-ghost">Close</button>
+    ${u.role === 'applicant' ? `<button onclick="promoteToStaff('${userId}')" class="btn btn-secondary" style="font-size:.83rem;"><i class="fas fa-user-shield"></i> Promote to Staff</button>` : ''}
+    ${u.role === 'staff' ? `<button onclick="demoteToApplicant('${userId}')" class="btn btn-ghost" style="font-size:.83rem;color:var(--muted);"><i class="fas fa-user-minus"></i> Demote to Applicant</button>` : ''}
+    ${u.role !== 'admin' ? `<button onclick="deleteAccount('${userId}')" class="btn btn-danger" style="font-size:.83rem;"><i class="fas fa-trash-alt"></i> Delete Account</button>` : ''}
+  `;
+
+  $('userProfileModal').classList.remove('hidden');
+}
+
+function closeUserModal() { $('userProfileModal').classList.add('hidden'); }
+
+async function addProfileNote(userId) {
+  const content = $('pNoteInput').value.trim();
+  if (!content) return;
+  const { error } = await sb.from('profile_notes').insert([{ profile_id: userId, author_id: CU.id, content }]);
+  if (error) { toast('Error: ' + error.message, 'error'); return; }
+  toast('Note added');
+  await logAct('note', null, `Added note to user profile`);
+  openUserProfile(userId);
+}
+
+async function promoteToStaff(userId) {
+  if (!confirm('Promote this applicant to Staff?')) return;
+  const { error } = await sb.from('profiles').update({ role: 'staff' }).eq('id', userId);
+  if (error) { toast('Error: ' + error.message, 'error'); return; }
+  toast('User promoted to staff');
+  await logAct('promote', null, `Promoted user ${userId} to staff`);
+  await loadAllUsers();
+  await loadStaff();
+  closeUserModal();
+  renderUserList();
+}
+
+async function demoteToApplicant(userId) {
+  if (!confirm('Demote this staff member to Applicant?')) return;
+  const { error } = await sb.from('profiles').update({ role: 'applicant' }).eq('id', userId);
+  if (error) { toast('Error: ' + error.message, 'error'); return; }
+  toast('User demoted to applicant');
+  await logAct('promote', null, `Demoted user ${userId} to applicant`);
+  await loadAllUsers();
+  await loadStaff();
+  closeUserModal();
+  renderUserList();
+}
+
+async function deleteAccount(userId) {
+  const u = allUsers.find(u => sstr(u.id) === sstr(userId));
+  if (!confirm(`Delete ${u?.full_name || 'this user'}'s account? This cannot be undone.`)) return;
+  await logAct('delete', null, `Deleted account for user ${userId}`);
+  // Delete their applications
+  const userApps = allApps.filter(a => sstr(a.user_id) === sstr(userId));
+  for (const a of userApps) {
+    const { data: docs } = await sb.from('application_documents').select('file_path').eq('application_id', a.id);
+    for (const d of docs || []) await sb.storage.from('documents').remove([d.file_path]);
+    await sb.from('applications').delete().eq('id', a.id);
+  }
+  await sb.from('profiles').delete().eq('id', userId);
+  toast('Account deleted');
+  await loadAllUsers();
+  await loadApps();
+  closeUserModal();
+  renderUserList();
+}
+
+// =========================================================
+//  APPLICATION DETAIL MODAL
+// =========================================================
+async function openDetail(appId) {
+  selAppId = String(appId);
+  const app = allApps.find(a => String(a.id) === selAppId);
+  if (!app) return;
+
+  if (CP.role !== 'applicant') {
+    await logAct('view', selAppId, `Viewed application #${sid(selAppId)}`);
+  }
+
+  const isAdmin = CP.role === 'admin';
+  const isStaff = CP.role === 'staff';
+  const isOwner = CP.role === 'applicant' && String(app.user_id) === String(CU.id);
+  const canEdit = isAdmin || (isStaff && String(app.assigned_staff_id) === String(CU.id)) || isOwner;
+
+  $('detailTitle').textContent    = `#${sid(app.id)} — ${app.applicant_name}`;
+  $('detailSubtitle').textContent = `Submitted ${fmt(app.created_at)}`;
+  $('detailStatusBadge').className   = `badge badge-${app.status}`;
+  $('detailStatusBadge').textContent = app.status.charAt(0).toUpperCase() + app.status.slice(1);
+
+  // Info view
+  $('detailViewGrid').innerHTML = `
+    <div><p style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:4px;">Applicant Name</p><p style="font-weight:600;">${san(app.applicant_name)}</p></div>
+    <div><p style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:4px;">Email</p><p style="font-weight:600;">${san(app.email)}</p></div>
+    <div><p style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:4px;">Phone</p><p style="font-weight:600;">${san(app.phone || '—')}</p></div>
+    <div><p style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:4px;">Package</p><p style="font-weight:600;">${san(app.package)}</p></div>`;
+
+  const refLocked = isOwner && !!CP.referred_by_code;
+  if (canEdit) {
+    $('detailEditGrid').innerHTML = `
+      <div><label class="lbl">Full Name</label><input id="eN" type="text" class="inp inp-sm" value="${san(app.applicant_name)}"></div>
+      <div><label class="lbl">Email</label><input id="eE" type="email" class="inp inp-sm" value="${san(app.email)}"></div>
+      <div><label class="lbl">Phone</label><input id="eP" type="tel" class="inp inp-sm" value="${san(app.phone||'')}"></div>
+      <div><label class="lbl">Package</label>
+        <select id="ePkg" class="inp inp-sm">
+          ${['Canada PR','USA Skilled Worker','Student Visa','UK Work Permit','Australia PR','Schengen Visa','Other'].map(p=>`<option ${app.package===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      ${isOwner ? `<div style="grid-column:1/-1;">
+        <label class="lbl">Referral Code ${refLocked ? '<span style="color:#ef4444;text-transform:none;font-weight:400;">(locked — already applied)</span>' : '<span style="color:var(--muted);text-transform:none;font-weight:400;">(one-time use)</span>'}</label>
+        <input id="eRef" type="text" class="inp inp-sm" style="text-transform:uppercase;font-family:monospace;letter-spacing:.1em;" maxlength="8"
+          value="${san(CP.referred_by_code||'')}" ${refLocked?'disabled':''} placeholder="${refLocked?'Already applied and locked':'Enter referral code (optional)'}">
+      </div>` : ''}`;
+    $('detailEditBtn').style.display = 'inline-flex';
+    $('detailEditBtn').textContent = 'Edit';
+    $('detailEditBtn').innerHTML = '<i class="fas fa-pen" style="font-size:.75rem;"></i> Edit';
+  } else {
+    $('detailEditBtn').style.display = 'none';
+  }
+
+  // Reset to view mode
+  cancelDetailEdit();
+
+  // Assign section (admin only)
+  if (isAdmin) {
+    $('assignSection').classList.remove('hidden');
+    $('assignSelect').innerHTML = '<option value="">— Unassigned —</option>' +
+      allStaff.map(s => `<option value="${s.id}" ${String(s.id)===String(app.assigned_staff_id)?'selected':''}>${san(s.full_name)} (${s.role})</option>`).join('');
+  } else {
+    $('assignSection').classList.add('hidden');
+  }
+
+  // Status section (staff/admin)
+  if (isAdmin || isStaff) {
+    $('statusSection').classList.remove('hidden');
+    document.querySelectorAll('.sts-btn').forEach(b => {
+      b.style.outline = b.dataset.s === app.status ? '2px solid #0f1f17' : 'none';
+      b.style.outlineOffset = '2px';
+    });
+  } else {
+    $('statusSection').classList.add('hidden');
+  }
+
+  // Documents
+  $('uploadInput').value = '';
+  (isAdmin || isStaff || isOwner) ? $('uploadBtn').classList.remove('hidden') : $('uploadBtn').classList.add('hidden');
+  await refreshDocs();
+
+  // Notes
+  await refreshNotes(isOwner, isStaff, isAdmin);
+
+  // Referral info
+  const rp = app._profile || CP;
+  $('detailRefCode').textContent = rp.referral_code || CP.referral_code || '—';
+  const refBy = rp.referred_by_code || CP.referred_by_code;
+  if (refBy) {
+    referrerCode = refBy;
+    $('referredByRow').classList.remove('hidden');
+  } else {
+    $('referredByRow').classList.add('hidden');
+    referrerCode = null;
+  }
+
+  $('deleteAppBtn').classList.toggle('hidden', !(isAdmin || isStaff));
+  $('detailModal').classList.remove('hidden');
+}
+
+function toggleDetailEdit() {
+  editMode = !editMode;
+  $('detailViewGrid').classList.toggle('hidden', editMode);
+  $('detailEditGrid').classList.toggle('hidden', !editMode);
+  $('detailSaveRow').classList.toggle('hidden', !editMode);
+  $('detailEditBtn').innerHTML = editMode ? '<i class="fas fa-times" style="font-size:.75rem;"></i> Cancel' : '<i class="fas fa-pen" style="font-size:.75rem;"></i> Edit';
+}
+
+function cancelDetailEdit() {
+  editMode = false;
+  $('detailViewGrid').classList.remove('hidden');
+  $('detailEditGrid').classList.add('hidden');
+  $('detailSaveRow').classList.add('hidden');
+  if ($('detailEditBtn').style.display !== 'none') {
+    $('detailEditBtn').innerHTML = '<i class="fas fa-pen" style="font-size:.75rem;"></i> Edit';
+  }
+}
+
+async function saveDetailEdits() {
+  const btn = $('detailSaveBtn');
+  setBtnLoading(btn, true);
+  try {
+    const { error } = await sb.from('applications').update({
+      applicant_name: $('eN').value.trim(),
+      email: $('eE').value.trim(),
+      phone: $('eP').value.trim(),
+      package: $('ePkg').value
+    }).eq('id', selAppId);
+    if (error) { toast('Save error: ' + error.message, 'error'); return; }
+
+    // Referral code (applicant only, one-time)
+    if (CP.role === 'applicant' && !CP.referred_by_code) {
+      const refEl = $('eRef');
+      if (refEl) {
+        const code = refEl.value.trim().toUpperCase();
+        if (code) {
+          const { data: ref } = await sb.from('profiles').select('id').eq('referral_code', code).single();
+          if (!ref) { toast('Invalid referral code', 'error'); return; }
+          if (sstr(ref.id) === sstr(CU.id)) { toast('Cannot use your own referral code', 'error'); return; }
+          const { error: re } = await sb.from('profiles').update({ referred_by_code: code }).eq('id', CU.id);
+          if (!re) { CP.referred_by_code = code; toast('Referral code applied and locked!'); }
         }
-        await logAct('upload', app.id, `Created application for ${name}`);
-        toast('Application submitted!');
-        closeNewAppModal();
-        await loadAllApplications();
-        if (!$('dashboardSection').classList.contains('hidden')) renderDashboard();
-        else if (!$('applicationsSection').classList.contains('hidden')) renderApplicationsGrid();
-    } catch(e) {
-        $('newAppError').textContent = e.message;
-        $('newAppError').classList.remove('hidden');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<span>Submit Application</span><i class="fas fa-paper-plane"></i>';
+      }
     }
+
+    await logAct('edit', selAppId, `Updated application #${sid(selAppId)}`);
+    toast('Changes saved!');
+    await loadApps();
+    openDetail(selAppId);
+  } finally { setBtnLoading(btn, false); }
 }
 
-// ==================== DETAIL MODAL ====================
-async function openApplicationModal(appId) {
-    selectedAppId = appId;
-    const app = allApplications.find(a => a.id===appId);
-    if (!app) return;
-
-    if (currentProfile.role !== 'applicant') await logAct('view', appId, `Viewed #${appId.toString().slice(-4)}`);
-
-    $('detailTitle').textContent   = `#${app.id.toString().slice(-4).toUpperCase()} — ${app.applicant_name}`;
-    $('detailSubtitle').textContent = `Submitted on ${fmtDate(app.created_at)}`;
-
-    const statusEl = $('detailStatus');
-    statusEl.textContent = app.status.charAt(0).toUpperCase()+app.status.slice(1);
-    statusEl.className = `px-3 py-1 rounded-full text-xs font-semibold status-${app.status}`;
-
-    const isStaff   = ['staff','admin'].includes(currentProfile.role);
-    const isAdmin   = currentProfile.role === 'admin';
-    const isOwner   = currentProfile.role === 'applicant' && app.user_id === currentUser.id;
-    const canEdit   = isAdmin || (isStaff && app.assigned_staff_id===currentUser.id) || isOwner;
-    const refLocked = isOwner && !!currentProfile.referred_by_code;
-
-    // Info section
-    if (canEdit) {
-        $('appInfoView').classList.add('hidden');
-        $('appInfoEdit').classList.remove('hidden');
-        $('appInfoEdit').innerHTML = `
-            <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Applicant Name</label>
-                <input type="text" id="editName" value="${sanitize(app.applicant_name)}"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Email</label>
-                <input type="email" id="editEmail" value="${sanitize(app.email)}"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Phone</label>
-                <input type="tel" id="editPhone" value="${sanitize(app.phone||'')}"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Package</label>
-                <select id="editPackage" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                    ${['Canada PR','USA Skilled Worker','Student Visa','UK Work Permit','Australia PR','Schengen Visa','Other']
-                        .map(p=>`<option ${app.package===p?'selected':''}>${p}</option>`).join('')}
-                </select>
-            </div>
-            ${isOwner ? `<div class="md:col-span-2">
-                <label class="block text-xs font-medium text-gray-600 mb-1">
-                    Referral Code
-                    <span class="ml-1 text-xs ${refLocked?'text-red-500':'text-emerald-600'}">
-                        ${refLocked?'(already used — locked)':'(one-time use only)'}
-                    </span>
-                </label>
-                <input type="text" id="editReferralCode" value="${sanitize(currentProfile.referred_by_code||'')}"
-                    maxlength="8" style="text-transform:uppercase" ${refLocked?'disabled':''}
-                    placeholder="${refLocked?'Already set and locked':'Enter referral code (optional)'}"
-                    class="w-full px-3 py-2 border ${refLocked?'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed':'border-gray-300'} rounded-lg text-sm font-mono outline-none">
-            </div>` : ''}`;
-        $('editBtn').classList.remove('hidden');
-    } else {
-        $('appInfoView').classList.remove('hidden');
-        $('appInfoEdit').classList.add('hidden');
-        $('appInfoView').innerHTML = `
-            <div><p class="text-xs text-gray-500 mb-1">Applicant Name</p><p class="font-medium">${sanitize(app.applicant_name)}</p></div>
-            <div><p class="text-xs text-gray-500 mb-1">Email</p><p class="font-medium">${sanitize(app.email)}</p></div>
-            <div><p class="text-xs text-gray-500 mb-1">Phone</p><p class="font-medium">${sanitize(app.phone||'N/A')}</p></div>
-            <div><p class="text-xs text-gray-500 mb-1">Package</p><p class="font-medium">${sanitize(app.package)}</p></div>`;
-        $('editBtn').classList.add('hidden');
-    }
-
-    // Staff assign (admin only)
-    if (isAdmin) {
-        $('staffAssignSection').classList.remove('hidden');
-        $('staffAssignSelect').innerHTML = '<option value="">Unassigned</option>' +
-            allStaffMembers.map(s => `<option value="${s.id}" ${s.id===app.assigned_staff_id?'selected':''}>${sanitize(s.full_name)} (${s.role})</option>`).join('');
-    } else {
-        $('staffAssignSection').classList.add('hidden');
-    }
-
-    // Status update (staff/admin only)
-    if (isStaff) {
-        $('statusUpdateSection').classList.remove('hidden');
-        document.querySelectorAll('.status-btn').forEach(b => {
-            b.classList.remove('ring-2','ring-offset-2','ring-emerald-500');
-            if (b.dataset.status===app.status) b.classList.add('ring-2','ring-offset-2','ring-emerald-500');
-        });
-    } else {
-        $('statusUpdateSection').classList.add('hidden');
-    }
-
-    // Documents
-    const docs = await loadDocuments(appId);
-    $('docCount').textContent = `(${docs.length})`;
-    $('documentsList').innerHTML = docs.map(d => `
-        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div class="flex items-center gap-3">
-                <i class="fas fa-file-${getIcon(d.document_type)} text-emerald-600"></i>
-                <div>
-                    <p class="text-sm font-medium">${sanitize(d.file_name)}</p>
-                    <p class="text-xs text-gray-500">${(d.file_size/1024).toFixed(1)} KB • ${fmtDate(d.created_at)}</p>
-                </div>
-            </div>
-            <div class="flex gap-2">
-                <button onclick="dlFile('${d.file_path}','${sanitize(d.file_name)}')" class="text-emerald-600 hover:text-emerald-700 p-2 hover:bg-emerald-50 rounded">
-                    <i class="fas fa-download"></i>
-                </button>
-                ${isStaff?`<button onclick="delDoc('${d.id}','${d.file_path}')" class="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded"><i class="fas fa-trash"></i></button>`:''}
-            </div>
-        </div>`).join('') || '<p class="text-sm text-gray-500 italic">No documents uploaded</p>';
-
-    (isStaff||isOwner) ? $('uploadZone').classList.remove('hidden') : $('uploadZone').classList.add('hidden');
-
-    // Notes — visible to everyone
-    const notes = await loadNotes(appId);
-    $('notesList').innerHTML = notes.length ? notes.map(n => `
-        <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
-            <div class="flex items-center justify-between mb-1">
-                <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${
-                    n.profiles?.role==='admin'?'bg-red-100 text-red-700':
-                    n.profiles?.role==='staff'?'bg-blue-100 text-blue-700':'bg-emerald-100 text-emerald-700'}">
-                    ${sanitize(n.profiles?.full_name)||'System'}
-                </span>
-                <span class="text-xs text-gray-400">${fmtDate(n.created_at)}</span>
-            </div>
-            <p class="text-sm text-gray-800 mt-1">${sanitize(n.content)}</p>
-        </div>`).join('') : '<p class="text-sm text-gray-500 italic text-center py-3">No notes yet</p>';
-
-    $('newNoteInput').placeholder = isOwner ? 'Send a message to staff...' : 'Add a note...';
-
-    // Referral
-    const rp = app.profiles || currentProfile;
-    $('detailReferralCode').textContent = rp.referral_code || currentProfile.referral_code || 'N/A';
-    const refBy = rp.referred_by_code || currentProfile.referred_by_code;
-    if (refBy) {
-        $('referredBySection').classList.remove('hidden');
-        $('referrerLink').dataset.code = refBy;
-    } else {
-        $('referredBySection').classList.add('hidden');
-    }
-
-    $('deleteAppBtn').classList.toggle('hidden', !isStaff);
-    $('detailModal').classList.remove('hidden');
-}
-
-function getIcon(t) {
-    if (t==='pdf') return 'pdf';
-    if (['jpg','jpeg','png'].includes(t)) return 'image';
-    if (['doc','docx'].includes(t)) return 'word';
-    return 'alt';
-}
-
-function closeModal() { $('detailModal').classList.add('hidden'); selectedAppId=null; }
-
-async function saveApplicationEdits() {
-    if (!selectedAppId) return;
-    const btn = $('editBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Saving...';
-
-    try {
-        const { error } = await supabase.from('applications').update({
-            applicant_name: $('editName').value.trim(),
-            email:  $('editEmail').value.trim(),
-            phone:  $('editPhone').value.trim(),
-            package: $('editPackage').value
-        }).eq('id', selectedAppId);
-
-        if (error) { toast('Error saving: '+error.message, 'error'); return; }
-
-        // One-time referral code
-        if (currentProfile.role==='applicant' && !currentProfile.referred_by_code) {
-            const inp = $('editReferralCode');
-            if (inp) {
-                const code = inp.value.trim().toUpperCase();
-                if (code) {
-                    const { data: ref } = await supabase.from('profiles').select('id').eq('referral_code',code).single();
-                    if (!ref) { toast('Invalid referral code','error'); return; }
-                    if (ref.id===currentUser.id) { toast('Cannot use your own referral code','error'); return; }
-                    const { error: re } = await supabase.from('profiles').update({ referred_by_code:code }).eq('id',currentUser.id);
-                    if (!re) { currentProfile.referred_by_code=code; toast('Referral code applied and locked!'); }
-                }
-            }
-        }
-
-        await logAct('edit', selectedAppId, 'Updated application details');
-        toast('Changes saved!');
-        await loadAllApplications();
-        openApplicationModal(selectedAppId);
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-save mr-1"></i> Save Changes';
-    }
-}
-
-async function updateApplicationStatus(status) {
-    if (!selectedAppId) return;
-    const app = allApplications.find(a=>a.id===selectedAppId);
-    const { error } = await supabase.from('applications').update({ status }).eq('id',selectedAppId);
-    if (error) { toast('Error updating status','error'); return; }
-    await logAct('status_update', selectedAppId, `Changed status from ${app.status} to ${status}`);
-    toast(`Status updated to ${status}`);
-    await loadAllApplications();
-    openApplicationModal(selectedAppId);
+async function updateStatus(status) {
+  const app = allApps.find(a => String(a.id) === selAppId);
+  const { error } = await sb.from('applications').update({ status }).eq('id', selAppId);
+  if (error) { toast('Error: ' + error.message, 'error'); return; }
+  await logAct('status_update', selAppId, `Changed status from ${app?.status} to ${status} on #${sid(selAppId)}`);
+  toast(`Status → ${status}`);
+  await loadApps();
+  openDetail(selAppId);
 }
 
 async function assignStaff() {
-    if (!selectedAppId) return;
-    const sid = $('staffAssignSelect').value;
-    const { error } = await supabase.from('applications').update({ assigned_staff_id:sid||null }).eq('id',selectedAppId);
-    if (error) { toast('Error assigning staff','error'); return; }
-    const sname = sid ? allStaffMembers.find(s=>s.id===sid)?.full_name||'Staff' : 'Unassigned';
-    await logAct('assign', selectedAppId, `Assigned to ${sname}`);
-    toast(`Assigned to ${sname}`);
-    await loadAllApplications();
-    openApplicationModal(selectedAppId);
+  const sid2 = $('assignSelect').value;
+  const { error } = await sb.from('applications').update({ assigned_staff_id: sid2 || null }).eq('id', selAppId);
+  if (error) { toast('Error: ' + error.message, 'error'); return; }
+  const sname = sid2 ? allStaff.find(s => sstr(s.id) === sstr(sid2))?.full_name || 'Staff' : 'nobody';
+  await logAct('assign', selAppId, `Assigned #${sid(selAppId)} to ${sname}`);
+  toast(`Assigned to ${sname}`);
+  await loadApps();
+  openDetail(selAppId);
 }
 
 async function deleteApplication() {
-    if (!selectedAppId) return;
-    if (!confirm('Delete this application? This cannot be undone.')) return;
-    await logAct('delete', selectedAppId, `Deleted #${selectedAppId.toString().slice(-4)}`);
-    const { data: docs } = await supabase.from('application_documents').select('file_path').eq('application_id',selectedAppId);
-    for (const d of docs||[]) await supabase.storage.from('documents').remove([d.file_path]);
-    const { error } = await supabase.from('applications').delete().eq('id',selectedAppId);
-    if (error) { toast('Error deleting','error'); return; }
-    toast('Application deleted');
-    closeModal();
-    await loadAllApplications();
-    if (!$('dashboardSection').classList.contains('hidden')) renderDashboard();
-    if (!$('applicationsSection').classList.contains('hidden')) renderApplicationsGrid();
-    if (!$('staffSection').classList.contains('hidden')) renderStaffApplicants();
+  if (!confirm('Delete this application? This cannot be undone.')) return;
+  await logAct('delete', selAppId, `Deleted application #${sid(selAppId)}`);
+  const { data: docs } = await sb.from('application_documents').select('file_path').eq('application_id', selAppId);
+  for (const d of docs || []) await sb.storage.from('documents').remove([d.file_path]);
+  await sb.from('applications').delete().eq('id', selAppId);
+  toast('Application deleted');
+  closeDetailModal();
+  await loadApps();
+  renderDashboard();
+  if (!$('applicationsSection').classList.contains('hidden')) renderAppList();
+  if (!$('staffSection').classList.contains('hidden')) { CP.role==='admin' ? renderAdminAppList() : renderStaffAppList(); }
 }
 
-// ==================== DOCUMENTS ====================
-async function handleFileUpload(e) {
-    if (!selectedAppId) return;
-    const uploaded = [];
-    for (const f of Array.from(e.target.files)) {
-        const path = `${selectedAppId}/${Date.now()}_${f.name}`;
-        const { error } = await supabase.storage.from('documents').upload(path, f);
-        if (error) continue;
-        await supabase.from('application_documents').insert([{
-            application_id:selectedAppId, document_type:f.name.split('.').pop().toLowerCase(),
-            file_name:f.name, file_path:path, file_size:f.size, uploaded_by:currentUser.id
-        }]);
-        uploaded.push(f.name);
-    }
-    if (uploaded.length) {
-        await logAct('upload', selectedAppId, `Uploaded ${uploaded.length} file(s): ${uploaded.join(', ')}`);
-        toast('Files uploaded!');
-        openApplicationModal(selectedAppId);
-    }
-    e.target.value = '';
+function closeDetailModal() { $('detailModal').classList.add('hidden'); selAppId = null; editMode = false; }
+
+// =========================================================
+//  DOCUMENTS
+// =========================================================
+async function refreshDocs() {
+  const { data } = await sb.from('application_documents').select('*').eq('application_id', selAppId).order('created_at', { ascending: false });
+  const docs = data || [];
+  $('docCountBadge').textContent = `(${docs.length})`;
+  $('docList').innerHTML = docs.length ? docs.map(d => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface);border-radius:10px;border:1px solid var(--border);">
+      <i class="fas fa-file-${getFileIcon(d.document_type)}" style="color:var(--brand-mid);font-size:1.1rem;flex-shrink:0;"></i>
+      <div style="flex:1;min-width:0;">
+        <p style="font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${san(d.file_name)}</p>
+        <p style="font-size:.72rem;color:var(--muted);">${(d.file_size/1024).toFixed(1)} KB · ${fmt(d.created_at)}</p>
+      </div>
+      <button onclick="downloadDoc('${d.file_path}','${san(d.file_name)}')" class="btn btn-ghost" style="padding:6px 10px;font-size:.75rem;"><i class="fas fa-download"></i></button>
+      ${CP.role === 'admin' || CP.role === 'staff' ? `<button onclick="deleteDoc('${d.id}','${d.file_path}')" class="btn btn-ghost" style="padding:6px 10px;font-size:.75rem;color:#ef4444;"><i class="fas fa-trash"></i></button>` : ''}
+    </div>`).join('') : '<p style="font-size:.83rem;color:var(--muted);padding:12px;text-align:center;">No documents uploaded</p>';
 }
 
-async function dlFile(path, name) {
-    const { data, error } = await supabase.storage.from('documents').download(path);
-    if (error) { toast('Download failed','error'); return; }
-    const url = URL.createObjectURL(data);
-    const a = document.createElement('a');
-    a.href=url; a.download=name;
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a); URL.revokeObjectURL(url);
+async function handleDocUpload(e) {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  const uploaded = [];
+  for (const f of files) {
+    const path = `${selAppId}/${Date.now()}_${f.name}`;
+    const { error } = await sb.storage.from('documents').upload(path, f);
+    if (error) continue;
+    await sb.from('application_documents').insert([{
+      application_id: selAppId, document_type: f.name.split('.').pop().toLowerCase(),
+      file_name: f.name, file_path: path, file_size: f.size, uploaded_by: CU.id
+    }]);
+    uploaded.push(f.name);
+  }
+  if (uploaded.length) {
+    await logAct('upload', selAppId, `Uploaded ${uploaded.length} file(s): ${uploaded.join(', ')}`);
+    toast(`${uploaded.length} file(s) uploaded`);
+    await refreshDocs();
+  }
+  e.target.value = '';
 }
 
-async function delDoc(id, path) {
-    if (!confirm('Delete this document?')) return;
-    await supabase.storage.from('documents').remove([path]);
-    await supabase.from('application_documents').delete().eq('id',id);
-    toast('Document deleted');
-    openApplicationModal(selectedAppId);
+async function downloadDoc(path, name) {
+  const { data, error } = await sb.storage.from('documents').download(path);
+  if (error) { toast('Download failed', 'error'); return; }
+  const url = URL.createObjectURL(data);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
-// ==================== NOTES ====================
+async function deleteDoc(id, path) {
+  if (!confirm('Delete this document?')) return;
+  await sb.storage.from('documents').remove([path]);
+  await sb.from('application_documents').delete().eq('id', id);
+  toast('Document deleted');
+  await refreshDocs();
+}
+
+function getFileIcon(ext) {
+  if (ext === 'pdf') return 'pdf';
+  if (['jpg','jpeg','png','gif','webp'].includes(ext)) return 'image';
+  if (['doc','docx'].includes(ext)) return 'word';
+  return 'alt';
+}
+
+// =========================================================
+//  NOTES
+// =========================================================
+async function refreshNotes(isOwner, isStaff, isAdmin) {
+  const { data } = await sb.from('notes')
+    .select('*, author:user_id(full_name,role)')
+    .eq('application_id', selAppId)
+    .order('created_at', { ascending: true });
+  const notes = data || [];
+
+  $('notesList').innerHTML = notes.length ? notes.map(n => `
+    <div class="note-bubble ${n.author?.role || 'applicant'}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+        <span class="badge badge-${n.author?.role||'applicant'}" style="font-size:.7rem;">${san(n.author?.full_name||'Unknown')}</span>
+        <span style="font-size:.72rem;color:var(--muted);">${fmt(n.created_at)}</span>
+      </div>
+      <p style="font-size:.83rem;line-height:1.5;">${san(n.content)}</p>
+    </div>`).join('') : '<p style="font-size:.83rem;color:var(--muted);text-align:center;padding:16px;">No notes yet</p>';
+
+  $('noteInput').placeholder = isOwner ? 'Send a message to staff…' : 'Add a note or update…';
+}
+
 async function addNote() {
-    const content = $('newNoteInput').value.trim();
-    if (!content||!selectedAppId) return;
-    const { error } = await supabase.from('notes').insert([{ application_id:selectedAppId, user_id:currentUser.id, content }]);
-    if (error) { toast('Error adding note: '+error.message,'error'); return; }
-    await logAct('note', selectedAppId, `Note: ${content.substring(0,50)}`);
-    $('newNoteInput').value = '';
-    toast('Note added');
-    openApplicationModal(selectedAppId);
+  const content = $('noteInput').value.trim();
+  if (!content || !selAppId) return;
+  const { error } = await sb.from('notes').insert([{ application_id: selAppId, user_id: CU.id, content }]);
+  if (error) { toast('Error: ' + error.message, 'error'); return; }
+  await logAct('note', selAppId, `Note on #${sid(selAppId)}: ${content.substring(0, 60)}`);
+  $('noteInput').value = '';
+  toast('Note added');
+  const isOwner = CP.role === 'applicant';
+  const isStaff = CP.role === 'staff';
+  const isAdmin = CP.role === 'admin';
+  await refreshNotes(isOwner, isStaff, isAdmin);
 }
 
-// ==================== LOGGING ====================
-async function logAct(action, appId, detail) {
-    try {
-        await supabase.from('activity_logs').insert([{
-            staff_user_id:currentUser.id, staff_email:currentUser.email,
-            application_id:appId, action, detail
-        }]);
-    } catch(e) { console.warn('Log failed:', e); }
+// =========================================================
+//  NEW APPLICATION MODAL
+// =========================================================
+function openNewAppModal() {
+  tempFiles = [];
+  $('naName').value = $('naEmail').value = $('naPhone').value = '';
+  $('naPkg').value = '';
+  $('naFileList').innerHTML = '';
+  $('newAppErr').classList.add('hidden');
+  $('newAppModal').classList.remove('hidden');
+}
+function closeNewAppModal() { $('newAppModal').classList.add('hidden'); }
+
+function handleNaDrop(e) {
+  e.preventDefault();
+  $('naDropZone').classList.remove('drag-active');
+  addNaFiles(Array.from(e.dataTransfer.files));
+}
+function handleNaFiles(e) { addNaFiles(Array.from(e.target.files)); }
+
+function addNaFiles(files) {
+  const valid = ['pdf','jpg','jpeg','png','doc','docx'];
+  files.forEach(f => {
+    const ext = f.name.split('.').pop().toLowerCase();
+    if (valid.includes(ext) && f.size <= 10 * 1024 * 1024) tempFiles.push(f);
+  });
+  renderNaFileList();
 }
 
-// ==================== REFERRAL ====================
-function copyReferralCode() {
-    navigator.clipboard.writeText($('referralCodeDisplay').textContent).then(() => toast('Copied!'));
+function renderNaFileList() {
+  $('naFileList').innerHTML = tempFiles.map((f, i) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+      <i class="fas fa-file" style="color:var(--brand-mid);flex-shrink:0;"></i>
+      <div style="flex:1;min-width:0;">
+        <p style="font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${san(f.name)}</p>
+        <p style="font-size:.72rem;color:var(--muted);">${(f.size/1024/1024).toFixed(2)} MB</p>
+      </div>
+      <button onclick="removeNaFile(${i})" style="background:none;border:none;cursor:pointer;color:#ef4444;padding:4px;"><i class="fas fa-times"></i></button>
+    </div>`).join('');
 }
 
-async function viewReferrerProfile() {
-    const code = $('referrerLink').dataset.code;
-    if (!code) return;
-    const { data: r } = await supabase.from('profiles').select('full_name,email,created_at,referral_code').eq('referral_code',code).single();
-    if (!r) { toast('Referrer not found','error'); return; }
-    const { count } = await supabase.from('profiles').select('id',{count:'exact'}).eq('referred_by_code',code);
-    $('referrerContent').innerHTML = `
-        <div class="text-center mb-4">
-            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-3">
-                ${sanitize(r.full_name).charAt(0).toUpperCase()}
-            </div>
-            <h4 class="font-bold text-lg">${sanitize(r.full_name)}</h4>
-            <p class="text-sm text-gray-500">${sanitize(r.email||'')}</p>
+function removeNaFile(i) { tempFiles.splice(i, 1); renderNaFileList(); }
+
+async function createApplication() {
+  const name = $('naName').value.trim();
+  const email = $('naEmail').value.trim();
+  const phone = $('naPhone').value.trim();
+  const pkg   = $('naPkg').value;
+
+  if (!name || !email || !phone || !pkg) {
+    $('newAppErr').textContent = 'Please fill all required fields';
+    $('newAppErr').classList.remove('hidden');
+    return;
+  }
+
+  const btn = $('naSubmitBtn');
+  setBtnLoading(btn, true);
+  try {
+    const { data: app, error } = await sb.from('applications')
+      .insert([{ user_id: CU.id, applicant_name: name, email, phone, package: pkg, status: 'pending' }])
+      .select().single();
+    if (error) throw error;
+
+    for (const f of tempFiles) {
+      const path = `${app.id}/${Date.now()}_${f.name}`;
+      const { error: ue } = await sb.storage.from('documents').upload(path, f);
+      if (ue) continue;
+      await sb.from('application_documents').insert([{
+        application_id: app.id, document_type: f.name.split('.').pop().toLowerCase(),
+        file_name: f.name, file_path: path, file_size: f.size, uploaded_by: CU.id
+      }]);
+    }
+
+    await logAct('upload', app.id, `Submitted new application for ${name}`);
+    toast('Application submitted!');
+    closeNewAppModal();
+    await loadApps();
+    renderDashboard();
+    if (!$('applicationsSection').classList.contains('hidden')) renderAppList();
+  } catch(e) {
+    $('newAppErr').textContent = e.message;
+    $('newAppErr').classList.remove('hidden');
+  } finally { setBtnLoading(btn, false); }
+}
+
+// =========================================================
+//  REFERRAL
+// =========================================================
+function copyReferral() {
+  const code = $('referralDisplay').textContent;
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(code).then(() => toast('Referral code copied!'));
+  } else {
+    const el = document.createElement('textarea');
+    el.value = code;
+    el.style.position = 'fixed'; el.style.opacity = '0';
+    document.body.appendChild(el);
+    el.select(); document.execCommand('copy');
+    document.body.removeChild(el);
+    toast('Referral code copied!');
+  }
+}
+
+async function openReferrerModal() {
+  if (!referrerCode) return;
+  const { data: r } = await sb.from('profiles').select('full_name,email,created_at,referral_code').eq('referral_code', referrerCode).single();
+  if (!r) { toast('Referrer not found', 'error'); return; }
+  const { count } = await sb.from('profiles').select('id', { count:'exact', head:true }).eq('referred_by_code', referrerCode);
+
+  $('referrerBody').innerHTML = `
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="width:64px;height:64px;background:linear-gradient(135deg,var(--brand-lite),var(--brand));border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.6rem;color:#fff;margin:0 auto 12px;font-family:'Syne',sans-serif;">
+        ${san(r.full_name||'?').charAt(0).toUpperCase()}
+      </div>
+      <h4 class="syne" style="font-size:1.15rem;font-weight:700;">${san(r.full_name)}</h4>
+      <p style="font-size:.83rem;color:var(--muted);">${san(r.email||'')}</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;background:var(--surface);border-radius:12px;padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:.83rem;color:var(--muted);">Member Since</span>
+        <span style="font-size:.83rem;font-weight:600;">${fmt(r.created_at)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:.83rem;color:var(--muted);">Referral Code</span>
+        <code style="font-family:monospace;font-weight:700;background:#f0fdf4;color:var(--brand);padding:2px 10px;border-radius:6px;">${san(r.referral_code)}</code>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
+        <span style="font-size:.83rem;color:var(--muted);">Total Referrals</span>
+        <span class="syne" style="font-size:1.1rem;font-weight:700;color:var(--brand-mid);">${count || 0}</span>
+      </div>
+    </div>`;
+
+  $('referrerModal').classList.remove('hidden');
+}
+
+function closeReferrerModal() { $('referrerModal').classList.add('hidden'); }
+
+// =========================================================
+//  ACTIVITY LOG
+// =========================================================
+function renderLogList() {
+  const q = ($('logSearch')?.value || '').trim().toLowerCase();
+  const f = ($('logTypeFilter')?.value || 'all');
+  const filtered = allLogs.filter(l =>
+    (f === 'all' || l.action === f) &&
+    (!q || (l.staff_email || '').toLowerCase().includes(q) || (l.detail || '').toLowerCase().includes(q)));
+
+  const actionColors = { view:'#3b82f6', status_update:'#22c55e', delete:'#ef4444', upload:'#8b5cf6', note:'#f59e0b', assign:'#0891b2', edit:'#f97316', promote:'#7c3aed' };
+
+  $('logList').innerHTML = filtered.map(l => `
+    <div style="display:flex;gap:12px;padding:12px 14px;background:var(--surface);border-radius:10px;border-left:3px solid ${actionColors[l.action]||'#ccc'};">
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap;">
+          <span style="font-size:.83rem;font-weight:600;">${san(l.staff_email)}</span>
+          <span style="font-size:.7rem;background:${actionColors[l.action]||'#e5e7eb'}22;color:${actionColors[l.action]||'#6b7280'};padding:2px 8px;border-radius:99px;font-weight:600;text-transform:capitalize;">${(l.action||'').replace('_',' ')}</span>
         </div>
-        <div class="space-y-3 text-sm">
-            <div class="flex justify-between py-2 border-b border-gray-100">
-                <span class="text-gray-600">Member Since</span><span class="font-medium">${fmtDate(r.created_at)}</span>
-            </div>
-            <div class="flex justify-between py-2 border-b border-gray-100">
-                <span class="text-gray-600">Referral Code</span>
-                <code class="font-mono bg-gray-100 px-2 py-1 rounded">${sanitize(r.referral_code)}</code>
-            </div>
-            <div class="flex justify-between py-2">
-                <span class="text-gray-600">Total Referrals</span>
-                <span class="font-bold text-emerald-600">${count||0}</span>
-            </div>
-        </div>`;
-    $('referrerModal').classList.remove('hidden');
+        <p style="font-size:.8rem;color:var(--muted);">${san(l.detail)}</p>
+        <p style="font-size:.72rem;color:#bbb;margin-top:3px;">${fmt(l.created_at)} · ${new Date(l.created_at).toLocaleTimeString()}</p>
+      </div>
+    </div>`).join('') || '<p style="color:var(--muted);text-align:center;padding:32px;font-size:.875rem;">No activity logs found</p>';
 }
 
-// ==================== INIT ====================
-window.addEventListener('load', async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) await bootApp(session.user);
-    supabase.auth.onAuthStateChange(event => { if (event==='SIGNED_OUT') location.reload(); });
+// =========================================================
+//  PAGINATION
+// =========================================================
+function renderPagination(containerId, total, current, onPage) {
+  if (total <= 1) { $(containerId).innerHTML = ''; return; }
+  let h = `<button onclick="(${onPage})(${current-1})" ${current===1?'disabled':''} style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:.8rem;cursor:pointer;background:${current===1?'#f9fafb':'var(--card)'};${current===1?'opacity:.4;':''};"><i class="fas fa-chevron-left"></i></button>`;
+  for (let i = 1; i <= total; i++) {
+    if (i === 1 || i === total || (i >= current - 1 && i <= current + 1)) {
+      h += `<button onclick="(${onPage})(${i})" style="padding:6px 12px;border:1px solid ${i===current?'var(--brand-mid)':'var(--border)'};border-radius:8px;font-size:.8rem;cursor:pointer;background:${i===current?'var(--brand-mid)':'var(--card)'};color:${i===current?'#fff':'var(--text)'};">${i}</button>`;
+    } else if ((i === current - 2 && i > 2) || (i === current + 2 && i < total - 1)) {
+      h += `<span style="padding:6px 4px;font-size:.8rem;color:var(--muted);">…</span>`;
+    }
+  }
+  h += `<button onclick="(${onPage})(${current+1})" ${current===total?'disabled':''} style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:.8rem;cursor:pointer;background:${current===total?'#f9fafb':'var(--card)'};${current===total?'opacity:.4;':''}"><i class="fas fa-chevron-right"></i></button>`;
+  $(containerId).innerHTML = h;
+}
+
+// =========================================================
+//  KEYBOARD SHORTCUTS
+// =========================================================
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    $('detailModal').classList.add('hidden');
+    $('newAppModal').classList.add('hidden');
+    $('userProfileModal').classList.add('hidden');
+    $('referrerModal').classList.add('hidden');
+    selAppId = null; editMode = false;
+  }
 });
 
-document.addEventListener('keydown', e => {
-    if (e.key==='Escape') {
-        closeModal();
-        closeNewAppModal();
-        $('referrerModal').classList.add('hidden');
-    }
+// =========================================================
+//  INIT
+// =========================================================
+window.addEventListener('load', async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    await bootApp(session.user);
+  } else {
+    showLoading(false);
+    $('authScreen').classList.remove('hidden');
+    switchAuthMode('login');
+  }
+  sb.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT') location.reload();
+  });
 });
 </script>
 </body>
