@@ -134,7 +134,7 @@
 
   /* ===== AUTH SCREEN ===== */
   #authScreen {
-    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; align-items: center; justify-content: center;
     background: var(--brand);
     background-image:
       radial-gradient(ellipse 80% 80% at 10% 90%, rgba(29,185,107,.25) 0%, transparent 50%),
@@ -242,7 +242,7 @@
 </div>
 
 <!-- ===== AUTH SCREEN ===== -->
-<div id="authScreen" class="hidden">
+<div id="authScreen" style="display:none;">
   <div class="auth-card">
     <div class="auth-header">
       <span class="plane-icon">✈️</span>
@@ -338,7 +338,7 @@
 </div>
 
 <!-- ===== MAIN APP ===== -->
-<div id="mainApp" class="hidden" style="display:none;">
+<div id="mainApp" style="display:none;">
 
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar" style="position:fixed;left:0;top:0;height:100vh;display:flex;flex-direction:column;z-index:50;">
@@ -890,12 +890,14 @@ function switchAuthMode(mode) {
   $('signupForm').classList.toggle('hidden', mode !== 'signup');
   $('authSubtitle').textContent = mode === 'login' ? 'Sign in to your account' : 'Create a new account';
   $('authError').classList.add('hidden');
+  $('authError').style.display = 'none';
 }
 
 function showAuthErr(msg) {
+  const el = $('authError');
   $('authErrorText').textContent = msg;
-  $('authError').classList.remove('hidden');
-  $('authError').style.display = 'flex';
+  el.style.display = 'flex';
+  el.classList.remove('hidden');
 }
 
 // Login
@@ -959,15 +961,17 @@ $('signupForm').addEventListener('submit', async e => {
     }], { onConflict:'id', ignoreDuplicates:true });
 
     if (pErr) { showAuthErr('Profile error: ' + pErr.message); return; }
-    toast('Account created! Please sign in.');
-    switchAuthMode('login');
-    $('loginEmail').value = email;
+
+    // Boot directly into app — no need to sign in again
+    showLoading(true);
+    await bootApp(authData.user);
+
   } finally { setBtnLoading(btn, false); }
 });
 
 async function handleLogout() {
   await sb.auth.signOut();
-  location.reload();
+  // State reset handled in onAuthStateChange
 }
 
 // =========================================================
@@ -978,7 +982,7 @@ async function bootApp(user) {
   const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).single();
   if (!profile) {
     showLoading(false);
-    $('authScreen').classList.remove('hidden');
+    $('authScreen').style.display = 'flex';
     showAuthErr('Profile not found. Please contact support.');
     return;
   }
@@ -1032,9 +1036,11 @@ async function bootApp(user) {
 
   renderDashboard();
   showSection('dashboard');
+
+  // Hide auth, show app — order matters
+  $('authScreen').style.display  = 'none';
+  $('mainApp').style.display     = 'flex';
   showLoading(false);
-  $('authScreen').classList.add('hidden');
-  $('mainApp').style.display = 'flex';
 }
 
 function buildStaffTabs(tabs) {
@@ -1976,11 +1982,21 @@ window.addEventListener('load', async () => {
     await bootApp(session.user);
   } else {
     showLoading(false);
-    $('authScreen').classList.remove('hidden');
+    $('authScreen').style.display = 'flex';
     switchAuthMode('login');
   }
-  sb.auth.onAuthStateChange((event) => {
-    if (event === 'SIGNED_OUT') location.reload();
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      $('mainApp').style.display  = 'none';
+      $('authScreen').style.display = 'flex';
+      switchAuthMode('login');
+      // Reset state
+      CU = null; CP = null;
+      allApps = []; allUsers = []; allStaff = []; allLogs = [];
+    }
+    if (event === 'SIGNED_IN' && session && !CP) {
+      bootApp(session.user);
+    }
   });
 });
 </script>
