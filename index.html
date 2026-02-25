@@ -85,7 +85,7 @@
     width: 100%; padding: 10px 14px; border: 1.5px solid var(--border);
     border-radius: 10px; font-size: .875rem; background: var(--card);
     color: var(--text); outline: none; transition: border-color .2s, box-shadow .2s;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Manrope', sans-serif;
   }
   .inp:focus { border-color: var(--brand-mid); box-shadow: 0 0 0 3px var(--brand-glow); }
   .inp-sm { padding: 7px 12px; font-size: .8rem; }
@@ -180,7 +180,7 @@
     background: var(--card);
   }
   .app-row:hover { border-color: var(--brand-mid); box-shadow: 0 4px 16px rgba(13,92,58,.08); transform: translateY(-1px); }
-  .app-avatar { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, var(--brand-lite), var(--brand)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .95rem; flex-shrink: 0; font-family: 'Syne', sans-serif; }
+  .app-avatar { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, var(--brand-lite), var(--brand)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .95rem; flex-shrink: 0; font-family: 'Bricolage Grotesque', sans-serif; }
 
   /* ===== DRAG ZONE ===== */
   .drop-zone {
@@ -192,7 +192,7 @@
   /* ===== PROGRESS RING (dashboard) ===== */
   .ring-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; }
   .ring-wrap svg { transform: rotate(-90deg); }
-  .ring-text { position: absolute; font-family: 'Syne', sans-serif; font-weight: 700; }
+  .ring-text { position: absolute; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; }
 
   /* ===== HIGHLIGHT ===== */
   mark { background: #a7f3d0; padding: 0 2px; border-radius: 3px; }
@@ -238,7 +238,7 @@
     <circle cx="22" cy="22" r="18" fill="none" stroke="#1db96b" stroke-width="3"
       stroke-dasharray="30 90" stroke-linecap="round"/>
   </svg>
-  <p style="color:rgba(255,255,255,.7);font-family:'Syne',sans-serif;font-size:.9rem;letter-spacing:.08em;">LOADING</p>
+  <p style="color:rgba(255,255,255,.7);font-family:'Bricolage Grotesque',sans-serif;font-size:.9rem;letter-spacing:.08em;">LOADING</p>
 </div>
 
 <!-- ===== AUTH SCREEN ===== -->
@@ -363,7 +363,7 @@
 
     <div style="padding:14px 12px;border-top:1px solid rgba(255,255,255,.1);">
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.08);border-radius:12px;margin-bottom:8px;">
-        <div id="sidebarAvatar" style="width:36px;height:36px;border-radius:10px;background:var(--brand-lite);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;flex-shrink:0;font-family:'Syne',sans-serif;">U</div>
+        <div id="sidebarAvatar" style="width:36px;height:36px;border-radius:10px;background:var(--brand-lite);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;flex-shrink:0;font-family:'Bricolage Grotesque',sans-serif;">U</div>
         <div style="min-width:0;flex:1;">
           <div id="sidebarName" style="color:#fff;font-weight:600;font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">User</div>
           <span id="sidebarRoleBadge" class="badge badge-applicant" style="font-size:.65rem;">Applicant</span>
@@ -483,6 +483,24 @@
       <!-- ==================== STAFF PORTAL ==================== -->
       <div id="staffSection" class="section-page hidden">
         <div id="staffTabBar" class="tab-bar" style="margin-bottom:22px;width:fit-content;"></div>
+
+        <!-- Staff Messages (Staff view — replies to admin notes) -->
+        <div id="staffMessagesTab" class="hidden">
+          <div class="card" style="padding:24px;">
+            <div style="margin-bottom:20px;">
+              <h2 class="syne" style="font-size:1.1rem;font-weight:700;">Messages from Admin</h2>
+              <p style="font-size:.8rem;color:var(--muted);margin-top:2px;">Notes admin has left on your profile — reply directly below.</p>
+            </div>
+            <div id="staffMsgList" style="display:flex;flex-direction:column;gap:10px;max-height:480px;overflow-y:auto;margin-bottom:20px;padding-right:4px;"></div>
+            <div style="border-top:1px solid var(--border);padding-top:16px;">
+              <label class="lbl" style="margin-bottom:8px;">Reply to Admin</label>
+              <div style="display:flex;gap:8px;">
+                <textarea id="staffReplyInput" class="inp" rows="2" style="resize:none;flex:1;" placeholder="Type your reply…"></textarea>
+                <button onclick="sendStaffReply()" class="btn btn-primary" style="padding:10px 16px;align-self:flex-end;"><i class="fas fa-paper-plane"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Assigned Applications (Staff view) -->
         <div id="staffAppsTab" class="hidden">
@@ -727,7 +745,7 @@
           <!-- Documents -->
           <div style="border:1px solid var(--border);border-radius:14px;padding:20px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-              <h4 class="syne" style="font-weight:700;font-size:.95rem;">Documents <span id="docCountBadge" style="font-size:.75rem;color:var(--muted);font-family:'DM Sans';font-weight:400;"></span></h4>
+              <h4 class="syne" style="font-weight:700;font-size:.95rem;">Documents <span id="docCountBadge" style="font-size:.75rem;color:var(--muted);font-family:'Manrope';font-weight:400;"></span></h4>
               <div id="uploadBtn" class="hidden">
                 <input type="file" id="uploadInput" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="handleDocUpload(event)">
                 <button onclick="$('uploadInput').click()" class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem;"><i class="fas fa-upload"></i> Upload</button>
@@ -1048,6 +1066,7 @@ function buildStaffTabs(tabs) {
   bar.innerHTML = '';
   if (tabs.includes('myapps')) {
     bar.innerHTML += `<button class="tab-btn active" id="stab-myapps" onclick="switchStaffTab('myapps')">My Applications</button>`;
+    bar.innerHTML += `<button class="tab-btn" id="stab-messages" onclick="switchStaffTab('messages')">Messages</button>`;
   }
   if (tabs.includes('applications')) {
     bar.innerHTML += `<button class="tab-btn active" id="stab-applications" onclick="switchStaffTab('applications')">All Applications</button>`;
@@ -1056,15 +1075,20 @@ function buildStaffTabs(tabs) {
 }
 
 function switchStaffTab(tab) {
+  $('staffMessagesTab').classList.add('hidden');
   $('staffAppsTab').classList.add('hidden');
   $('allApplicantsTab').classList.add('hidden');
   $('activityLogTab').classList.add('hidden');
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#staffTabBar .tab-btn').forEach(b => b.classList.remove('active'));
 
   if (tab === 'myapps') {
     $('staffAppsTab').classList.remove('hidden');
     $('stab-myapps')?.classList.add('active');
     renderStaffAppList();
+  } else if (tab === 'messages') {
+    $('staffMessagesTab').classList.remove('hidden');
+    $('stab-messages')?.classList.add('active');
+    loadStaffMessages();
   } else if (tab === 'applications') {
     $('allApplicantsTab').classList.remove('hidden');
     $('stab-applications')?.classList.add('active');
@@ -1359,7 +1383,7 @@ function buildUserRow(u) {
   const assignedCount = allApps.filter(a => sstr(a.user_id) === sstr(u.id)).length;
   return `
   <div class="user-row">
-    <div style="width:40px;height:40px;border-radius:12px;background:${u.role==='admin'?'#ede9fe':u.role==='staff'?'#e0f2fe':'#d1fae5'};color:${u.role==='admin'?'#7c3aed':u.role==='staff'?'#0369a1':'#047857'};display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Syne',sans-serif;flex-shrink:0;">
+    <div style="width:40px;height:40px;border-radius:12px;background:${u.role==='admin'?'#ede9fe':u.role==='staff'?'#e0f2fe':'#d1fae5'};color:${u.role==='admin'?'#7c3aed':u.role==='staff'?'#0369a1':'#047857'};display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">
       ${san(u.full_name||'?').charAt(0).toUpperCase()}
     </div>
     <div style="flex:1;min-width:0;">
@@ -1383,7 +1407,7 @@ async function openUserProfile(userId) {
   $('upTitle').textContent = (u.full_name || u.email) + ' — Profile';
   $('upBody').innerHTML = `
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:22px;padding:18px;background:var(--surface);border-radius:14px;">
-      <div style="width:56px;height:56px;border-radius:16px;background:${u.role==='admin'?'#ede9fe':u.role==='staff'?'#e0f2fe':'#d1fae5'};color:${u.role==='admin'?'#7c3aed':u.role==='staff'?'#0369a1':'#047857'};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.4rem;font-family:'Syne',sans-serif;">
+      <div style="width:56px;height:56px;border-radius:16px;background:${u.role==='admin'?'#ede9fe':u.role==='staff'?'#e0f2fe':'#d1fae5'};color:${u.role==='admin'?'#7c3aed':u.role==='staff'?'#0369a1':'#047857'};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.4rem;font-family:'Bricolage Grotesque',sans-serif;">
         ${san(u.full_name||'?').charAt(0).toUpperCase()}
       </div>
       <div>
@@ -1408,19 +1432,32 @@ async function openUserProfile(userId) {
     </div>
 
     <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
-      <h5 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:12px;">Notes from Admin</h5>
-      <div id="pNotesContainer" style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;margin-bottom:12px;">
-        ${(pNotes||[]).map(n => `
-          <div class="note-bubble ${n.author?.role||'applicant'}">
-            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-              <span style="font-size:.75rem;font-weight:600;color:var(--muted);">${san(n.author?.full_name||'Admin')}</span>
-              <span style="font-size:.72rem;color:var(--muted);">${fmt(n.created_at)}</span>
+      <h5 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:12px;">
+        Message Thread
+        <span style="font-size:.72rem;font-weight:400;color:var(--muted);font-family:'Manrope',sans-serif;margin-left:6px;">${(pNotes||[]).length} message${(pNotes||[]).length!==1?'s':''}</span>
+      </h5>
+      <div id="pNotesContainer" style="display:flex;flex-direction:column;gap:10px;max-height:280px;overflow-y:auto;margin-bottom:14px;padding-right:4px;">
+        ${(pNotes||[]).map(n => {
+          const isStaffReply = String(n.author_id) === String(userId);
+          const role = n.author?.role || 'admin';
+          const name = n.author?.full_name || 'Admin';
+          return `
+          <div style="display:flex;flex-direction:column;align-items:${isStaffReply?'flex-end':'flex-start'};">
+            <div style="max-width:85%;background:${isStaffReply?'#e0f2fe':'var(--surface)'};color:var(--text);
+              border:1px solid ${isStaffReply?'#bae6fd':'var(--border)'};
+              border-radius:${isStaffReply?'14px 14px 4px 14px':'14px 14px 14px 4px'};
+              padding:10px 14px;">
+              <p style="font-size:.83rem;line-height:1.55;">${san(n.content)}</p>
             </div>
-            <p style="font-size:.83rem;">${san(n.content)}</p>
-          </div>`).join('') || '<p style="font-size:.83rem;color:var(--muted);text-align:center;padding:12px;">No notes yet</p>'}
+            <div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:0 4px;">
+              <span class="badge badge-${role}" style="font-size:.65rem;">${san(name)}</span>
+              <span style="font-size:.7rem;color:var(--muted);">${fmt(n.created_at)}</span>
+            </div>
+          </div>`;
+        }).join('') || '<p style="font-size:.83rem;color:var(--muted);text-align:center;padding:16px;">No messages yet — start the conversation below</p>'}
       </div>
       <div style="display:flex;gap:8px;">
-        <input type="text" id="pNoteInput" class="inp inp-sm" style="flex:1;" placeholder="Add a note about this user…">
+        <input type="text" id="pNoteInput" class="inp inp-sm" style="flex:1;" placeholder="Send a message to this staff member…">
         <button onclick="addProfileNote('${userId}')" class="btn btn-primary" style="padding:8px 14px;font-size:.8rem;"><i class="fas fa-paper-plane"></i></button>
       </div>
     </div>
@@ -1443,45 +1480,101 @@ async function addProfileNote(userId) {
   if (!content) return;
   const { error } = await sb.from('profile_notes').insert([{ profile_id: userId, author_id: CU.id, content }]);
   if (error) { toast('Error: ' + error.message, 'error'); return; }
-  toast('Note added');
-  await logAct('note', null, `Added note to user profile`);
-  openUserProfile(userId);
+  toast('Message sent');
+  await logAct('note', null, `Sent message to user profile`);
+  await openUserProfile(userId);
+  // Scroll thread to bottom after re-render
+  setTimeout(() => {
+    const c = $('pNotesContainer');
+    if (c) c.scrollTop = c.scrollHeight;
+  }, 100);
 }
 
 async function promoteToStaff(userId) {
-  if (!confirm('Promote this applicant to Staff?')) return;
+  if (!confirm('Promote this applicant to Staff? They must sign out and back in to see the change.')) return;
   const { error } = await sb.from('profiles').update({ role: 'staff' }).eq('id', userId);
   if (error) { toast('Error: ' + error.message, 'error'); return; }
-  toast('User promoted to staff — they must sign out and back in to see changes');
+  toast('Promoted to staff — user must sign out and back in');
   await logAct('promote', null, `Promoted user ${userId} to staff`);
   await loadAllUsers();
   await loadStaff();
   closeUserModal();
-  renderUserList();
-
-  // If the promoted user is the currently logged-in user, refresh their session
-  if (String(userId) === String(CU.id)) {
-    await sb.auth.refreshSession();
-    location.reload();
-  }
+  renderStaffList();
 }
 
 async function demoteToApplicant(userId) {
-  if (!confirm('Demote this staff member to Applicant?')) return;
+  if (!confirm('Demote this staff member to Applicant? They must sign out and back in to see the change.')) return;
   const { error } = await sb.from('profiles').update({ role: 'applicant' }).eq('id', userId);
   if (error) { toast('Error: ' + error.message, 'error'); return; }
-  toast('User demoted to applicant — they must sign out and back in to see changes');
+  toast('Demoted to applicant — user must sign out and back in');
   await logAct('promote', null, `Demoted user ${userId} to applicant`);
   await loadAllUsers();
   await loadStaff();
   closeUserModal();
   renderUserList();
+}
 
-  // If demoting the currently logged-in user
-  if (String(userId) === String(CU.id)) {
-    await sb.auth.refreshSession();
-    location.reload();
+// =========================================================
+//  STAFF MESSAGES (staff reads + replies to admin profile notes)
+// =========================================================
+async function loadStaffMessages() {
+  const { data, error } = await sb.from('profile_notes')
+    .select('*, author:author_id(full_name, role)')
+    .eq('profile_id', CU.id)
+    .order('created_at', { ascending: true });
+
+  const notes = data || [];
+  const container = $('staffMsgList');
+
+  if (!notes.length) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:48px 24px;color:var(--muted);">
+        <div style="font-size:3rem;margin-bottom:12px;">💬</div>
+        <p style="font-weight:600;">No messages yet</p>
+        <p style="font-size:.83rem;margin-top:4px;">Admin notes on your profile will appear here</p>
+      </div>`;
+    return;
   }
+
+  container.innerHTML = notes.map(n => {
+    const isMe = String(n.author_id) === String(CU.id);
+    const role  = n.author?.role || 'staff';
+    const name  = n.author?.full_name || (isMe ? 'You' : 'Admin');
+    return `
+      <div style="display:flex;flex-direction:column;align-items:${isMe?'flex-end':'flex-start'};">
+        <div style="max-width:80%;background:${isMe?'var(--brand-mid)':'var(--surface)'};color:${isMe?'#fff':'var(--text)'};
+          border:1px solid ${isMe?'transparent':'var(--border)'};border-radius:${isMe?'14px 14px 4px 14px':'14px 14px 14px 4px'};
+          padding:12px 14px;">
+          <p style="font-size:.83rem;line-height:1.55;">${san(n.content)}</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:0 4px;">
+          <span class="badge badge-${role}" style="font-size:.65rem;">${san(name)}</span>
+          <span style="font-size:.7rem;color:var(--muted);">${fmt(n.created_at)}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Scroll to bottom
+  container.scrollTop = container.scrollHeight;
+}
+
+async function sendStaffReply() {
+  const content = $('staffReplyInput').value.trim();
+  if (!content) return;
+
+  const btn = document.querySelector('[onclick="sendStaffReply()"]');
+  setBtnLoading(btn, true);
+  try {
+    const { error } = await sb.from('profile_notes').insert([{
+      profile_id: CU.id,   // note is on own profile — admin sees it there
+      author_id:  CU.id,
+      content
+    }]);
+    if (error) { toast('Error: ' + error.message, 'error'); return; }
+    $('staffReplyInput').value = '';
+    toast('Reply sent');
+    await loadStaffMessages();
+  } finally { setBtnLoading(btn, false); }
 }
 
 async function deleteAccount(userId) {
@@ -1904,7 +1997,7 @@ async function openReferrerModal() {
 
   $('referrerBody').innerHTML = `
     <div style="text-align:center;margin-bottom:20px;">
-      <div style="width:64px;height:64px;background:linear-gradient(135deg,var(--brand-lite),var(--brand));border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.6rem;color:#fff;margin:0 auto 12px;font-family:'Syne',sans-serif;">
+      <div style="width:64px;height:64px;background:linear-gradient(135deg,var(--brand-lite),var(--brand));border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.6rem;color:#fff;margin:0 auto 12px;font-family:'Bricolage Grotesque',sans-serif;">
         ${san(r.full_name||'?').charAt(0).toUpperCase()}
       </div>
       <h4 class="syne" style="font-size:1.15rem;font-weight:700;">${san(r.full_name)}</h4>
