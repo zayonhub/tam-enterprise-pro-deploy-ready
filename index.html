@@ -1452,24 +1452,36 @@ async function promoteToStaff(userId) {
   if (!confirm('Promote this applicant to Staff?')) return;
   const { error } = await sb.from('profiles').update({ role: 'staff' }).eq('id', userId);
   if (error) { toast('Error: ' + error.message, 'error'); return; }
-  toast('User promoted to staff');
+  toast('User promoted to staff — they must sign out and back in to see changes');
   await logAct('promote', null, `Promoted user ${userId} to staff`);
   await loadAllUsers();
   await loadStaff();
   closeUserModal();
   renderUserList();
+
+  // If the promoted user is the currently logged-in user, refresh their session
+  if (String(userId) === String(CU.id)) {
+    await sb.auth.refreshSession();
+    location.reload();
+  }
 }
 
 async function demoteToApplicant(userId) {
   if (!confirm('Demote this staff member to Applicant?')) return;
   const { error } = await sb.from('profiles').update({ role: 'applicant' }).eq('id', userId);
   if (error) { toast('Error: ' + error.message, 'error'); return; }
-  toast('User demoted to applicant');
+  toast('User demoted to applicant — they must sign out and back in to see changes');
   await logAct('promote', null, `Demoted user ${userId} to applicant`);
   await loadAllUsers();
   await loadStaff();
   closeUserModal();
   renderUserList();
+
+  // If demoting the currently logged-in user
+  if (String(userId) === String(CU.id)) {
+    await sb.auth.refreshSession();
+    location.reload();
+  }
 }
 
 async function deleteAccount(userId) {
