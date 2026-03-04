@@ -226,6 +226,47 @@
     main { margin-left: 0 !important; }
     .mobile-menu-btn { display: flex !important; }
   }
+
+  /* ===== STAGE TRACKER ===== */
+  .stage-progress-bar {
+    height: 6px; background: #e5e7eb; border-radius: 99px; overflow: hidden;
+  }
+  .stage-progress-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--brand-lite), var(--brand-mid));
+    transition: width .8s cubic-bezier(.34,1.56,.64,1);
+  }
+  /* Dashboard card expand */
+  .stage-expand-body {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height .4s ease, padding .3s ease;
+    padding: 0 16px;
+  }
+  .stage-expand-body.open {
+    max-height: 500px;
+    padding: 0 16px 16px;
+  }
+  /* Stage dots in full tracker */
+  .sdot {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .68rem; font-weight: 700; flex-shrink: 0;
+    font-family: 'Bricolage Grotesque', sans-serif;
+  }
+  .sdot-done    { background: #1db96b; color: #fff; }
+  .sdot-current { background: #f97316; color: #fff; box-shadow: 0 0 0 4px rgba(249,115,22,.18); }
+  .sdot-upcoming{ background: #e5e7eb; color: #9ca3af; }
+  /* Stage control nav buttons */
+  .stage-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 16px; border-radius: 10px; font-size: .83rem; font-weight: 600;
+    cursor: pointer; transition: all .2s; border: 1.5px solid var(--border);
+    background: var(--card); color: var(--text);
+  }
+  .stage-btn:hover { border-color: var(--brand-mid); background: var(--brand-glow); color: var(--brand); }
+  .stage-btn-approve { background: var(--brand-mid); color: #fff; border-color: var(--brand-mid); }
+  .stage-btn-approve:hover { background: var(--brand); border-color: var(--brand); }
 </style>
 </head>
 <body>
@@ -355,9 +396,7 @@
     <nav style="flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;">
       <div id="navDashboard"    class="nav-item active" onclick="showSection('dashboard')"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
       <div id="navApplications" class="nav-item" onclick="showSection('applications')"><i class="fas fa-folder-open"></i><span>Applications</span></div>
-      <!-- Staff Portal: admin + staff only -->
       <div id="navStaff" class="nav-item hidden" onclick="showSection('staff')"><i class="fas fa-headset"></i><span>Staff Portal</span></div>
-      <!-- User Management: admin only -->
       <div id="navUsers" class="nav-item hidden" onclick="showSection('users')"><i class="fas fa-users-cog"></i><span>User Management</span></div>
     </nav>
 
@@ -484,7 +523,6 @@
       <div id="staffSection" class="section-page hidden">
         <div id="staffTabBar" class="tab-bar" style="margin-bottom:22px;width:fit-content;"></div>
 
-        <!-- Staff Messages (Staff view — replies to admin notes) -->
         <div id="staffMessagesTab" class="hidden">
           <div class="card" style="padding:24px;">
             <div style="margin-bottom:20px;">
@@ -502,7 +540,6 @@
           </div>
         </div>
 
-        <!-- Assigned Applications (Staff view) -->
         <div id="staffAppsTab" class="hidden">
           <div class="card" style="padding:24px;">
             <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
@@ -532,7 +569,6 @@
           </div>
         </div>
 
-        <!-- Admin: All Applicants -->
         <div id="allApplicantsTab" class="hidden">
           <div class="card" style="padding:24px;">
             <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
@@ -566,7 +602,6 @@
           </div>
         </div>
 
-        <!-- Activity Log (Admin only) -->
         <div id="activityLogTab" class="hidden">
           <div class="card" style="padding:24px;">
             <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
@@ -604,8 +639,6 @@
           <button class="tab-btn active" id="tabApplicants" onclick="switchUserTab('applicants')">Applicants</button>
           <button class="tab-btn" id="tabStaffList"  onclick="switchUserTab('staff')">Staff Members</button>
         </div>
-
-        <!-- Applicants list -->
         <div id="userApplicantsTab">
           <div class="card" style="padding:24px;">
             <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
@@ -621,8 +654,6 @@
             <div id="applicantList" style="display:flex;flex-direction:column;gap:8px;"></div>
           </div>
         </div>
-
-        <!-- Staff list -->
         <div id="userStaffTab" class="hidden">
           <div class="card" style="padding:24px;">
             <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
@@ -705,6 +736,10 @@
       </div>
     </div>
     <div class="modal-body">
+
+      <!-- ===== STAGE TRACKER (top of modal) ===== -->
+      <div id="modalStageTracker" style="margin-bottom:22px;"></div>
+
       <div style="display:grid;grid-template-columns:1fr 320px;gap:24px;">
         <!-- LEFT -->
         <div style="display:flex;flex-direction:column;gap:20px;">
@@ -731,15 +766,10 @@
             </select>
           </div>
 
-          <!-- Status Update (staff/admin only) -->
-          <div id="statusSection" class="hidden" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:20px;">
-            <h4 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:12px;color:var(--brand);">Update Status</h4>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;">
-              <button onclick="updateStatus('pending')"  data-s="pending"  class="sts-btn btn badge-pending"  style="font-size:.83rem;padding:8px 16px;cursor:pointer;border:1.5px solid #f59e0b;">Pending</button>
-              <button onclick="updateStatus('review')"   data-s="review"   class="sts-btn btn badge-review"   style="font-size:.83rem;padding:8px 16px;cursor:pointer;border:1.5px solid #f97316;">Review</button>
-              <button onclick="updateStatus('approved')" data-s="approved" class="sts-btn btn badge-approved" style="font-size:.83rem;padding:8px 16px;cursor:pointer;border:1.5px solid #22c55e;">Approved</button>
-              <button onclick="updateStatus('rejected')" data-s="rejected" class="sts-btn btn badge-rejected" style="font-size:.83rem;padding:8px 16px;cursor:pointer;border:1.5px solid #ef4444;">Rejected</button>
-            </div>
+          <!-- Stage Control (staff/admin only) -->
+          <div id="stageControlSection" class="hidden" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:20px;">
+            <h4 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:14px;color:var(--brand);">Update Stage</h4>
+            <div id="stageControlBtns" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;"></div>
           </div>
 
           <!-- Documents -->
@@ -798,7 +828,7 @@
   </div>
 </div>
 
-<!-- ==================== USER PROFILE MODAL (Admin view of user) ==================== -->
+<!-- ==================== USER PROFILE MODAL ==================== -->
 <div id="userProfileModal" class="modal-overlay hidden">
   <div class="modal-box" style="max-width:640px;">
     <div class="modal-header">
@@ -834,13 +864,112 @@ const SUPABASE_KEY = 'sb_publishable_h3Kb-0pknHcYItkGeyEI-Q_urYDrPD9';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // =========================================================
+//  STAGE CONFIGURATION
+// =========================================================
+const STAGES = [
+  { n:1, label:'Onboarding Complete',   short:'Onboarding',  clr:'#166534', bg:'#f0fdf4', msg:'Welcome to NonStop Travels. Your journey has officially started.' },
+  { n:2, label:'Document Preparation',  short:'Documents',   clr:'#92400e', bg:'#fffbeb', msg:'We are currently preparing and verifying your required documents.' },
+  { n:3, label:'Profile Submitted',     short:'Profile',     clr:'#166534', bg:'#f0fdf4', msg:'You are now officially in the pool.' },
+  { n:4, label:'Pool Monitoring',       short:'Monitoring',  clr:'#1e40af', bg:'#eff6ff', msg:'We are actively monitoring the drawings for your profile.' },
+  { n:5, label:'ITA Received',          short:'ITA',         clr:'#6b21a8', bg:'#fdf4ff', msg:'Congratulations! You have received an Invitation to Apply.' },
+  { n:6, label:'Application Submitted', short:'Submitted',   clr:'#92400e', bg:'#fffbeb', msg:'Your application is under final background checks & review.' },
+  { n:7, label:'Approved',              short:'Approved',    clr:'#14532d', bg:'#dcfce7', msg:'Congratulations! Your application has been fully approved.' },
+];
+
+function stageGet(n) { return STAGES[Math.max(0, Math.min(6, (n||1)-1))]; }
+function stagePct(n) { return Math.round(((n||1)/7)*100); }
+
+// Small inline bar for app rows (no expand trigger)
+function stageBarSmall(stage) {
+  const s = stageGet(stage), pct = stagePct(stage);
+  const dotClr = stage === 7 ? '#1db96b' : '#f97316';
+  return `<div style="margin-top:6px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+      <span style="font-size:.7rem;font-weight:600;color:${s.clr};background:${s.bg};padding:1px 7px;border-radius:99px;">Stage ${stage} — ${s.short}</span>
+      <span style="font-size:.72rem;font-weight:700;color:${dotClr};">${pct}%</span>
+    </div>
+    <div class="stage-progress-bar"><div class="stage-progress-fill" style="width:${pct}%;"></div></div>
+  </div>`;
+}
+
+// Dashboard card bar with "Click to see more" expand toggle
+function stageBarExpand(stage, appId) {
+  const s = stageGet(stage), pct = stagePct(stage);
+  const dotClr = stage === 7 ? '#1db96b' : '#f97316';
+  return `<div style="margin-top:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+      <span style="font-size:.7rem;font-weight:600;color:${s.clr};background:${s.bg};padding:1px 7px;border-radius:99px;">Stage ${stage} — ${s.short}</span>
+      <span style="font-size:.72rem;font-weight:700;color:${dotClr};">${pct}%</span>
+    </div>
+    <div class="stage-progress-bar" style="margin-bottom:6px;"><div class="stage-progress-fill" style="width:${pct}%;"></div></div>
+    <button id="expand-btn-${appId}" onclick="event.stopPropagation();toggleExpand('${appId}')"
+      style="font-size:.72rem;color:var(--brand-mid);font-weight:600;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;padding:2px 0;">
+      <i id="expand-icon-${appId}" class="fas fa-chevron-down" style="font-size:.6rem;"></i> Click to see more
+    </button>
+  </div>`;
+}
+
+// Full 7-step tracker HTML
+function fullTrackerHtml(stage) {
+  const pct = stagePct(stage);
+  const s   = stageGet(stage);
+
+  // Build connector + dot row
+  let stepsHtml = '';
+  STAGES.forEach((st, i) => {
+    const done    = st.n < stage;
+    const current = st.n === stage;
+    const cls     = done ? 'sdot-done' : current ? 'sdot-current' : 'sdot-upcoming';
+    const icon    = done ? '<i class="fas fa-check" style="font-size:.6rem;"></i>' : st.n;
+    stepsHtml += `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:0;">
+      <div class="sdot ${cls}">${icon}</div>
+      <span style="font-size:.6rem;text-align:center;line-height:1.2;color:${current?'var(--text)':'var(--muted)'};font-weight:${current?700:400};">${st.short}</span>
+    </div>`;
+    if (i < 6) stepsHtml += `<div style="flex:2;height:2px;background:${done?'#1db96b':'#e5e7eb'};border-radius:2px;margin-bottom:20px;align-self:flex-start;margin-top:13px;"></div>`;
+  });
+
+  return `<div style="background:var(--surface);border-radius:14px;padding:18px;border:1px solid var(--border);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <h4 class="syne" style="font-size:.9rem;font-weight:700;">Application Progress</h4>
+      <span class="syne" style="font-size:1.35rem;font-weight:800;color:${stage===7?'#1db96b':'#f97316'};">${pct}%</span>
+    </div>
+    <div class="stage-progress-bar" style="margin-bottom:14px;"><div class="stage-progress-fill" style="width:${pct}%;"></div></div>
+    <div style="display:flex;align-items:flex-start;">${stepsHtml}</div>
+    <div style="margin-top:14px;border-left:3px solid ${s.clr};background:${s.bg};border-radius:0 8px 8px 0;padding:10px 12px;">
+      <p style="font-size:.75rem;font-weight:700;color:${s.clr};margin-bottom:2px;">Stage ${stage}: ${s.label}</p>
+      <p style="font-size:.8rem;color:var(--text);line-height:1.5;">${s.msg}</p>
+    </div>
+  </div>`;
+}
+
+// Toggle the expand on dashboard cards
+function toggleExpand(appId) {
+  const body = document.getElementById('expand-body-' + appId);
+  const icon = document.getElementById('expand-icon-' + appId);
+  const btn  = document.getElementById('expand-btn-'  + appId);
+  if (!body) return;
+  const opening = !body.classList.contains('open');
+  body.classList.toggle('open', opening);
+  if (opening) {
+    const app = allApps.find(a => String(a.id) === String(appId));
+    if (app) body.innerHTML = fullTrackerHtml(app.stage || 1);
+    icon.className = 'fas fa-chevron-up';
+    btn.innerHTML  = '<i class="fas fa-chevron-up" id="expand-icon-' + appId + '" style="font-size:.6rem;"></i> Hide details';
+  } else {
+    body.innerHTML = '';
+    icon.className = 'fas fa-chevron-down';
+    btn.innerHTML  = '<i class="fas fa-chevron-down" id="expand-icon-' + appId + '" style="font-size:.6rem;"></i> Click to see more';
+  }
+}
+
+// =========================================================
 //  STATE
 // =========================================================
-let CU  = null;   // currentUser (auth)
-let CP  = null;   // currentProfile (from profiles table)
+let CU  = null;
+let CP  = null;
 let allApps   = [];
-let allUsers  = [];   // all profiles (admin only)
-let allStaff  = [];   // staff/admin profiles
+let allUsers  = [];
+let allStaff  = [];
 let allLogs   = [];
 let tempFiles = [];
 let selAppId  = null;
@@ -918,7 +1047,6 @@ function showAuthErr(msg) {
   el.classList.remove('hidden');
 }
 
-// Login
 $('loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   const btn = $('loginBtn');
@@ -932,7 +1060,6 @@ $('loginForm').addEventListener('submit', async e => {
   } finally { setBtnLoading(btn, false); }
 });
 
-// Signup
 $('signupForm').addEventListener('submit', async e => {
   e.preventDefault();
   const btn = $('signupBtn');
@@ -980,7 +1107,6 @@ $('signupForm').addEventListener('submit', async e => {
 
     if (pErr) { showAuthErr('Profile error: ' + pErr.message); return; }
 
-    // Boot directly into app — no need to sign in again
     showLoading(true);
     await bootApp(authData.user);
 
@@ -989,7 +1115,6 @@ $('signupForm').addEventListener('submit', async e => {
 
 async function handleLogout() {
   await sb.auth.signOut();
-  // State reset handled in onAuthStateChange
 }
 
 // =========================================================
@@ -1006,7 +1131,6 @@ async function bootApp(user) {
   }
   CP = profile;
 
-  // UI setup
   const name = profile.full_name || user.email.split('@')[0];
   $('sidebarAvatar').textContent = name.charAt(0).toUpperCase();
   $('sidebarName').textContent   = name;
@@ -1020,7 +1144,6 @@ async function bootApp(user) {
   $('headerRoleBadge').className = `badge ${roleBadgeClass}`;
   $('headerRoleBadge').textContent = profile.role.charAt(0).toUpperCase() + profile.role.slice(1);
 
-  // Role-specific nav
   if (profile.role === 'admin') {
     $('navStaff').classList.remove('hidden');
     $('navStaff').style.display = 'flex';
@@ -1040,7 +1163,6 @@ async function bootApp(user) {
     $('referralDisplay').textContent = profile.referral_code || '--------';
   }
 
-  // Load data
   await loadApps();
   if (profile.role === 'admin') {
     await loadAllUsers();
@@ -1055,7 +1177,6 @@ async function bootApp(user) {
   renderDashboard();
   showSection('dashboard');
 
-  // Hide auth, show app — order matters
   $('authScreen').style.display  = 'none';
   $('mainApp').style.display     = 'flex';
   showLoading(false);
@@ -1122,7 +1243,6 @@ async function loadApps() {
   if (error) { toast('Failed to load applications: ' + error.message, 'error'); return; }
   allApps = data || [];
 
-  // Enrich with profile data for staff/admin
   if ((CP.role === 'admin' || CP.role === 'staff') && allApps.length) {
     const ids = [...new Set(allApps.map(a => a.user_id).filter(Boolean))];
     const { data: profs } = await sb.from('profiles').select('id,full_name,email,referral_code,referred_by_code,role').in('id', ids);
@@ -1195,7 +1315,7 @@ function showSection(name) {
 // =========================================================
 function renderDashboard() {
   const total    = allApps.length;
-  const approved = allApps.filter(a => a.status === 'approved').length;
+  const approved = allApps.filter(a => (a.stage||1) === 7).length;
   const pending  = allApps.filter(a => a.status === 'pending').length;
   const rejected = allApps.filter(a => a.status === 'rejected').length;
   const review   = allApps.filter(a => a.status === 'review').length;
@@ -1227,14 +1347,18 @@ function renderDashboard() {
       </div>
     </div>`).join('');
 
+  // Recent list: each card has stage bar + expand
   $('recentList').innerHTML = allApps.slice(0, 5).map(a => `
-    <div class="app-row" onclick="openDetail('${a.id}')">
-      <div class="app-avatar">${san(a.applicant_name).charAt(0).toUpperCase()}</div>
-      <div style="flex:1;min-width:0;">
-        <p style="font-weight:600;font-size:.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${san(a.applicant_name)}</p>
-        <p style="font-size:.75rem;color:var(--muted);">${san(a.package)} · ${fmt(a.created_at)}</p>
+    <div style="border:1px solid var(--border);border-radius:12px;background:var(--card);overflow:hidden;transition:all .2s;" onmouseover="this.style.borderColor='var(--brand-mid)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;" onclick="openDetail('${a.id}')">
+        <div class="app-avatar">${san(a.applicant_name).charAt(0).toUpperCase()}</div>
+        <div style="flex:1;min-width:0;">
+          <p style="font-weight:600;font-size:.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${san(a.applicant_name)}</p>
+          <p style="font-size:.75rem;color:var(--muted);">${san(a.package)} · ${fmt(a.created_at)}</p>
+          ${stageBarExpand(a.stage||1, a.id)}
+        </div>
       </div>
-      <span class="badge badge-${a.status}">${a.status.charAt(0).toUpperCase()+a.status.slice(1)}</span>
+      <div class="stage-expand-body" id="expand-body-${a.id}"></div>
     </div>`).join('') || '<p style="color:var(--muted);font-size:.875rem;text-align:center;padding:20px;">No applications yet</p>';
 }
 
@@ -1278,8 +1402,8 @@ function renderAppList() {
       <div style="flex:1;min-width:0;">
         <p style="font-weight:600;font-size:.875rem;">${hl(a.applicant_name, q)}</p>
         <p style="font-size:.75rem;color:var(--muted);">${hl(a.package, q)} · ${fmt(a.created_at)}</p>
+        ${stageBarSmall(a.stage||1)}
       </div>
-      <span class="badge badge-${a.status}">${a.status.charAt(0).toUpperCase()+a.status.slice(1)}</span>
       <i class="fas fa-chevron-right" style="color:var(--muted);font-size:.75rem;"></i>
     </div>`).join('');
 
@@ -1308,9 +1432,9 @@ function renderStaffAppList() {
       <div style="flex:1;min-width:0;">
         <p style="font-weight:600;font-size:.875rem;">${hl(a.applicant_name, q)}</p>
         <p style="font-size:.75rem;color:var(--muted);">${(a._profile?.email || a.email || '')} · ${san(a.package)}</p>
+        ${stageBarSmall(a.stage||1)}
       </div>
       <span style="font-size:.75rem;color:var(--muted);">${fmt(a.created_at)}</span>
-      <span class="badge badge-${a.status}">${a.status.charAt(0).toUpperCase()+a.status.slice(1)}</span>
     </div>`).join('');
 }
 
@@ -1347,10 +1471,10 @@ function renderAdminAppList() {
       <div style="flex:1;min-width:0;">
         <p style="font-weight:600;font-size:.875rem;">${hl(a.applicant_name, q)}</p>
         <p style="font-size:.75rem;color:var(--muted);">${p.email || a.email || ''} · ${hl(a.package, q)}</p>
+        ${stageBarSmall(a.stage||1)}
       </div>
       ${assignedStaff ? `<span style="font-size:.72rem;background:#e0f2fe;color:#075985;padding:3px 8px;border-radius:99px;white-space:nowrap;">${san(assignedStaff.full_name)}</span>` : ''}
       <span style="font-size:.75rem;color:var(--muted);white-space:nowrap;">${fmt(a.created_at)}</span>
-      <span class="badge badge-${a.status}">${a.status.charAt(0).toUpperCase()+a.status.slice(1)}</span>
     </div>`;
   }).join('');
 
@@ -1483,7 +1607,6 @@ async function addProfileNote(userId) {
   toast('Message sent');
   await logAct('note', null, `Sent message to user profile`);
   await openUserProfile(userId);
-  // Scroll thread to bottom after re-render
   setTimeout(() => {
     const c = $('pNotesContainer');
     if (c) c.scrollTop = c.scrollHeight;
@@ -1515,7 +1638,7 @@ async function demoteToApplicant(userId) {
 }
 
 // =========================================================
-//  STAFF MESSAGES (staff reads + replies to admin profile notes)
+//  STAFF MESSAGES
 // =========================================================
 async function loadStaffMessages() {
   const { data, error } = await sb.from('profile_notes')
@@ -1554,7 +1677,6 @@ async function loadStaffMessages() {
       </div>`;
   }).join('');
 
-  // Scroll to bottom
   container.scrollTop = container.scrollHeight;
 }
 
@@ -1566,7 +1688,7 @@ async function sendStaffReply() {
   setBtnLoading(btn, true);
   try {
     const { error } = await sb.from('profile_notes').insert([{
-      profile_id: CU.id,   // note is on own profile — admin sees it there
+      profile_id: CU.id,
       author_id:  CU.id,
       content
     }]);
@@ -1581,7 +1703,6 @@ async function deleteAccount(userId) {
   const u = allUsers.find(u => sstr(u.id) === sstr(userId));
   if (!confirm(`Delete ${u?.full_name || 'this user'}'s account? This cannot be undone.`)) return;
   await logAct('delete', null, `Deleted account for user ${userId}`);
-  // Delete their applications
   const userApps = allApps.filter(a => sstr(a.user_id) === sstr(userId));
   for (const a of userApps) {
     const { data: docs } = await sb.from('application_documents').select('file_path').eq('application_id', a.id);
@@ -1604,6 +1725,8 @@ async function openDetail(appId) {
   const app = allApps.find(a => String(a.id) === selAppId);
   if (!app) return;
 
+  const currentStage = app.stage || 1;
+
   if (CP.role !== 'applicant') {
     await logAct('view', selAppId, `Viewed application #${sid(selAppId)}`);
   }
@@ -1614,9 +1737,15 @@ async function openDetail(appId) {
   const canEdit = isAdmin || (isStaff && String(app.assigned_staff_id) === String(CU.id)) || isOwner;
 
   $('detailTitle').textContent    = `#${sid(app.id)} — ${app.applicant_name}`;
-  $('detailSubtitle').textContent = `Submitted ${fmt(app.created_at)}`;
-  $('detailStatusBadge').className   = `badge badge-${app.status}`;
-  $('detailStatusBadge').textContent = app.status.charAt(0).toUpperCase() + app.status.slice(1);
+  $('detailSubtitle').textContent = `Submitted ${fmt(app.created_at)} · Stage ${currentStage} of 7`;
+
+  // Badge shows stage info
+  const si = stageGet(currentStage);
+  $('detailStatusBadge').style.cssText = `background:${si.bg};color:${si.clr};`;
+  $('detailStatusBadge').textContent = `${stagePct(currentStage)}% — ${si.short}`;
+
+  // Full stage tracker at top of modal body
+  $('modalStageTracker').innerHTML = fullTrackerHtml(currentStage);
 
   // Info view
   $('detailViewGrid').innerHTML = `
@@ -1642,13 +1771,11 @@ async function openDetail(appId) {
           value="${san(CP.referred_by_code||'')}" ${refLocked?'disabled':''} placeholder="${refLocked?'Already applied and locked':'Enter referral code (optional)'}">
       </div>` : ''}`;
     $('detailEditBtn').style.display = 'inline-flex';
-    $('detailEditBtn').textContent = 'Edit';
     $('detailEditBtn').innerHTML = '<i class="fas fa-pen" style="font-size:.75rem;"></i> Edit';
   } else {
     $('detailEditBtn').style.display = 'none';
   }
 
-  // Reset to view mode
   cancelDetailEdit();
 
   // Assign section (admin only)
@@ -1660,15 +1787,12 @@ async function openDetail(appId) {
     $('assignSection').classList.add('hidden');
   }
 
-  // Status section (staff/admin)
+  // Stage control (staff/admin only)
   if (isAdmin || isStaff) {
-    $('statusSection').classList.remove('hidden');
-    document.querySelectorAll('.sts-btn').forEach(b => {
-      b.style.outline = b.dataset.s === app.status ? '2px solid #0f1f17' : 'none';
-      b.style.outlineOffset = '2px';
-    });
+    $('stageControlSection').classList.remove('hidden');
+    renderStageControls(currentStage);
   } else {
-    $('statusSection').classList.add('hidden');
+    $('stageControlSection').classList.add('hidden');
   }
 
   // Documents
@@ -1693,6 +1817,48 @@ async function openDetail(appId) {
 
   $('deleteAppBtn').classList.toggle('hidden', !(isAdmin || isStaff));
   $('detailModal').classList.remove('hidden');
+}
+
+// Render stage nav buttons inside the modal
+function renderStageControls(currentStage) {
+  let html = '';
+  if (currentStage > 1) {
+    html += `<button class="stage-btn" onclick="moveStage(${currentStage - 1})">
+      <i class="fas fa-arrow-left"></i> Back to Stage ${currentStage - 1}
+    </button>`;
+  }
+  if (currentStage < 6) {
+    html += `<button class="stage-btn" onclick="moveStage(${currentStage + 1})">
+      Advance to Stage ${currentStage + 1} <i class="fas fa-arrow-right"></i>
+    </button>`;
+  }
+  if (currentStage === 6) {
+    html += `<button class="stage-btn" style="background:var(--brand-mid);color:#fff;border-color:var(--brand-mid);" onclick="finalApprove()">
+      <i class="fas fa-check-circle"></i> Mark as Approved (Stage 7)
+    </button>`;
+  }
+  if (currentStage === 7) {
+    html += `<span style="color:#1db96b;font-weight:600;font-size:.875rem;display:flex;align-items:center;gap:6px;">
+      <i class="fas fa-check-circle"></i> Fully Approved
+    </span>`;
+  }
+  $('stageControlBtns').innerHTML = html;
+}
+
+async function moveStage(newStage) {
+  const app = allApps.find(a => String(a.id) === selAppId);
+  const { error } = await sb.from('applications').update({ stage: newStage }).eq('id', selAppId);
+  if (error) { toast('Error: ' + error.message, 'error'); return; }
+  const si = stageGet(newStage);
+  await logAct('status_update', selAppId, `Stage ${app?.stage||1} → ${newStage}: ${si.label} on #${sid(selAppId)}`);
+  toast(`Stage ${newStage}: ${si.label}`);
+  await loadApps();
+  openDetail(selAppId);
+}
+
+async function finalApprove() {
+  if (!confirm('Mark this application as fully Approved (Stage 7)?')) return;
+  await moveStage(7);
 }
 
 function toggleDetailEdit() {
@@ -1725,7 +1891,6 @@ async function saveDetailEdits() {
     }).eq('id', selAppId);
     if (error) { toast('Save error: ' + error.message, 'error'); return; }
 
-    // Referral code (applicant only, one-time)
     if (CP.role === 'applicant' && !CP.referred_by_code) {
       const refEl = $('eRef');
       if (refEl) {
@@ -1745,16 +1910,6 @@ async function saveDetailEdits() {
     await loadApps();
     openDetail(selAppId);
   } finally { setBtnLoading(btn, false); }
-}
-
-async function updateStatus(status) {
-  const app = allApps.find(a => String(a.id) === selAppId);
-  const { error } = await sb.from('applications').update({ status }).eq('id', selAppId);
-  if (error) { toast('Error: ' + error.message, 'error'); return; }
-  await logAct('status_update', selAppId, `Changed status from ${app?.status} to ${status} on #${sid(selAppId)}`);
-  toast(`Status → ${status}`);
-  await loadApps();
-  openDetail(selAppId);
 }
 
 async function assignStaff() {
@@ -1945,7 +2100,7 @@ async function createApplication() {
   setBtnLoading(btn, true);
   try {
     const { data: app, error } = await sb.from('applications')
-      .insert([{ user_id: CU.id, applicant_name: name, email, phone, package: pkg, status: 'pending' }])
+      .insert([{ user_id: CU.id, applicant_name: name, email, phone, package: pkg, status: 'pending', stage: 1 }])
       .select().single();
     if (error) throw error;
 
@@ -2095,7 +2250,6 @@ window.addEventListener('load', async () => {
       $('mainApp').style.display  = 'none';
       $('authScreen').style.display = 'flex';
       switchAuthMode('login');
-      // Reset state
       CU = null; CP = null;
       allApps = []; allUsers = []; allStaff = []; allLogs = [];
     }
