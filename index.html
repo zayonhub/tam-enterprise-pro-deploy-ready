@@ -338,7 +338,7 @@
       <div id="navDashboard"     class="nav-item active" onclick="showSection('dashboard')"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
       <div id="navApplications"  class="nav-item"        onclick="showSection('applications')"><i class="fas fa-folder-open"></i><span>Applications</span></div>
       <div id="navStaff"         class="nav-item hidden"  onclick="showSection('staff')"><i class="fas fa-headset"></i><span>Staff Portal</span><span id="staffBadge" class="nav-badge hidden">0</span></div>
-      <div id="navUsers"         class="nav-item hidden"  onclick="showSection('users')"><i class="fas fa-users-cog"></i><span>User Management</span></div>
+      <div id="navUsers"         class="nav-item hidden"  onclick="showSection('users')"><i class="fas fa-users-cog"></i><span>User Management</span><span id="usersBadge" class="nav-badge hidden">0</span></div>
     </nav>
     <div style="padding:14px 12px;border-top:1px solid rgba(255,255,255,.1);">
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.08);border-radius:12px;margin-bottom:8px;">
@@ -944,6 +944,15 @@ let appPage=1, adminPage=1;
 const PER=12;
 let currentUserTab='applicants', referrerCode=null, detailRefCodeVal=null;
 
+// ── Notification state ──
+let _notifInterval=null;       // repeating chime interval handle
+let _pollTimer=null;           // polling interval handle
+let _audioCtx=null;
+let _staffUnreadMsgs=0;        // staff: unread admin notes count
+let _adminUnreadStaffMsgs=0;   // admin: unread staff messages count
+let _staffUnreadReqs=0;        // staff: their pending requests count
+let _chimeActive=false;        // whether chime loop is active
+
 // =========================================================
 //  UTILITIES
 // =========================================================
@@ -1043,7 +1052,13 @@ $('signupForm').addEventListener('submit',async e=>{
   } finally{setBtnLoading(btn,false);}
 });
 
-async function handleLogout(){await sb.auth.signOut();}
+async function handleLogout(){
+  stopChimeLoop();
+  clearInterval(_pollTimer);
+  _pollTimer=null;
+  _staffUnreadMsgs=0; _adminUnreadStaffMsgs=0; _staffUnreadReqs=0;
+  await sb.auth.signOut();
+}
 
 // =========================================================
 //  BOOT
@@ -1099,6 +1114,31 @@ async function bootApp(user){
   }
   if(profile.role==='admin'||profile.role==='staff') await loadStaff();
 
+  // ── Seed notification counts on sign-in ──
+  if(profile.role==='staff'){
+    const {count}=await sb.from('profile_notes')
+      .select('id',{count:'exact',head:true})
+      .eq('profile_id',user.id)
+      .neq('author_id',user.id);
+    _staffUnreadMsgs=count||0;
+  }
+  if(profile.role==='admin'){
+    const {data:sIds}=await sb.from('profiles').select('id').eq('role','staff');
+    if(sIds?.length){
+      const {count}=await sb.from('profile_notes').select('id',{count:'exact',head:true}).in('author_id',sIds.map(s=>s.id));
+      _adminUnreadStaffMsgs=count||0;
+    }
+  }
+  updateAllBadges();
+
+  // Play chime on sign-in if there are pre-existing unread notifications
+  if(profile.role==='staff'&&_staffUnreadMsgs>0) startChimeLoop();
+  if(profile.role==='admin'&&(_adminUnreadStaffMsgs>0||allRequests.filter(r=>r.status==='pending').length>0)) startChimeLoop();
+
+  // Start polling every 30s
+  clearInterval(_pollTimer);
+  _pollTimer=setInterval(pollNotifications, 30000);
+
   renderDashboard();
   showSection('dashboard');
   $('authScreen').style.display='none';
@@ -1128,6 +1168,18 @@ function switchStaffTab(tab){
   const tabId=`stab-${tab}`;
   $(map[tab])?.classList.remove('hidden');
   $(tabId)?.classList.add('active');
+
+  // Clear relevant badges + chime when tab opened
+  if(tab==='messages'&&CP?.role==='staff'){
+    _staffUnreadMsgs=0;
+    stopChimeLoop();
+    updateAllBadges();
+  }
+  if(tab==='requests'&&CP?.role==='admin'){
+    // Don't clear — admin must approve/pend to clear; just stop chime
+    stopChimeLoop();
+  }
+
   if(tab==='myapps') renderStaffAppList();
   else if(tab==='messages') loadStaffMessages();
   else if(tab==='applications') renderAdminAppList();
@@ -1168,15 +1220,165 @@ async function loadLogs(){const {data}=await sb.from('activity_logs').select('*'
 async function loadApprovalRequests(){
   const {data}=await sb.from('stage_requests').select('*').in('status',['pending','pended']).order('created_at',{ascending:false});
   allRequests=data||[];
-  updateRequestBadge();
+  updateAllBadges();
   renderApprovalList();
 }
 
-function updateRequestBadge(){
-  const pending=allRequests.filter(r=>r.status==='pending').length;
-  const badge=$('staffBadge');
-  if(pending>0&&CP?.role==='admin'){badge.textContent=pending;badge.classList.remove('hidden');}
-  else badge.classList.add('hidden');
+// =========================================================
+//  SOFT CHIME (Web Audio API)
+// =========================================================
+function getAudioCtx(){
+  if(!_audioCtx) _audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  return _audioCtx;
+}
+
+function playSoftChime(){
+  try{
+    const ctx=getAudioCtx();
+    // Two-tone chime: high note then lower
+    const notes=[{freq:880,start:0,dur:.18},{freq:1100,start:.12,dur:.25},{freq:660,start:.28,dur:.35}];
+    notes.forEach(n=>{
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type='sine'; osc.frequency.value=n.freq;
+      const t=ctx.currentTime+n.start;
+      gain.gain.setValueAtTime(0,t);
+      gain.gain.linearRampToValueAtTime(0.18,t+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001,t+n.dur);
+      osc.start(t); osc.stop(t+n.dur+0.05);
+    });
+  } catch(e){ console.warn('Chime failed',e); }
+}
+
+function startChimeLoop(){
+  if(_chimeActive) return;
+  _chimeActive=true;
+  playSoftChime();
+  _notifInterval=setInterval(()=>{
+    if(_chimeActive) playSoftChime();
+  }, 7*60*1000); // every 7 minutes
+}
+
+function stopChimeLoop(){
+  _chimeActive=false;
+  clearInterval(_notifInterval);
+  _notifInterval=null;
+}
+
+// =========================================================
+//  BADGE + NOTIFICATION MANAGER
+// =========================================================
+function updateAllBadges(){
+  if(!CP) return;
+
+  if(CP.role==='admin'){
+    // Sidebar Staff Portal badge = pending approval requests
+    const pendingReqs=allRequests.filter(r=>r.status==='pending').length;
+    setBadge('staffBadge', pendingReqs);
+    // Requests tab badge
+    setTabBadge('stab-requests', pendingReqs);
+    // Users badge = unread staff messages
+    setBadge('usersBadge', _adminUnreadStaffMsgs);
+  }
+
+  if(CP.role==='staff'){
+    // Sidebar Staff Portal badge = unread msgs + pending requests they sent
+    const pendingMyReqs=allRequests.filter(r=>String(r.requested_by)===String(CU.id)&&r.status==='pending').length;
+    _staffUnreadReqs=pendingMyReqs;
+    const total=_staffUnreadMsgs+pendingMyReqs;
+    setBadge('staffBadge', total);
+    // Tab badges
+    setTabBadge('stab-messages', _staffUnreadMsgs);
+    setTabBadge('stab-myapps', pendingMyReqs);
+  }
+}
+
+function setBadge(id, count){
+  const el=$(id); if(!el) return;
+  if(count>0){el.textContent=count;el.classList.remove('hidden');}
+  else el.classList.add('hidden');
+}
+
+function setTabBadge(tabId, count){
+  const btn=$(tabId); if(!btn) return;
+  // Remove existing inline badge
+  const existing=btn.querySelector('.tab-notif-badge');
+  if(existing) existing.remove();
+  if(count>0){
+    const sp=document.createElement('span');
+    sp.className='tab-notif-badge';
+    sp.style.cssText='display:inline-flex;align-items:center;justify-content:center;background:#ef4444;color:#fff;border-radius:99px;font-size:.62rem;font-weight:700;padding:1px 5px;min-width:16px;margin-left:5px;';
+    sp.textContent=count;
+    btn.appendChild(sp);
+  }
+}
+
+// =========================================================
+//  POLLING — checks for new notifications every 30s
+// =========================================================
+async function pollNotifications(){
+  if(!CU||!CP) return;
+  try{
+    if(CP.role==='staff'){
+      // Count admin notes on this staff's profile
+      const {count}=await sb.from('profile_notes')
+        .select('id',{count:'exact',head:true})
+        .eq('profile_id',CU.id)
+        .neq('author_id',CU.id); // notes NOT from self = from admin
+      const newCount=count||0;
+      const prev=_staffUnreadMsgs;
+      // Only fire chime if user hasn't opened Messages tab and count grew
+      if(newCount>prev){
+        _staffUnreadMsgs=newCount;
+        updateAllBadges();
+        if(!_staffMessagesOpen()) startChimeLoop();
+      }
+    }
+
+    if(CP.role==='admin'){
+      // Count profile_notes where author is staff/applicant (messages to admin)
+      const {data:staffIds}=await sb.from('profiles').select('id').eq('role','staff');
+      if(staffIds?.length){
+        const ids=staffIds.map(s=>s.id);
+        const {count}=await sb.from('profile_notes')
+          .select('id',{count:'exact',head:true})
+          .in('author_id',ids);
+        const newCount=count||0;
+        const prev=_adminUnreadStaffMsgs;
+        if(newCount>prev){
+          _adminUnreadStaffMsgs=newCount;
+          updateAllBadges();
+          if(!_adminUsersOpen()) startChimeLoop();
+        }
+      }
+
+      // Also reload approval requests silently
+      const {data:reqs}=await sb.from('stage_requests').select('*').in('status',['pending','pended']).order('created_at',{ascending:false});
+      const newReqs=reqs||[];
+      const prevPending=allRequests.filter(r=>r.status==='pending').length;
+      const newPending=newReqs.filter(r=>r.status==='pending').length;
+      allRequests=newReqs;
+      if(newPending>prevPending){
+        updateAllBadges();
+        if(!_adminRequestsOpen()) startChimeLoop();
+      } else {
+        updateAllBadges();
+      }
+    }
+  } catch(e){ console.warn('Poll failed',e); }
+}
+
+function _staffMessagesOpen(){
+  return !$('staffSection')?.classList.contains('hidden') &&
+         !$('staffMessagesTab')?.classList.contains('hidden');
+}
+function _adminUsersOpen(){
+  return !$('usersSection')?.classList.contains('hidden');
+}
+function _adminRequestsOpen(){
+  return !$('staffSection')?.classList.contains('hidden') &&
+         !$('approvalRequestsTab')?.classList.contains('hidden');
 }
 
 async function logAct(action,appId,detail){
@@ -1200,7 +1402,15 @@ function showSection(name){
   if(name==='dashboard') renderDashboard();
   if(name==='applications') renderAppList();
   if(name==='staff'){CP.role==='admin'?switchStaffTab('applications'):switchStaffTab('myapps');}
-  if(name==='users'){switchUserTab('applicants');renderUserList();}
+  if(name==='users'){
+    switchUserTab('applicants'); renderUserList();
+    // Clear unread staff messages badge for admin
+    if(CP?.role==='admin'){
+      _adminUnreadStaffMsgs=0;
+      stopChimeLoop();
+      updateAllBadges();
+    }
+  }
   closeSidebar();
 }
 
@@ -1529,6 +1739,16 @@ async function demoteToApplicant(userId){
 async function loadStaffMessages(){
   const {data}=await sb.from('profile_notes').select('*,author:author_id(full_name,role)').eq('profile_id',CU.id).order('created_at',{ascending:true});
   const notes=data||[]; const container=$('staffMsgList');
+
+  // Recount admin messages (from others = admin notes)
+  const adminNotes=notes.filter(n=>String(n.author_id)!==String(CU.id));
+  // If messages tab is open, mark as read
+  if(_staffMessagesOpen()){
+    _staffUnreadMsgs=0; stopChimeLoop(); updateAllBadges();
+  } else {
+    _staffUnreadMsgs=adminNotes.length; updateAllBadges();
+  }
+
   if(!notes.length){container.innerHTML=`<div style="text-align:center;padding:48px 24px;color:var(--muted);"><div style="font-size:3rem;margin-bottom:12px;">💬</div><p style="font-weight:600;">No messages yet</p></div>`;return;}
   container.innerHTML=notes.map(n=>{
     const isMe=String(n.author_id)===String(CU.id);
@@ -2070,6 +2290,9 @@ window.addEventListener('load',async()=>{
   else{showLoading(false);$('authScreen').style.display='flex';switchAuthMode('login');}
   sb.auth.onAuthStateChange((event,session)=>{
     if(event==='SIGNED_OUT'){
+      stopChimeLoop();
+      clearInterval(_pollTimer); _pollTimer=null;
+      _staffUnreadMsgs=0; _adminUnreadStaffMsgs=0; _staffUnreadReqs=0;
       $('mainApp').style.display='none'; $('authScreen').style.display='flex'; switchAuthMode('login');
       CU=null;CP=null;allApps=[];allUsers=[];allStaff=[];allLogs=[];allRequests=[];
     }
