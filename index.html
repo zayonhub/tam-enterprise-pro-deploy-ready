@@ -790,7 +790,8 @@
           <div style="background:var(--surface);border-radius:14px;padding:18px;">
             <h4 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:12px;">Actions</h4>
             <div style="display:flex;flex-direction:column;gap:8px;">
-              <button onclick="closeDetailModal()" class="btn btn-ghost" style="justify-content:center;width:100%;font-size:.83rem;">Close</button>
+              <button onclick="saveAndClose()" class="btn btn-primary" style="justify-content:center;width:100%;font-size:.83rem;"><i class="fas fa-save"></i> Save & Close</button>
+              <button onclick="closeDetailModal()" class="btn btn-ghost" style="justify-content:center;width:100%;font-size:.83rem;">Close without Saving</button>
               <button id="deleteAppBtn" onclick="deleteApplication()" class="btn btn-danger hidden" style="justify-content:center;width:100%;font-size:.83rem;"><i class="fas fa-trash-alt"></i> Delete Application</button>
             </div>
           </div>
@@ -1576,13 +1577,6 @@ function renderAdminAppList(){
 // =========================================================
 //  APPROVAL REQUESTS (Admin)
 // =========================================================
-async function loadApprovalRequests(){
-  const {data}=await sb.from('stage_requests').select('*').in('status',['pending','pended']).order('created_at',{ascending:false});
-  allRequests=data||[];
-  updateRequestBadge();
-  renderApprovalList();
-}
-
 async function renderApprovalList(){
   const list=$('approvalList');
   if(!allRequests.length){list.innerHTML='';$('approvalEmpty').classList.remove('hidden');$('reqCount').textContent='0';return;}
@@ -2027,6 +2021,18 @@ async function saveDetailEdits(){
     await logAct('edit',selAppId,`Updated application #${sid(selAppId)}`);
     toast('Changes saved!'); await loadApps(); openDetail(selAppId);
   } finally{setBtnLoading(btn,false);}
+}
+
+async function saveAndClose(){
+  // If in edit mode, save first then close; otherwise just close
+  if(editMode){
+    await saveDetailEdits();
+    // Only close if save didn't surface an error toast
+    if(!editMode) closeDetailModal(); // saveDetailEdits calls openDetail which resets editMode
+    else closeDetailModal(); // close anyway
+  } else {
+    closeDetailModal();
+  }
 }
 
 async function assignStaff(){
