@@ -31,29 +31,40 @@
   h1,h2,h3,h4,.syne { font-family: 'Bricolage Grotesque', sans-serif; }
   body { background: var(--surface); color: var(--text); }
 
-  /* ===== SCROLLBAR ===== */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--brand-mid); border-radius: 99px; }
 
   /* ===== SIDEBAR ===== */
   .sidebar {
-    width: 260px;
-    background: var(--brand);
+    width: 260px; background: var(--brand);
     background-image: radial-gradient(ellipse at top left, rgba(29,185,107,.15) 0%, transparent 60%);
     transition: transform .3s ease;
+    position: fixed; left: 0; top: 0; height: 100vh;
+    display: flex; flex-direction: column; z-index: 50;
   }
   .nav-item {
     display: flex; align-items: center; gap: 12px;
     padding: 11px 16px; border-radius: 10px;
     font-size: .875rem; font-weight: 500; color: rgba(255,255,255,.75);
-    cursor: pointer; transition: all .2s;
+    cursor: pointer; transition: all .2s; position: relative;
   }
   .nav-item:hover { background: rgba(255,255,255,.1); color: #fff; }
   .nav-item.active { background: rgba(255,255,255,.15); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
   .nav-item i { width: 18px; text-align: center; }
+  .nav-badge {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: #ef4444; color: #fff; border-radius: 99px;
+    font-size: .65rem; font-weight: 700; padding: 2px 6px; min-width: 18px; text-align: center;
+  }
 
-  /* ===== STATUS BADGES ===== */
+  /* ===== MOBILE OVERLAY ===== */
+  #sidebarOverlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.5); z-index: 49;
+  }
+
+  /* ===== BADGES ===== */
   .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 99px; font-size: .72rem; font-weight: 600; letter-spacing: .02em; }
   .badge-pending  { background: #fef9c3; color: #854d0e; }
   .badge-review   { background: #ffedd5; color: #9a3412; }
@@ -62,6 +73,8 @@
   .badge-admin    { background: #ede9fe; color: #5b21b6; }
   .badge-staff    { background: #e0f2fe; color: #075985; }
   .badge-applicant{ background: #d1fae5; color: #065f46; }
+  .badge-pended   { background: #fef9c3; color: #854d0e; }
+  .badge-awaiting { background: #fce7f3; color: #9d174d; }
 
   /* ===== CARDS ===== */
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; }
@@ -78,6 +91,8 @@
   .btn-danger:hover { background: #fee2e2; }
   .btn-ghost { background: transparent; color: var(--muted); }
   .btn-ghost:hover { background: var(--surface); color: var(--text); }
+  .btn-warn { background: #fffbeb; color: #92400e; border: 1.5px solid #fde68a; }
+  .btn-warn:hover { background: #fef3c7; }
   .btn:disabled { opacity: .55; cursor: not-allowed; transform: none !important; }
 
   /* ===== INPUTS ===== */
@@ -92,11 +107,11 @@
   label.lbl { display: block; font-size: .78rem; font-weight: 600; color: var(--muted); margin-bottom: 5px; letter-spacing: .03em; text-transform: uppercase; }
 
   /* ===== TABS ===== */
-  .tab-bar { display: flex; gap: 4px; background: var(--surface); padding: 4px; border-radius: 12px; border: 1px solid var(--border); }
-  .tab-btn { padding: 8px 20px; border-radius: 9px; font-size: .83rem; font-weight: 600; cursor: pointer; transition: all .2s; color: var(--muted); border: none; background: transparent; }
+  .tab-bar { display: flex; gap: 4px; background: var(--surface); padding: 4px; border-radius: 12px; border: 1px solid var(--border); flex-wrap: wrap; }
+  .tab-btn { padding: 8px 20px; border-radius: 9px; font-size: .83rem; font-weight: 600; cursor: pointer; transition: all .2s; color: var(--muted); border: none; background: transparent; white-space: nowrap; }
   .tab-btn.active { background: var(--card); color: var(--brand); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
 
-  /* ===== LOG LINES ===== */
+  /* ===== LOG ===== */
   .log-view         { border-left-color: #3b82f6; }
   .log-status_update{ border-left-color: var(--brand-lite); }
   .log-delete       { border-left-color: var(--danger); }
@@ -106,183 +121,126 @@
   .log-edit         { border-left-color: #f97316; }
   .log-promote      { border-left-color: #7c3aed; }
 
-  /* ===== LOADING SKELETON ===== */
   @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
-  .skeleton {
-    background: linear-gradient(90deg, #e8f0ec 25%, #d4e4db 50%, #e8f0ec 75%);
-    background-size: 800px 100%;
-    animation: shimmer 1.5s infinite;
-    border-radius: 8px;
-  }
+  .skeleton { background: linear-gradient(90deg,#e8f0ec 25%,#d4e4db 50%,#e8f0ec 75%); background-size:800px 100%; animation:shimmer 1.5s infinite; border-radius:8px; }
 
-  /* ===== SPINNER ===== */
   @keyframes spin { to { transform: rotate(360deg); } }
-  .spinner { width: 20px; height: 20px; border: 2.5px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
-  .spinner-dark { border-color: rgba(13,92,58,.2); border-top-color: var(--brand-mid); }
+  .spinner { width:20px; height:20px; border:2.5px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
+  .spinner-dark { border-color:rgba(13,92,58,.2); border-top-color:var(--brand-mid); }
 
   /* ===== MODAL ===== */
-  .modal-overlay { position: fixed; inset: 0; background: rgba(10,20,15,.55); backdrop-filter: blur(4px); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .modal-box { background: var(--card); border-radius: 20px; width: 100%; max-height: 92vh; overflow: hidden; display: flex; flex-direction: column; animation: modalIn .25s cubic-bezier(.34,1.56,.64,1); }
-  @keyframes modalIn { from { opacity:0; transform: scale(.94) translateY(12px); } to { opacity:1; transform: scale(1) translateY(0); } }
-  .modal-header { padding: 22px 24px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: var(--surface); border-radius: 20px 20px 0 0; }
-  .modal-body { overflow-y: auto; flex: 1; padding: 24px; }
-  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; flex-shrink: 0; }
+  .modal-overlay { position:fixed; inset:0; background:rgba(10,20,15,.55); backdrop-filter:blur(4px); z-index:60; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .modal-box { background:var(--card); border-radius:20px; width:100%; max-height:92vh; overflow:hidden; display:flex; flex-direction:column; animation:modalIn .25s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes modalIn { from{opacity:0;transform:scale(.94) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
+  .modal-header { padding:22px 24px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; background:var(--surface); border-radius:20px 20px 0 0; }
+  .modal-body { overflow-y:auto; flex:1; padding:24px; }
+  .modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; flex-shrink:0; }
 
   /* ===== TOAST ===== */
-  #toast { position: fixed; bottom: 24px; right: 24px; z-index: 100; display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-radius: 14px; background: #0f1f17; color: #fff; font-size: .875rem; font-weight: 500; box-shadow: 0 8px 32px rgba(0,0,0,.25); max-width: 360px; animation: toastIn .3s cubic-bezier(.34,1.56,.64,1); }
-  @keyframes toastIn { from { opacity:0; transform: translateY(20px) scale(.95); } to { opacity:1; transform: translateY(0) scale(1); } }
+  #toast { position:fixed; bottom:24px; right:24px; z-index:100; display:flex; align-items:center; gap:12px; padding:14px 20px; border-radius:14px; background:#0f1f17; color:#fff; font-size:.875rem; font-weight:500; box-shadow:0 8px 32px rgba(0,0,0,.25); max-width:360px; animation:toastIn .3s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes toastIn { from{opacity:0;transform:translateY(20px) scale(.95)} to{opacity:1;transform:translateY(0) scale(1)} }
 
-  /* ===== AUTH SCREEN ===== */
-  #authScreen {
-    min-height: 100vh; align-items: center; justify-content: center;
-    background: var(--brand);
-    background-image:
-      radial-gradient(ellipse 80% 80% at 10% 90%, rgba(29,185,107,.25) 0%, transparent 50%),
-      radial-gradient(ellipse 60% 60% at 90% 10%, rgba(29,185,107,.15) 0%, transparent 50%);
-    padding: 16px;
-  }
-  .auth-card {
-    background: rgba(255,255,255,.97);
-    border-radius: 24px;
-    box-shadow: 0 32px 80px rgba(0,0,0,.35);
-    width: 100%; max-width: 460px;
-    overflow: hidden;
-  }
-  .auth-header {
-    background: var(--brand);
-    background-image: radial-gradient(ellipse at bottom right, rgba(29,185,107,.4) 0%, transparent 60%);
-    padding: 36px 36px 28px;
-    color: #fff;
-  }
-  .auth-body { padding: 32px 36px 36px; }
-  .plane-icon { font-size: 2.5rem; margin-bottom: 12px; display: block; animation: float 3s ease-in-out infinite; }
+  /* ===== AUTH ===== */
+  #authScreen { min-height:100vh; align-items:center; justify-content:center; background:var(--brand); background-image:radial-gradient(ellipse 80% 80% at 10% 90%,rgba(29,185,107,.25) 0%,transparent 50%),radial-gradient(ellipse 60% 60% at 90% 10%,rgba(29,185,107,.15) 0%,transparent 50%); padding:16px; }
+  .auth-card { background:rgba(255,255,255,.97); border-radius:24px; box-shadow:0 32px 80px rgba(0,0,0,.35); width:100%; max-width:480px; overflow:hidden; }
+  .auth-header { background:var(--brand); background-image:radial-gradient(ellipse at bottom right,rgba(29,185,107,.4) 0%,transparent 60%); padding:36px 36px 28px; color:#fff; }
+  .auth-body { padding:28px 36px 36px; }
+  .plane-icon { font-size:2.5rem; margin-bottom:12px; display:block; animation:float 3s ease-in-out infinite; }
   @keyframes float { 0%,100%{transform:translateY(0) rotate(-5deg)} 50%{transform:translateY(-8px) rotate(5deg)} }
 
-  /* ===== FADE IN ===== */
   @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-  .fade-up { animation: fadeUp .35s ease both; }
-  .fade-up-1 { animation-delay: .05s; }
-  .fade-up-2 { animation-delay: .1s; }
-  .fade-up-3 { animation-delay: .15s; }
-  .fade-up-4 { animation-delay: .2s; }
+  .fade-up { animation:fadeUp .35s ease both; }
+  .fade-up-1 { animation-delay:.05s; }
+  .fade-up-2 { animation-delay:.1s; }
+  .fade-up-3 { animation-delay:.15s; }
+  .fade-up-4 { animation-delay:.2s; }
 
-  /* ===== STAT CARD ===== */
-  .stat-card { display: flex; flex-direction: column; gap: 16px; padding: 22px; }
-  .stat-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
-  .stat-bar { height: 6px; background: var(--surface); border-radius: 99px; overflow: hidden; margin-top: 4px; }
-  .stat-bar-fill { height: 100%; border-radius: 99px; transition: width .8s cubic-bezier(.34,1.56,.64,1); }
+  .stat-card { display:flex; flex-direction:column; gap:16px; padding:22px; }
+  .stat-icon { width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.25rem; }
+  .stat-bar { height:6px; background:var(--surface); border-radius:99px; overflow:hidden; margin-top:4px; }
+  .stat-bar-fill { height:100%; border-radius:99px; transition:width .8s cubic-bezier(.34,1.56,.64,1); }
 
-  /* ===== APP ROW ===== */
-  .app-row {
-    display: flex; align-items: center; gap: 14px;
-    padding: 14px 16px; border: 1px solid var(--border);
-    border-radius: 12px; cursor: pointer; transition: all .2s;
-    background: var(--card);
-  }
-  .app-row:hover { border-color: var(--brand-mid); box-shadow: 0 4px 16px rgba(13,92,58,.08); transform: translateY(-1px); }
-  .app-avatar { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, var(--brand-lite), var(--brand)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .95rem; flex-shrink: 0; font-family: 'Bricolage Grotesque', sans-serif; }
+  .app-row { display:flex; align-items:center; gap:14px; padding:14px 16px; border:1px solid var(--border); border-radius:12px; cursor:pointer; transition:all .2s; background:var(--card); }
+  .app-row:hover { border-color:var(--brand-mid); box-shadow:0 4px 16px rgba(13,92,58,.08); transform:translateY(-1px); }
+  .app-avatar { width:40px; height:40px; border-radius:12px; background:linear-gradient(135deg,var(--brand-lite),var(--brand)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.95rem; flex-shrink:0; font-family:'Bricolage Grotesque',sans-serif; }
 
-  /* ===== DRAG ZONE ===== */
-  .drop-zone {
-    border: 2px dashed var(--border); border-radius: 14px; padding: 36px 24px;
-    text-align: center; cursor: pointer; transition: all .2s;
-  }
-  .drop-zone:hover, .drop-zone.drag-active { border-color: var(--brand-mid); background: var(--brand-glow); }
+  .drop-zone { border:2px dashed var(--border); border-radius:14px; padding:36px 24px; text-align:center; cursor:pointer; transition:all .2s; }
+  .drop-zone:hover,.drop-zone.drag-active { border-color:var(--brand-mid); background:var(--brand-glow); }
 
-  /* ===== PROGRESS RING (dashboard) ===== */
-  .ring-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; }
-  .ring-wrap svg { transform: rotate(-90deg); }
-  .ring-text { position: absolute; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; }
+  .ring-wrap { position:relative; display:inline-flex; align-items:center; justify-content:center; }
+  .ring-wrap svg { transform:rotate(-90deg); }
+  .ring-text { position:absolute; font-family:'Bricolage Grotesque',sans-serif; font-weight:700; }
 
-  /* ===== HIGHLIGHT ===== */
-  mark { background: #a7f3d0; padding: 0 2px; border-radius: 3px; }
+  mark { background:#a7f3d0; padding:0 2px; border-radius:3px; }
+  .divider { height:1px; background:var(--border); margin:20px 0; }
+  .note-bubble { padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:var(--surface); }
+  .note-bubble.admin  { border-left:3px solid var(--admin-c); background:#faf5ff; }
+  .note-bubble.staff  { border-left:3px solid var(--staff-c); background:#f0f9ff; }
+  .note-bubble.applicant { border-left:3px solid var(--app-c); background:#f0fdf4; }
+  .section-page { animation:fadeUp .3s ease; }
+  .user-row { display:flex; align-items:center; gap:14px; padding:14px 16px; border:1px solid var(--border); border-radius:12px; background:var(--card); transition:all .2s; }
+  .user-row:hover { box-shadow:0 2px 12px rgba(0,0,0,.06); }
 
-  /* ===== DIVIDER ===== */
-  .divider { height: 1px; background: var(--border); margin: 20px 0; }
-
-  /* ===== NOTE BUBBLE ===== */
-  .note-bubble { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); }
-  .note-bubble.admin  { border-left: 3px solid var(--admin-c); background: #faf5ff; }
-  .note-bubble.staff  { border-left: 3px solid var(--staff-c); background: #f0f9ff; }
-  .note-bubble.applicant { border-left: 3px solid var(--app-c); background: #f0fdf4; }
-
-  /* ===== SECTION TRANSITIONS ===== */
-  .section-page { animation: fadeUp .3s ease; }
-
-  /* ===== PROFILE CARD (user management) ===== */
-  .user-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); transition: all .2s; }
-  .user-row:hover { border-color: var(--border); box-shadow: 0 2px 12px rgba(0,0,0,.06); }
-
-  /* ===== LOADING OVERLAY ===== */
-  #loadingOverlay { position: fixed; inset: 0; background: var(--brand); z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; transition: opacity .5s; }
-  #loadingOverlay .ldr-plane { font-size: 3rem; animation: float 1.5s ease-in-out infinite; }
-  @keyframes ldrSpin { 0%{stroke-dashoffset:200} 100%{stroke-dashoffset:0} }
-  .ldr-ring { animation: spin 1s linear infinite; }
-
-  /* ===== RESPONSIVE SIDEBAR ===== */
-  @media(max-width: 768px) {
-    .sidebar { position: fixed; left: 0; top: 0; height: 100%; z-index: 50; transform: translateX(-100%); }
-    .sidebar.open { transform: translateX(0); }
-    main { margin-left: 0 !important; }
-    .mobile-menu-btn { display: flex !important; }
-  }
+  #loadingOverlay { position:fixed; inset:0; background:var(--brand); z-index:999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; transition:opacity .5s; }
+  #loadingOverlay .ldr-plane { font-size:3rem; animation:float 1.5s ease-in-out infinite; }
+  .ldr-ring { animation:spin 1s linear infinite; }
 
   /* ===== STAGE TRACKER ===== */
-  .stage-progress-bar {
-    height: 6px; background: #e5e7eb; border-radius: 99px; overflow: hidden;
+  .stage-progress-bar { height:6px; background:#e5e7eb; border-radius:99px; overflow:hidden; }
+  .stage-progress-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,var(--brand-lite),var(--brand-mid)); transition:width .8s cubic-bezier(.34,1.56,.64,1); }
+  .stage-expand-body { overflow:hidden; max-height:0; transition:max-height .4s ease,padding .3s ease; padding:0 16px; }
+  .stage-expand-body.open { max-height:500px; padding:0 16px 16px; }
+  .sdot { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.68rem; font-weight:700; flex-shrink:0; font-family:'Bricolage Grotesque',sans-serif; }
+  .sdot-done    { background:#1db96b; color:#fff; }
+  .sdot-current { background:#f97316; color:#fff; box-shadow:0 0 0 4px rgba(249,115,22,.18); }
+  .sdot-upcoming{ background:#e5e7eb; color:#9ca3af; }
+  .stage-btn { display:inline-flex; align-items:center; gap:7px; padding:8px 16px; border-radius:10px; font-size:.83rem; font-weight:600; cursor:pointer; transition:all .2s; border:1.5px solid var(--border); background:var(--card); color:var(--text); }
+  .stage-btn:hover { border-color:var(--brand-mid); background:var(--brand-glow); color:var(--brand); }
+
+  /* ===== APPROVAL REQUEST CARD ===== */
+  .req-card { border:1px solid #fde68a; background:#fffbeb; border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+  .req-card.pended { border-color:#ddd6fe; background:#faf5ff; }
+
+  /* ===== MOBILE ===== */
+  .mobile-menu-btn { display:none; }
+  @media(max-width:768px) {
+    .sidebar { transform:translateX(-100%); }
+    .sidebar.open { transform:translateX(0); }
+    #sidebarOverlay.open { display:block; }
+    main { margin-left:0 !important; }
+    .mobile-menu-btn { display:flex !important; }
+    .modal-box { max-height:96vh; border-radius:16px; }
+    .modal-body { padding:16px; }
+    .modal-header { padding:16px; }
+    .modal-footer { padding:12px 16px; flex-wrap:wrap; }
+    .detail-grid { grid-template-columns:1fr !important; }
+    .stat-grid-4 { grid-template-columns:1fr 1fr !important; }
+    .dash-grid { grid-template-columns:1fr !important; }
+    .auth-body { padding:20px 24px 28px; }
+    .auth-header { padding:28px 24px 22px; }
+    header { padding:12px 16px !important; }
+    .page-pad { padding:16px !important; }
+    .hide-mobile { display:none !important; }
   }
-  .stage-progress-fill {
-    height: 100%; border-radius: 99px;
-    background: linear-gradient(90deg, var(--brand-lite), var(--brand-mid));
-    transition: width .8s cubic-bezier(.34,1.56,.64,1);
+  @media(max-width:480px) {
+    .stat-grid-4 { grid-template-columns:1fr !important; }
+    .tab-btn { padding:7px 12px; font-size:.75rem; }
+    .btn { padding:8px 14px; font-size:.83rem; }
   }
-  /* Dashboard card expand */
-  .stage-expand-body {
-    overflow: hidden;
-    max-height: 0;
-    transition: max-height .4s ease, padding .3s ease;
-    padding: 0 16px;
-  }
-  .stage-expand-body.open {
-    max-height: 500px;
-    padding: 0 16px 16px;
-  }
-  /* Stage dots in full tracker */
-  .sdot {
-    width: 26px; height: 26px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: .68rem; font-weight: 700; flex-shrink: 0;
-    font-family: 'Bricolage Grotesque', sans-serif;
-  }
-  .sdot-done    { background: #1db96b; color: #fff; }
-  .sdot-current { background: #f97316; color: #fff; box-shadow: 0 0 0 4px rgba(249,115,22,.18); }
-  .sdot-upcoming{ background: #e5e7eb; color: #9ca3af; }
-  /* Stage control nav buttons */
-  .stage-btn {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 8px 16px; border-radius: 10px; font-size: .83rem; font-weight: 600;
-    cursor: pointer; transition: all .2s; border: 1.5px solid var(--border);
-    background: var(--card); color: var(--text);
-  }
-  .stage-btn:hover { border-color: var(--brand-mid); background: var(--brand-glow); color: var(--brand); }
-  .stage-btn-approve { background: var(--brand-mid); color: #fff; border-color: var(--brand-mid); }
-  .stage-btn-approve:hover { background: var(--brand); border-color: var(--brand); }
 </style>
 </head>
 <body>
 
-<!-- ===== LOADING OVERLAY ===== -->
 <div id="loadingOverlay">
   <div class="ldr-plane">✈️</div>
   <svg width="44" height="44" viewBox="0 0 44 44" class="ldr-ring">
     <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="3"/>
-    <circle cx="22" cy="22" r="18" fill="none" stroke="#1db96b" stroke-width="3"
-      stroke-dasharray="30 90" stroke-linecap="round"/>
+    <circle cx="22" cy="22" r="18" fill="none" stroke="#1db96b" stroke-width="3" stroke-dasharray="30 90" stroke-linecap="round"/>
   </svg>
   <p style="color:rgba(255,255,255,.7);font-family:'Bricolage Grotesque',sans-serif;font-size:.9rem;letter-spacing:.08em;">LOADING</p>
 </div>
 
-<!-- ===== AUTH SCREEN ===== -->
+<!-- ===== AUTH ===== -->
 <div id="authScreen" style="display:none;">
   <div class="auth-card">
     <div class="auth-header">
@@ -295,7 +253,7 @@
         <i class="fas fa-exclamation-circle"></i><span id="authErrorText"></span>
       </div>
 
-      <!-- LOGIN FORM -->
+      <!-- LOGIN -->
       <form id="loginForm" class="space-y-4">
         <div class="fade-up fade-up-1">
           <label class="lbl">Email Address</label>
@@ -305,48 +263,39 @@
           <label class="lbl">Password</label>
           <div style="position:relative;">
             <input type="password" id="loginPassword" class="inp" style="padding-right:44px;" placeholder="••••••••" required autocomplete="current-password">
-            <button type="button" onclick="togglePw('loginPassword','pwi1')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);background:none;border:none;cursor:pointer;font-size:.9rem;">
-              <i id="pwi1" class="fas fa-eye"></i>
-            </button>
+            <button type="button" onclick="togglePw('loginPassword','pwi1')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);background:none;border:none;cursor:pointer;font-size:.9rem;"><i id="pwi1" class="fas fa-eye"></i></button>
           </div>
         </div>
         <div class="fade-up fade-up-3" style="padding-top:4px;">
-          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" id="loginBtn">
-            <span>Sign In</span><i class="fas fa-arrow-right"></i>
-          </button>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" id="loginBtn"><span>Sign In</span><i class="fas fa-arrow-right"></i></button>
         </div>
         <div class="fade-up fade-up-4" style="text-align:center;">
-          <button type="button" onclick="switchAuthMode('signup')" style="font-size:.83rem;color:var(--brand-mid);font-weight:600;background:none;border:none;cursor:pointer;">
-            Don't have an account? Create one →
-          </button>
+          <button type="button" onclick="switchAuthMode('signup')" style="font-size:.83rem;color:var(--brand-mid);font-weight:600;background:none;border:none;cursor:pointer;">Don't have an account? Create one →</button>
         </div>
       </form>
 
-      <!-- SIGNUP FORM -->
+      <!-- SIGNUP -->
       <form id="signupForm" class="hidden space-y-4">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-          <div>
-            <label class="lbl">Email Address</label>
-            <input type="email" id="signupEmail" class="inp" placeholder="you@example.com" required autocomplete="email">
-          </div>
-          <div>
-            <label class="lbl">Password</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div><label class="lbl">Email Address</label><input type="email" id="signupEmail" class="inp" placeholder="you@example.com" required autocomplete="email"></div>
+          <div><label class="lbl">Phone Number</label><input type="tel" id="signupPhone" class="inp" placeholder="+234 800 000 0000" required></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div><label class="lbl">Password</label>
             <div style="position:relative;">
               <input type="password" id="signupPassword" class="inp" style="padding-right:40px;" placeholder="Min 6 chars" required minlength="6">
               <button type="button" onclick="togglePw('signupPassword','pwi2')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);background:none;border:none;cursor:pointer;font-size:.9rem;"><i id="pwi2" class="fas fa-eye"></i></button>
             </div>
           </div>
-        </div>
-        <div>
-          <label class="lbl">Confirm Password</label>
-          <div style="position:relative;">
-            <input type="password" id="signupConfirm" class="inp" style="padding-right:40px;" placeholder="Repeat password" required>
-            <button type="button" onclick="togglePw('signupConfirm','pwi3')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);background:none;border:none;cursor:pointer;font-size:.9rem;"><i id="pwi3" class="fas fa-eye"></i></button>
+          <div><label class="lbl">Confirm Password</label>
+            <div style="position:relative;">
+              <input type="password" id="signupConfirm" class="inp" style="padding-right:40px;" placeholder="Repeat password" required>
+              <button type="button" onclick="togglePw('signupConfirm','pwi3')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);background:none;border:none;cursor:pointer;font-size:.9rem;"><i id="pwi3" class="fas fa-eye"></i></button>
+            </div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-          <div>
-            <label class="lbl">Security Question</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div><label class="lbl">Security Question</label>
             <select id="signupQuestion" class="inp" required>
               <option value="">Select question…</option>
               <option>What is your mother's maiden name?</option>
@@ -356,23 +305,13 @@
               <option>Who was your favourite teacher?</option>
             </select>
           </div>
-          <div>
-            <label class="lbl">Security Answer</label>
-            <input type="text" id="signupAnswer" class="inp" placeholder="Your answer" required autocomplete="off">
-          </div>
+          <div><label class="lbl">Security Answer</label><input type="text" id="signupAnswer" class="inp" placeholder="Your answer" required autocomplete="off"></div>
         </div>
-        <div>
-          <label class="lbl">Referral Code <span style="text-transform:none;font-weight:400;color:#aaa;">(optional)</span></label>
+        <div><label class="lbl">Referral Code <span style="text-transform:none;font-weight:400;color:#aaa;">(optional)</span></label>
           <input type="text" id="signupReferral" class="inp" placeholder="8-char code" maxlength="8" style="text-transform:uppercase;font-family:monospace;letter-spacing:.1em;">
         </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" id="signupBtn">
-          <span>Create Account</span><i class="fas fa-user-plus"></i>
-        </button>
-        <div style="text-align:center;">
-          <button type="button" onclick="switchAuthMode('login')" style="font-size:.83rem;color:var(--brand-mid);font-weight:600;background:none;border:none;cursor:pointer;">
-            Already have an account? Sign in →
-          </button>
-        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" id="signupBtn"><span>Create Account</span><i class="fas fa-user-plus"></i></button>
+        <div style="text-align:center;"><button type="button" onclick="switchAuthMode('login')" style="font-size:.83rem;color:var(--brand-mid);font-weight:600;background:none;border:none;cursor:pointer;">Already have an account? Sign in →</button></div>
       </form>
     </div>
   </div>
@@ -381,8 +320,11 @@
 <!-- ===== MAIN APP ===== -->
 <div id="mainApp" style="display:none;">
 
+  <!-- MOBILE OVERLAY -->
+  <div id="sidebarOverlay" onclick="closeSidebar()"></div>
+
   <!-- SIDEBAR -->
-  <aside class="sidebar" id="sidebar" style="position:fixed;left:0;top:0;height:100vh;display:flex;flex-direction:column;z-index:50;">
+  <aside class="sidebar" id="sidebar">
     <div style="padding:24px 20px 16px;border-bottom:1px solid rgba(255,255,255,.1);">
       <div style="display:flex;align-items:center;gap:12px;">
         <span style="font-size:1.6rem;">✈️</span>
@@ -392,14 +334,12 @@
         </div>
       </div>
     </div>
-
     <nav style="flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;">
-      <div id="navDashboard"    class="nav-item active" onclick="showSection('dashboard')"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
-      <div id="navApplications" class="nav-item" onclick="showSection('applications')"><i class="fas fa-folder-open"></i><span>Applications</span></div>
-      <div id="navStaff" class="nav-item hidden" onclick="showSection('staff')"><i class="fas fa-headset"></i><span>Staff Portal</span></div>
-      <div id="navUsers" class="nav-item hidden" onclick="showSection('users')"><i class="fas fa-users-cog"></i><span>User Management</span></div>
+      <div id="navDashboard"     class="nav-item active" onclick="showSection('dashboard')"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
+      <div id="navApplications"  class="nav-item"        onclick="showSection('applications')"><i class="fas fa-folder-open"></i><span>Applications</span></div>
+      <div id="navStaff"         class="nav-item hidden"  onclick="showSection('staff')"><i class="fas fa-headset"></i><span>Staff Portal</span><span id="staffBadge" class="nav-badge hidden">0</span></div>
+      <div id="navUsers"         class="nav-item hidden"  onclick="showSection('users')"><i class="fas fa-users-cog"></i><span>User Management</span></div>
     </nav>
-
     <div style="padding:14px 12px;border-top:1px solid rgba(255,255,255,.1);">
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.08);border-radius:12px;margin-bottom:8px;">
         <div id="sidebarAvatar" style="width:36px;height:36px;border-radius:10px;background:var(--brand-lite);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;flex-shrink:0;font-family:'Bricolage Grotesque',sans-serif;">U</div>
@@ -414,19 +354,22 @@
     </div>
   </aside>
 
-  <!-- MAIN CONTENT -->
+  <!-- MAIN -->
   <main style="margin-left:260px;min-height:100vh;display:flex;flex-direction:column;">
-    <header style="position:sticky;top:0;background:rgba(244,247,245,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;z-index:40;">
-      <h1 id="pageTitle" class="syne" style="font-size:1.35rem;font-weight:700;">Dashboard</h1>
+    <header style="position:sticky;top:0;background:rgba(244,247,245,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;z-index:40;gap:12px;">
       <div style="display:flex;align-items:center;gap:12px;">
-        <span id="headerEmail" style="font-size:.8rem;color:var(--muted);"></span>
+        <button class="mobile-menu-btn btn btn-ghost" style="padding:8px;" onclick="openSidebar()"><i class="fas fa-bars"></i></button>
+        <h1 id="pageTitle" class="syne" style="font-size:1.2rem;font-weight:700;">Dashboard</h1>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span id="headerEmail" class="hide-mobile" style="font-size:.8rem;color:var(--muted);"></span>
         <span id="headerRoleBadge" class="badge badge-applicant">Applicant</span>
       </div>
     </header>
 
-    <div style="padding:28px 32px;flex:1;">
+    <div style="padding:28px 32px;flex:1;" class="page-pad">
 
-      <!-- ==================== DASHBOARD ==================== -->
+      <!-- ===== DASHBOARD ===== -->
       <div id="dashboardSection" class="section-page">
         <div style="background:linear-gradient(135deg,var(--brand),var(--brand-mid));border-radius:20px;padding:32px;color:#fff;margin-bottom:28px;position:relative;overflow:hidden;">
           <div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:rgba(29,185,107,.2);border-radius:50%;"></div>
@@ -443,9 +386,9 @@
           </div>
         </div>
 
-        <div id="statsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:28px;"></div>
+        <div id="statsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:28px;" class="stat-grid-4"></div>
 
-        <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;">
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;" class="dash-grid">
           <div class="card">
             <div style="padding:22px 22px 14px;display:flex;align-items:center;justify-content:space-between;">
               <h3 class="syne" style="font-size:1rem;font-weight:700;">Recent Applications</h3>
@@ -453,18 +396,22 @@
             </div>
             <div id="recentList" style="padding:0 16px 16px;display:flex;flex-direction:column;gap:8px;"></div>
           </div>
+
+          <!-- USER INFO CARD (replaces approval ring) -->
           <div style="display:flex;flex-direction:column;gap:18px;">
             <div class="card" style="padding:22px;">
-              <h3 class="syne" style="font-size:.95rem;font-weight:700;margin-bottom:16px;">Approval Rate</h3>
-              <div style="text-align:center;">
-                <div class="ring-wrap">
-                  <svg width="100" height="100" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="38" fill="none" stroke="#e8f0ec" stroke-width="8"/>
-                    <circle id="ringFill" cx="50" cy="50" r="38" fill="none" stroke="var(--brand-lite)" stroke-width="8" stroke-linecap="round" stroke-dasharray="239" stroke-dashoffset="239" style="transition:stroke-dashoffset .8s cubic-bezier(.34,1.56,.64,1);"/>
-                  </svg>
-                  <span id="ringPct" class="ring-text syne" style="font-size:1.2rem;color:var(--brand);">0%</span>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:14px;">
+                <div id="dashUserAvatar" style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--brand-lite),var(--brand));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.6rem;font-family:'Bricolage Grotesque',sans-serif;">U</div>
+                <div style="text-align:center;">
+                  <p id="dashUserName" class="syne" style="font-size:1rem;font-weight:700;margin-bottom:4px;">User</p>
+                  <p id="dashUserEmail" style="font-size:.75rem;color:var(--muted);margin-bottom:8px;word-break:break-all;"></p>
+                  <span id="dashUserRole" class="badge badge-applicant">Applicant</span>
                 </div>
-                <p style="font-size:.78rem;color:var(--muted);margin-top:8px;">Based on resolved applications</p>
+                <div style="width:100%;border-top:1px solid var(--border);padding-top:14px;">
+                  <button onclick="handleLogout()" class="btn btn-ghost" style="width:100%;justify-content:center;font-size:.83rem;color:var(--danger);">
+                    <i class="fas fa-sign-out-alt"></i> Sign Out
+                  </button>
+                </div>
               </div>
             </div>
             <div id="referralWidget" class="card" style="padding:22px;background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border-color:#a7f3d0;">
@@ -472,16 +419,14 @@
               <div style="background:#fff;border:2px dashed #6ee7b7;border-radius:12px;padding:14px;text-align:center;margin-bottom:12px;">
                 <code id="referralDisplay" style="font-size:1.5rem;font-family:monospace;font-weight:700;color:var(--brand);letter-spacing:.18em;">--------</code>
               </div>
-              <button onclick="copyReferral()" class="btn btn-primary" style="width:100%;justify-content:center;font-size:.8rem;">
-                <i class="fas fa-copy"></i> Copy Code
-              </button>
+              <button onclick="copyReferral()" class="btn btn-primary" style="width:100%;justify-content:center;font-size:.8rem;"><i class="fas fa-copy"></i> Copy Code</button>
               <p style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:8px;">Share and earn bonuses!</p>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ==================== APPLICATIONS ==================== -->
+      <!-- ===== APPLICATIONS ===== -->
       <div id="applicationsSection" class="section-page hidden">
         <div class="card" style="padding:24px;">
           <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;">
@@ -498,12 +443,10 @@
                 <option value="rejected">Rejected</option>
               </select>
               <div style="position:relative;">
-                <input type="text" id="appSearch" class="inp inp-sm" style="padding-left:32px;width:220px;" placeholder="Search…" oninput="renderAppList()">
+                <input type="text" id="appSearch" class="inp inp-sm" style="padding-left:32px;width:200px;" placeholder="Search…" oninput="renderAppList()">
                 <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i>
               </div>
-              <button id="appNewBtn" onclick="openNewAppModal()" class="btn btn-primary" style="padding:8px 16px;font-size:.83rem;">
-                <i class="fas fa-plus"></i> New
-              </button>
+              <button id="appNewBtn" onclick="openNewAppModal()" class="btn btn-primary" style="padding:8px 16px;font-size:.83rem;"><i class="fas fa-plus"></i> New</button>
             </div>
           </div>
           <div id="appList" style="display:flex;flex-direction:column;gap:8px;"></div>
@@ -514,15 +457,14 @@
           </div>
           <div id="appPagination" style="display:flex;align-items:center;justify-content:space-between;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
             <span id="appPageInfo" style="font-size:.8rem;color:var(--muted);"></span>
-            <div id="appPageBtns" style="display:flex;gap:6px;"></div>
+            <div id="appPageBtns" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
           </div>
         </div>
       </div>
 
-      <!-- ==================== STAFF PORTAL ==================== -->
+      <!-- ===== STAFF PORTAL ===== -->
       <div id="staffSection" class="section-page hidden">
         <div id="staffTabBar" class="tab-bar" style="margin-bottom:22px;width:fit-content;"></div>
-
         <div id="staffMessagesTab" class="hidden">
           <div class="card" style="padding:24px;">
             <div style="margin-bottom:20px;">
@@ -539,7 +481,6 @@
             </div>
           </div>
         </div>
-
         <div id="staffAppsTab" class="hidden">
           <div class="card" style="padding:24px;">
             <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
@@ -547,7 +488,7 @@
                 <h2 class="syne" style="font-size:1.1rem;font-weight:700;">My Assigned Applications</h2>
                 <p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="staffAppsCount">0</span> assigned</p>
               </div>
-              <div style="display:flex;gap:10px;">
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
                 <select id="staffAppStatusFilter" class="inp inp-sm" style="width:auto;" onchange="renderStaffAppList()">
                   <option value="all">All Statuses</option>
                   <option value="pending">Pending</option>
@@ -556,7 +497,7 @@
                   <option value="rejected">Rejected</option>
                 </select>
                 <div style="position:relative;">
-                  <input type="text" id="staffAppSearch" class="inp inp-sm" style="padding-left:32px;width:200px;" placeholder="Search…" oninput="renderStaffAppList()">
+                  <input type="text" id="staffAppSearch" class="inp inp-sm" style="padding-left:32px;width:180px;" placeholder="Search…" oninput="renderStaffAppList()">
                   <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i>
                 </div>
               </div>
@@ -568,7 +509,7 @@
             </div>
           </div>
         </div>
-
+        <!-- Admin: All Apps -->
         <div id="allApplicantsTab" class="hidden">
           <div class="card" style="padding:24px;">
             <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
@@ -576,7 +517,7 @@
                 <h2 class="syne" style="font-size:1.1rem;font-weight:700;">All Applications</h2>
                 <p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="adminAppsCount">0</span> total</p>
               </div>
-              <div style="display:flex;gap:10px;">
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
                 <select id="adminAppStatusFilter" class="inp inp-sm" style="width:auto;" onchange="renderAdminAppList()">
                   <option value="all">All Statuses</option>
                   <option value="pending">Pending</option>
@@ -585,31 +526,45 @@
                   <option value="rejected">Rejected</option>
                 </select>
                 <div style="position:relative;">
-                  <input type="text" id="adminAppSearch" class="inp inp-sm" style="padding-left:32px;width:220px;" placeholder="Search…" oninput="renderAdminAppList()">
+                  <input type="text" id="adminAppSearch" class="inp inp-sm" style="padding-left:32px;width:200px;" placeholder="Search…" oninput="renderAdminAppList()">
                   <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i>
                 </div>
               </div>
             </div>
             <div id="adminAppList" style="display:flex;flex-direction:column;gap:8px;"></div>
             <div id="adminAppEmpty" class="hidden" style="text-align:center;padding:40px;color:var(--muted);">
-              <div style="font-size:3rem;margin-bottom:12px;">📂</div>
-              <p style="font-weight:600;">No applications found</p>
+              <div style="font-size:3rem;margin-bottom:12px;">📂</div><p style="font-weight:600;">No applications found</p>
             </div>
-            <div id="adminAppPagination" style="display:flex;align-items:center;justify-content:space-between;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+            <div id="adminAppPagination" style="display:flex;align-items:center;justify-content:space-between;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);flex-wrap:wrap;gap:8px;">
               <span id="adminAppPageInfo" style="font-size:.8rem;color:var(--muted);"></span>
-              <div id="adminAppPageBtns" style="display:flex;gap:6px;"></div>
+              <div id="adminAppPageBtns" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
             </div>
           </div>
         </div>
-
+        <!-- Admin: Approval Requests -->
+        <div id="approvalRequestsTab" class="hidden">
+          <div class="card" style="padding:24px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+              <div>
+                <h2 class="syne" style="font-size:1.1rem;font-weight:700;">Stage Approval Requests</h2>
+                <p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="reqCount">0</span> pending</p>
+              </div>
+              <button onclick="loadApprovalRequests()" class="btn btn-ghost" style="padding:8px 12px;"><i class="fas fa-sync-alt"></i></button>
+            </div>
+            <div id="approvalList" style="display:flex;flex-direction:column;gap:12px;"></div>
+            <div id="approvalEmpty" class="hidden" style="text-align:center;padding:48px;color:var(--muted);">
+              <div style="font-size:3rem;margin-bottom:12px;">✅</div>
+              <p style="font-weight:600;">No pending requests</p>
+              <p style="font-size:.83rem;margin-top:4px;">All stage advances have been reviewed</p>
+            </div>
+          </div>
+        </div>
+        <!-- Activity Log -->
         <div id="activityLogTab" class="hidden">
           <div class="card" style="padding:24px;">
             <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
-              <div>
-                <h2 class="syne" style="font-size:1.1rem;font-weight:700;">Activity Log</h2>
-                <p style="font-size:.8rem;color:var(--muted);">Last 200 activities</p>
-              </div>
-              <div style="display:flex;gap:10px;">
+              <div><h2 class="syne" style="font-size:1.1rem;font-weight:700;">Activity Log</h2><p style="font-size:.8rem;color:var(--muted);">Last 200 activities</p></div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
                 <select id="logTypeFilter" class="inp inp-sm" style="width:auto;" onchange="renderLogList()">
                   <option value="all">All Actions</option>
                   <option value="view">View</option>
@@ -622,7 +577,7 @@
                   <option value="promote">Promote</option>
                 </select>
                 <div style="position:relative;">
-                  <input type="text" id="logSearch" class="inp inp-sm" style="padding-left:32px;width:200px;" placeholder="Search logs…" oninput="renderLogList()">
+                  <input type="text" id="logSearch" class="inp inp-sm" style="padding-left:32px;width:180px;" placeholder="Search logs…" oninput="renderLogList()">
                   <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i>
                 </div>
                 <button onclick="loadLogs()" class="btn btn-ghost" style="padding:8px 12px;"><i class="fas fa-sync-alt"></i></button>
@@ -633,23 +588,17 @@
         </div>
       </div>
 
-      <!-- ==================== USER MANAGEMENT (Admin) ==================== -->
+      <!-- ===== USER MANAGEMENT ===== -->
       <div id="usersSection" class="section-page hidden">
         <div class="tab-bar" style="margin-bottom:22px;width:fit-content;">
           <button class="tab-btn active" id="tabApplicants" onclick="switchUserTab('applicants')">Applicants</button>
-          <button class="tab-btn" id="tabStaffList"  onclick="switchUserTab('staff')">Staff Members</button>
+          <button class="tab-btn" id="tabStaffList" onclick="switchUserTab('staff')">Staff Members</button>
         </div>
         <div id="userApplicantsTab">
           <div class="card" style="padding:24px;">
             <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
-              <div>
-                <h2 class="syne" style="font-size:1.1rem;font-weight:700;">All Applicants</h2>
-                <p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="applicantCount">0</span> accounts</p>
-              </div>
-              <div style="position:relative;">
-                <input type="text" id="userSearch" class="inp inp-sm" style="padding-left:32px;width:220px;" placeholder="Search…" oninput="renderUserList()">
-                <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i>
-              </div>
+              <div><h2 class="syne" style="font-size:1.1rem;font-weight:700;">All Applicants</h2><p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="applicantCount">0</span> accounts</p></div>
+              <div style="position:relative;"><input type="text" id="userSearch" class="inp inp-sm" style="padding-left:32px;width:220px;" placeholder="Search…" oninput="renderUserList()"><i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i></div>
             </div>
             <div id="applicantList" style="display:flex;flex-direction:column;gap:8px;"></div>
           </div>
@@ -657,55 +606,89 @@
         <div id="userStaffTab" class="hidden">
           <div class="card" style="padding:24px;">
             <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
-              <div>
-                <h2 class="syne" style="font-size:1.1rem;font-weight:700;">Staff Members</h2>
-                <p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="staffCount">0</span> members</p>
-              </div>
-              <div style="position:relative;">
-                <input type="text" id="staffSearch" class="inp inp-sm" style="padding-left:32px;width:220px;" placeholder="Search…" oninput="renderStaffList()">
-                <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i>
-              </div>
+              <div><h2 class="syne" style="font-size:1.1rem;font-weight:700;">Staff Members</h2><p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="staffCount">0</span> members</p></div>
+              <div style="position:relative;"><input type="text" id="staffSearch" class="inp inp-sm" style="padding-left:32px;width:220px;" placeholder="Search…" oninput="renderStaffList()"><i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i></div>
             </div>
             <div id="staffMemberList" style="display:flex;flex-direction:column;gap:8px;"></div>
           </div>
         </div>
       </div>
 
-    </div><!-- /padding -->
+    </div>
   </main>
 </div>
 
-<!-- ==================== NEW APP MODAL ==================== -->
+<!-- ===== NEW APP MODAL ===== -->
 <div id="newAppModal" class="modal-overlay hidden">
-  <div class="modal-box" style="max-width:680px;">
+  <div class="modal-box" style="max-width:740px;">
     <div class="modal-header">
-      <div>
-        <h3 class="syne" style="font-size:1.1rem;font-weight:700;">New Application</h3>
-        <p style="font-size:.8rem;color:var(--muted);margin-top:2px;">Fill in the applicant details below</p>
-      </div>
+      <div><h3 class="syne" style="font-size:1.1rem;font-weight:700;">New Application</h3><p style="font-size:.8rem;color:var(--muted);margin-top:2px;">Fill in the applicant details below</p></div>
       <button onclick="closeNewAppModal()" class="btn btn-ghost" style="padding:8px;"><i class="fas fa-times" style="font-size:1rem;"></i></button>
     </div>
     <div class="modal-body">
       <div id="newAppErr" class="hidden" style="background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:12px 14px;border-radius:10px;font-size:.83rem;margin-bottom:18px;"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-        <div><label class="lbl">Full Name *</label><input type="text" id="naName" class="inp" placeholder="John Doe"></div>
+
+      <!-- Name fields -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div><label class="lbl">First Name *</label><input type="text" id="naFirstName" class="inp" placeholder="John"></div>
+        <div><label class="lbl">Middle Name</label><input type="text" id="naMiddleName" class="inp" placeholder="(optional)"></div>
+        <div><label class="lbl">Last Name *</label><input type="text" id="naLastName" class="inp" placeholder="Doe"></div>
+      </div>
+
+      <!-- Contact -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div><label class="lbl">Email *</label><input type="email" id="naEmail" class="inp" placeholder="john@example.com"></div>
         <div><label class="lbl">Phone *</label><input type="tel" id="naPhone" class="inp" placeholder="+234 800 000 0000"></div>
-        <div><label class="lbl">Package *</label>
-          <select id="naPkg" class="inp">
-            <option value="">Select package…</option>
-            <option>Canada PR</option>
-            <option>USA Skilled Worker</option>
-            <option>Student Visa</option>
-            <option>UK Work Permit</option>
-            <option>Australia PR</option>
-            <option>Schengen Visa</option>
-            <option>Other</option>
-          </select>
-        </div>
       </div>
-      <div>
-        <label class="lbl" style="margin-bottom:8px;">Documents</label>
+
+      <!-- Package -->
+      <div style="margin-bottom:6px;">
+        <label class="lbl">Package *</label>
+        <select id="naPkg" class="inp" onchange="toggleOtherPkg()">
+          <option value="">Select package…</option>
+          <optgroup label="🇨🇦 Canada">
+            <option value="Canada — Permanent Residency">Permanent Residency</option>
+            <option value="Canada — Work Visa">Work Visa</option>
+            <option value="Canada — Visiting Visa">Visiting Visa</option>
+            <option value="Canada — Student Visa">Student Visa</option>
+          </optgroup>
+          <optgroup label="🇦🇺 Australia">
+            <option value="Australia — Permanent Residency">Permanent Residency</option>
+            <option value="Australia — Work Visa">Work Visa</option>
+            <option value="Australia — Visiting Visa">Visiting Visa</option>
+            <option value="Australia — Student Visa">Student Visa</option>
+          </optgroup>
+          <optgroup label="🌍 Work Visa with Job Placement">
+            <option value="Cape Verde — Work Visa">Cape Verde</option>
+            <option value="Mauritius — Work Visa">Mauritius</option>
+            <option value="Qatar — Work Visa">Qatar</option>
+            <option value="Schengen (Romania & Bulgaria) — Work Visa">Schengen (Romania & Bulgaria)</option>
+            <option value="Singapore — Work Visa">Singapore</option>
+            <option value="Kazakhstan — Work Visa">Kazakhstan</option>
+            <option value="Luxembourg — Work Visa">Luxembourg</option>
+          </optgroup>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div id="otherPkgWrap" class="hidden" style="margin-bottom:14px;">
+        <label class="lbl">Please specify *</label>
+        <input type="text" id="naOtherPkg" class="inp" placeholder="Describe your package or destination…">
+      </div>
+
+      <!-- Document checklist overview -->
+      <div style="margin-bottom:16px;margin-top:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <label class="lbl" style="margin-bottom:0;">Required Documents <span style="text-transform:none;font-weight:400;color:#aaa;font-size:.72rem;">(upload what you have — none are strictly required now)</span></label>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;">
+          <p style="font-size:.75rem;color:var(--muted);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Document Checklist</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;" id="docChecklist">
+            <!-- rendered by JS -->
+          </div>
+          <p style="font-size:.72rem;color:var(--muted);margin-top:10px;"><i class="fas fa-info-circle" style="color:var(--brand-mid);"></i> Upload as many as possible. Missing documents can be added later.</p>
+        </div>
+
+        <!-- Upload zone -->
         <div id="naDropZone" class="drop-zone" onclick="$('naFileInput').click()" ondragover="event.preventDefault();this.classList.add('drag-active')" ondragleave="this.classList.remove('drag-active')" ondrop="handleNaDrop(event)">
           <i class="fas fa-cloud-upload-alt" style="font-size:2rem;color:var(--muted);margin-bottom:8px;display:block;"></i>
           <p style="color:var(--muted);font-size:.875rem;margin-bottom:4px;">Drag & drop or click to upload</p>
@@ -722,9 +705,9 @@
   </div>
 </div>
 
-<!-- ==================== APPLICATION DETAIL MODAL ==================== -->
+<!-- ===== DETAIL MODAL ===== -->
 <div id="detailModal" class="modal-overlay hidden">
-  <div class="modal-box" style="max-width:900px;">
+  <div class="modal-box" style="max-width:960px;">
     <div class="modal-header">
       <div>
         <h3 id="detailTitle" class="syne" style="font-size:1.1rem;font-weight:700;"></h3>
@@ -736,19 +719,14 @@
       </div>
     </div>
     <div class="modal-body">
-
-      <!-- ===== STAGE TRACKER (top of modal) ===== -->
       <div id="modalStageTracker" style="margin-bottom:22px;"></div>
-
-      <div style="display:grid;grid-template-columns:1fr 320px;gap:24px;">
+      <div style="display:grid;grid-template-columns:1fr 300px;gap:24px;" class="detail-grid">
         <!-- LEFT -->
         <div style="display:flex;flex-direction:column;gap:20px;">
-
-          <!-- App Info -->
           <div style="background:var(--surface);border-radius:14px;padding:20px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
               <h4 class="syne" style="font-weight:700;font-size:.95rem;">Application Details</h4>
-              <button id="detailEditBtn" onclick="toggleDetailEdit()" class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem;" style="display:none;"></button>
+              <button id="detailEditBtn" onclick="toggleDetailEdit()" class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem;display:none;"></button>
             </div>
             <div id="detailViewGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;"></div>
             <div id="detailEditGrid" class="hidden" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;"></div>
@@ -758,21 +736,20 @@
             </div>
           </div>
 
-          <!-- Assign Staff (admin only) -->
           <div id="assignSection" class="hidden" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:20px;">
             <h4 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:12px;color:#1e40af;">Assign to Staff</h4>
-            <select id="assignSelect" onchange="assignStaff()" class="inp">
-              <option value="">— Unassigned —</option>
-            </select>
+            <select id="assignSelect" onchange="assignStaff()" class="inp"><option value="">— Unassigned —</option></select>
           </div>
 
-          <!-- Stage Control (staff/admin only) -->
+          <!-- Stage control -->
           <div id="stageControlSection" class="hidden" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:20px;">
-            <h4 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:14px;color:var(--brand);">Update Stage</h4>
+            <h4 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:14px;color:var(--brand);">Stage Control</h4>
             <div id="stageControlBtns" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;"></div>
+            <div id="stagePendingNote" class="hidden" style="margin-top:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;font-size:.8rem;color:#92400e;">
+              <i class="fas fa-clock"></i> <strong>Awaiting Admin Approval</strong> — A stage advance request is pending review.
+            </div>
           </div>
 
-          <!-- Documents -->
           <div style="border:1px solid var(--border);border-radius:14px;padding:20px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
               <h4 class="syne" style="font-weight:700;font-size:.95rem;">Documents <span id="docCountBadge" style="font-size:.75rem;color:var(--muted);font-family:'Manrope';font-weight:400;"></span></h4>
@@ -784,7 +761,6 @@
             <div id="docList" style="display:flex;flex-direction:column;gap:6px;"></div>
           </div>
 
-          <!-- Notes -->
           <div style="border:1px solid var(--border);border-radius:14px;padding:20px;">
             <h4 class="syne" style="font-weight:700;font-size:.95rem;margin-bottom:14px;">Notes & Messages</h4>
             <div id="notesList" style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;margin-bottom:14px;"></div>
@@ -797,13 +773,12 @@
 
         <!-- RIGHT -->
         <div style="display:flex;flex-direction:column;gap:16px;">
-          <!-- Referral Info -->
           <div style="background:linear-gradient(135deg,#faf5ff,#ede9fe);border:1px solid #ddd6fe;border-radius:14px;padding:18px;">
             <h4 class="syne" style="font-weight:700;font-size:.9rem;color:#5b21b6;margin-bottom:12px;">Referral Information</h4>
             <div style="display:flex;flex-direction:column;gap:8px;font-size:.83rem;">
               <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span style="color:var(--muted);">Code:</span>
-                <code id="detailRefCode" style="font-family:monospace;font-weight:700;color:#7c3aed;background:#ede9fe;padding:2px 8px;border-radius:6px;"></code>
+                <code id="detailRefCode" style="font-family:monospace;font-weight:700;color:#7c3aed;background:#ede9fe;padding:2px 8px;border-radius:6px;cursor:pointer;" title="Click to view profile" onclick="openCodeOwnerProfile()"></code>
               </div>
               <div id="referredByRow" class="hidden" style="padding-top:8px;border-top:1px solid #ddd6fe;">
                 <span style="color:var(--muted);">Referred by:</span>
@@ -812,14 +787,11 @@
             </div>
           </div>
 
-          <!-- Quick Actions -->
           <div style="background:var(--surface);border-radius:14px;padding:18px;">
             <h4 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:12px;">Actions</h4>
             <div style="display:flex;flex-direction:column;gap:8px;">
               <button onclick="closeDetailModal()" class="btn btn-ghost" style="justify-content:center;width:100%;font-size:.83rem;">Close</button>
-              <button id="deleteAppBtn" onclick="deleteApplication()" class="btn btn-danger hidden" style="justify-content:center;width:100%;font-size:.83rem;">
-                <i class="fas fa-trash-alt"></i> Delete Application
-              </button>
+              <button id="deleteAppBtn" onclick="deleteApplication()" class="btn btn-danger hidden" style="justify-content:center;width:100%;font-size:.83rem;"><i class="fas fa-trash-alt"></i> Delete Application</button>
             </div>
           </div>
         </div>
@@ -828,7 +800,7 @@
   </div>
 </div>
 
-<!-- ==================== USER PROFILE MODAL ==================== -->
+<!-- ===== USER PROFILE MODAL ===== -->
 <div id="userProfileModal" class="modal-overlay hidden">
   <div class="modal-box" style="max-width:640px;">
     <div class="modal-header">
@@ -840,7 +812,7 @@
   </div>
 </div>
 
-<!-- ==================== REFERRER MODAL ==================== -->
+<!-- ===== REFERRER MODAL ===== -->
 <div id="referrerModal" class="modal-overlay hidden" style="z-index:70;">
   <div class="modal-box" style="max-width:420px;">
     <div class="modal-header">
@@ -851,10 +823,19 @@
   </div>
 </div>
 
-<!-- ==================== TOAST ==================== -->
+<!-- ===== CODE OWNER MODAL ===== -->
+<div id="codeOwnerModal" class="modal-overlay hidden" style="z-index:70;">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header">
+      <h3 class="syne" style="font-size:1.05rem;font-weight:700;">Referral Code Owner</h3>
+      <button onclick="$('codeOwnerModal').classList.add('hidden')" class="btn btn-ghost" style="padding:8px;"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="codeOwnerBody"></div>
+  </div>
+</div>
+
 <div id="toast" class="hidden"></div>
 
-<!-- ==================== SCRIPTS ==================== -->
 <script>
 // =========================================================
 //  CONFIG
@@ -864,25 +845,23 @@ const SUPABASE_KEY = 'sb_publishable_h3Kb-0pknHcYItkGeyEI-Q_urYDrPD9';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // =========================================================
-//  STAGE CONFIGURATION
+//  STAGES
 // =========================================================
 const STAGES = [
-  { n:1, label:'Onboarding Complete',   short:'Onboarding',  clr:'#166534', bg:'#f0fdf4', msg:'Welcome to NonStop Travels. Your journey has officially started.' },
-  { n:2, label:'Document Preparation',  short:'Documents',   clr:'#92400e', bg:'#fffbeb', msg:'We are currently preparing and verifying your required documents.' },
-  { n:3, label:'Profile Submitted',     short:'Profile',     clr:'#166534', bg:'#f0fdf4', msg:'You are now officially in the pool.' },
-  { n:4, label:'Pool Monitoring',       short:'Monitoring',  clr:'#1e40af', bg:'#eff6ff', msg:'We are actively monitoring the drawings for your profile.' },
-  { n:5, label:'ITA Received',          short:'ITA',         clr:'#6b21a8', bg:'#fdf4ff', msg:'Congratulations! You have received an Invitation to Apply.' },
-  { n:6, label:'Application Submitted', short:'Submitted',   clr:'#92400e', bg:'#fffbeb', msg:'Your application is under final background checks & review.' },
-  { n:7, label:'Approved',              short:'Approved',    clr:'#14532d', bg:'#dcfce7', msg:'Congratulations! Your application has been fully approved.' },
+  { n:1, label:'Onboarding Complete',   short:'Onboarding', clr:'#166534', bg:'#f0fdf4', msg:'Welcome to NonStop Travels. Your journey has officially started.' },
+  { n:2, label:'Document Preparation',  short:'Documents',  clr:'#92400e', bg:'#fffbeb', msg:'We are currently preparing and verifying your required documents.' },
+  { n:3, label:'Profile Submitted',     short:'Profile',    clr:'#166534', bg:'#f0fdf4', msg:'You are now officially in the pool.' },
+  { n:4, label:'Pool Monitoring',       short:'Monitoring', clr:'#1e40af', bg:'#eff6ff', msg:'We are actively monitoring the drawings for your profile.' },
+  { n:5, label:'ITA Received',          short:'ITA',        clr:'#6b21a8', bg:'#fdf4ff', msg:'Congratulations! You have received an Invitation to Apply.' },
+  { n:6, label:'Application Submitted', short:'Submitted',  clr:'#92400e', bg:'#fffbeb', msg:'Your application is under final background checks & review.' },
+  { n:7, label:'Approved',              short:'Approved',   clr:'#14532d', bg:'#dcfce7', msg:'Congratulations! Your application has been fully approved.' },
 ];
-
-function stageGet(n) { return STAGES[Math.max(0, Math.min(6, (n||1)-1))]; }
+function stageGet(n) { return STAGES[Math.max(0,Math.min(6,(n||1)-1))]; }
 function stagePct(n) { return Math.round(((n||1)/7)*100); }
 
-// Small inline bar for app rows (no expand trigger)
 function stageBarSmall(stage) {
   const s = stageGet(stage), pct = stagePct(stage);
-  const dotClr = stage === 7 ? '#1db96b' : '#f97316';
+  const dotClr = stage===7?'#1db96b':'#f97316';
   return `<div style="margin-top:6px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
       <span style="font-size:.7rem;font-weight:600;color:${s.clr};background:${s.bg};padding:1px 7px;border-radius:99px;">Stage ${stage} — ${s.short}</span>
@@ -892,13 +871,16 @@ function stageBarSmall(stage) {
   </div>`;
 }
 
-// Dashboard card bar with "Click to see more" expand toggle
-function stageBarExpand(stage, appId) {
+function stageBarExpand(stage, appId, pendingReq) {
   const s = stageGet(stage), pct = stagePct(stage);
-  const dotClr = stage === 7 ? '#1db96b' : '#f97316';
+  const dotClr = stage===7?'#1db96b':'#f97316';
+  const pendingTag = pendingReq ? `<span style="font-size:.68rem;background:#fce7f3;color:#9d174d;padding:1px 7px;border-radius:99px;font-weight:600;margin-left:6px;"><i class="fas fa-clock" style="font-size:.6rem;"></i> Awaiting Approval</span>` : '';
   return `<div style="margin-top:8px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-      <span style="font-size:.7rem;font-weight:600;color:${s.clr};background:${s.bg};padding:1px 7px;border-radius:99px;">Stage ${stage} — ${s.short}</span>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;flex-wrap:wrap;gap:4px;">
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;">
+        <span style="font-size:.7rem;font-weight:600;color:${s.clr};background:${s.bg};padding:1px 7px;border-radius:99px;">Stage ${stage} — ${s.short}</span>
+        ${pendingTag}
+      </div>
       <span style="font-size:.72rem;font-weight:700;color:${dotClr};">${pct}%</span>
     </div>
     <div class="stage-progress-bar" style="margin-bottom:6px;"><div class="stage-progress-fill" style="width:${pct}%;"></div></div>
@@ -909,32 +891,26 @@ function stageBarExpand(stage, appId) {
   </div>`;
 }
 
-// Full 7-step tracker HTML
 function fullTrackerHtml(stage) {
-  const pct = stagePct(stage);
-  const s   = stageGet(stage);
-
-  // Build connector + dot row
+  const pct = stagePct(stage), s = stageGet(stage);
   let stepsHtml = '';
-  STAGES.forEach((st, i) => {
-    const done    = st.n < stage;
-    const current = st.n === stage;
-    const cls     = done ? 'sdot-done' : current ? 'sdot-current' : 'sdot-upcoming';
-    const icon    = done ? '<i class="fas fa-check" style="font-size:.6rem;"></i>' : st.n;
+  STAGES.forEach((st,i) => {
+    const done=st.n<stage, current=st.n===stage;
+    const cls = done?'sdot-done':current?'sdot-current':'sdot-upcoming';
+    const icon = done?'<i class="fas fa-check" style="font-size:.6rem;"></i>':st.n;
     stepsHtml += `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:0;">
       <div class="sdot ${cls}">${icon}</div>
-      <span style="font-size:.6rem;text-align:center;line-height:1.2;color:${current?'var(--text)':'var(--muted)'};font-weight:${current?700:400};">${st.short}</span>
+      <span style="font-size:.58rem;text-align:center;line-height:1.2;color:${current?'var(--text)':'var(--muted)'};font-weight:${current?700:400};">${st.short}</span>
     </div>`;
-    if (i < 6) stepsHtml += `<div style="flex:2;height:2px;background:${done?'#1db96b':'#e5e7eb'};border-radius:2px;margin-bottom:20px;align-self:flex-start;margin-top:13px;"></div>`;
+    if(i<6) stepsHtml+=`<div style="flex:2;height:2px;background:${done?'#1db96b':'#e5e7eb'};border-radius:2px;margin-bottom:20px;align-self:flex-start;margin-top:13px;"></div>`;
   });
-
   return `<div style="background:var(--surface);border-radius:14px;padding:18px;border:1px solid var(--border);">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
       <h4 class="syne" style="font-size:.9rem;font-weight:700;">Application Progress</h4>
       <span class="syne" style="font-size:1.35rem;font-weight:800;color:${stage===7?'#1db96b':'#f97316'};">${pct}%</span>
     </div>
     <div class="stage-progress-bar" style="margin-bottom:14px;"><div class="stage-progress-fill" style="width:${pct}%;"></div></div>
-    <div style="display:flex;align-items:flex-start;">${stepsHtml}</div>
+    <div style="display:flex;align-items:flex-start;overflow-x:auto;">${stepsHtml}</div>
     <div style="margin-top:14px;border-left:3px solid ${s.clr};background:${s.bg};border-radius:0 8px 8px 0;padding:10px 12px;">
       <p style="font-size:.75rem;font-weight:700;color:${s.clr};margin-bottom:2px;">Stage ${stage}: ${s.label}</p>
       <p style="font-size:.8rem;color:var(--text);line-height:1.5;">${s.msg}</p>
@@ -942,400 +918,311 @@ function fullTrackerHtml(stage) {
   </div>`;
 }
 
-// Toggle the expand on dashboard cards
 function toggleExpand(appId) {
-  const body = document.getElementById('expand-body-' + appId);
-  const icon = document.getElementById('expand-icon-' + appId);
-  const btn  = document.getElementById('expand-btn-'  + appId);
-  if (!body) return;
-  const opening = !body.classList.contains('open');
-  body.classList.toggle('open', opening);
-  if (opening) {
-    const app = allApps.find(a => String(a.id) === String(appId));
-    if (app) body.innerHTML = fullTrackerHtml(app.stage || 1);
-    icon.className = 'fas fa-chevron-up';
-    btn.innerHTML  = '<i class="fas fa-chevron-up" id="expand-icon-' + appId + '" style="font-size:.6rem;"></i> Hide details';
+  const body=document.getElementById('expand-body-'+appId);
+  const btn=document.getElementById('expand-btn-'+appId);
+  if(!body) return;
+  const opening=!body.classList.contains('open');
+  body.classList.toggle('open',opening);
+  if(opening) {
+    const app=allApps.find(a=>String(a.id)===String(appId));
+    if(app) body.innerHTML=fullTrackerHtml(app.stage||1);
+    if(btn) btn.innerHTML='<i class="fas fa-chevron-up" style="font-size:.6rem;"></i> Hide details';
   } else {
-    body.innerHTML = '';
-    icon.className = 'fas fa-chevron-down';
-    btn.innerHTML  = '<i class="fas fa-chevron-down" id="expand-icon-' + appId + '" style="font-size:.6rem;"></i> Click to see more';
+    body.innerHTML='';
+    if(btn) btn.innerHTML='<i class="fas fa-chevron-down" style="font-size:.6rem;"></i> Click to see more';
   }
 }
 
 // =========================================================
 //  STATE
 // =========================================================
-let CU  = null;
-let CP  = null;
-let allApps   = [];
-let allUsers  = [];
-let allStaff  = [];
-let allLogs   = [];
-let tempFiles = [];
-let selAppId  = null;
-let editMode  = false;
-let appPage   = 1;
-let adminPage = 1;
-const PER = 12;
-let currentUserTab = 'applicants';
-let referrerCode   = null;
+let CU=null, CP=null;
+let allApps=[], allUsers=[], allStaff=[], allLogs=[], allRequests=[];
+let tempFiles=[], selAppId=null, editMode=false;
+let appPage=1, adminPage=1;
+const PER=12;
+let currentUserTab='applicants', referrerCode=null, detailRefCodeVal=null;
 
 // =========================================================
 //  UTILITIES
 // =========================================================
-const $ = id => document.getElementById(id);
-const san = s => s ? String(s).replace(/[<>"'&]/g, c => ({'<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','&':'&amp;'}[c])) : '';
-const fmt = s => s ? new Date(s).toLocaleDateString('en-NG', {year:'numeric',month:'short',day:'numeric'}) : 'N/A';
-const greet = () => { const h = new Date().getHours(); return h<12?'Good morning':h<18?'Good afternoon':'Good evening'; };
-const genCode = () => { const c='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; return Array.from({length:8},()=>c[Math.floor(Math.random()*c.length)]).join(''); };
-const sid = id => String(id || '').slice(-4).toUpperCase();
-const sstr = s => String(s || '');
+const $=id=>document.getElementById(id);
+const san=s=>s?String(s).replace(/[<>"'&]/g,c=>({'<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','&':'&amp;'}[c])):'';
+const fmt=s=>s?new Date(s).toLocaleDateString('en-NG',{year:'numeric',month:'short',day:'numeric'}):'N/A';
+const greet=()=>{const h=new Date().getHours();return h<12?'Good morning':h<18?'Good afternoon':'Good evening';};
+const genCode=()=>{const c='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';return Array.from({length:8},()=>c[Math.floor(Math.random()*c.length)]).join('');};
+const sid=id=>String(id||'').slice(-4).toUpperCase();
+const sstr=s=>String(s||'');
+function hl(text,q){if(!q||!text)return san(text);return san(text).replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`,'gi'),'<mark>$1</mark>');}
 
-function hl(text, q) {
-  if (!q || !text) return san(text);
-  return san(text).replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<mark>$1</mark>');
+function toast(msg,type='success'){
+  const el=$('toast');
+  const icons={success:'fas fa-check-circle',error:'fas fa-exclamation-circle',info:'fas fa-info-circle'};
+  const colors={success:'#1db96b',error:'#ef4444',info:'#3b82f6'};
+  el.innerHTML=`<i class="${icons[type]||icons.success}" style="color:${colors[type]||colors.success};font-size:1rem;flex-shrink:0;"></i><span>${san(msg)}</span>`;
+  el.classList.remove('hidden'); clearTimeout(el._t);
+  el._t=setTimeout(()=>el.classList.add('hidden'),3600);
+}
+function showLoading(show){const ol=$('loadingOverlay');if(!show){ol.style.opacity='0';setTimeout(()=>ol.style.display='none',500);}else{ol.style.display='flex';ol.style.opacity='1';}}
+function setBtnLoading(btn,loading,origHtml){
+  if(loading){btn.dataset.orig=btn.innerHTML;btn.innerHTML=`<span class="spinner" style="width:16px;height:16px;"></span> Loading…`;btn.disabled=true;}
+  else{btn.innerHTML=origHtml||btn.dataset.orig||btn.innerHTML;btn.disabled=false;}
 }
 
-function toast(msg, type='success') {
-  const el = $('toast');
-  const icons = { success:'fas fa-check-circle', error:'fas fa-exclamation-circle', info:'fas fa-info-circle' };
-  const colors = { success:'#1db96b', error:'#ef4444', info:'#3b82f6' };
-  el.innerHTML = `<i class="${icons[type]||icons.success}" style="color:${colors[type]||colors.success};font-size:1rem;flex-shrink:0;"></i><span>${san(msg)}</span>`;
-  el.classList.remove('hidden');
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.add('hidden'), 3600);
-}
-
-function showLoading(show) {
-  const ol = $('loadingOverlay');
-  if (!show) { ol.style.opacity='0'; setTimeout(()=>ol.style.display='none',500); }
-  else { ol.style.display='flex'; ol.style.opacity='1'; }
-}
-
-function setBtnLoading(btn, loading, origHtml) {
-  if (loading) {
-    btn.dataset.orig = btn.innerHTML;
-    btn.innerHTML = `<span class="spinner" style="width:16px;height:16px;"></span> Loading…`;
-    btn.disabled = true;
-  } else {
-    btn.innerHTML = origHtml || btn.dataset.orig || btn.innerHTML;
-    btn.disabled = false;
-  }
-}
+// =========================================================
+//  MOBILE SIDEBAR
+// =========================================================
+function openSidebar(){$('sidebar').classList.add('open');$('sidebarOverlay').classList.add('open');}
+function closeSidebar(){$('sidebar').classList.remove('open');$('sidebarOverlay').classList.remove('open');}
 
 // =========================================================
 //  AUTH
 // =========================================================
-function togglePw(id, iconId) {
-  const el = $(id);
-  el.type = el.type === 'password' ? 'text' : 'password';
-  $(iconId).className = el.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+function togglePw(id,iconId){const el=$(id);el.type=el.type==='password'?'text':'password';$(iconId).className=el.type==='password'?'fas fa-eye':'fas fa-eye-slash';}
+function switchAuthMode(mode){
+  $('loginForm').classList.toggle('hidden',mode!=='login');
+  $('signupForm').classList.toggle('hidden',mode!=='signup');
+  $('authSubtitle').textContent=mode==='login'?'Sign in to your account':'Create a new account';
+  $('authError').classList.add('hidden'); $('authError').style.display='none';
 }
+function showAuthErr(msg){const el=$('authError');$('authErrorText').textContent=msg;el.style.display='flex';el.classList.remove('hidden');}
 
-function switchAuthMode(mode) {
-  $('loginForm').classList.toggle('hidden', mode !== 'login');
-  $('signupForm').classList.toggle('hidden', mode !== 'signup');
-  $('authSubtitle').textContent = mode === 'login' ? 'Sign in to your account' : 'Create a new account';
-  $('authError').classList.add('hidden');
-  $('authError').style.display = 'none';
-}
-
-function showAuthErr(msg) {
-  const el = $('authError');
-  $('authErrorText').textContent = msg;
-  el.style.display = 'flex';
-  el.classList.remove('hidden');
-}
-
-$('loginForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  const btn = $('loginBtn');
-  setBtnLoading(btn, true);
+$('loginForm').addEventListener('submit',async e=>{
+  e.preventDefault(); const btn=$('loginBtn'); setBtnLoading(btn,true);
   try {
-    const email    = $('loginEmail').value.trim();
-    const password = $('loginPassword').value;
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) { showAuthErr(error.message); return; }
+    const {data,error}=await sb.auth.signInWithPassword({email:$('loginEmail').value.trim(),password:$('loginPassword').value});
+    if(error){showAuthErr(error.message);return;}
     await bootApp(data.user);
-  } finally { setBtnLoading(btn, false); }
+  } finally{setBtnLoading(btn,false);}
 });
 
-$('signupForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  const btn = $('signupBtn');
-  setBtnLoading(btn, true);
+$('signupForm').addEventListener('submit',async e=>{
+  e.preventDefault(); const btn=$('signupBtn'); setBtnLoading(btn,true);
   try {
-    const email    = $('signupEmail').value.trim();
-    const password = $('signupPassword').value;
-    const confirm  = $('signupConfirm').value;
-    const question = $('signupQuestion').value;
-    const answer   = $('signupAnswer').value.trim();
-    const refCode  = $('signupReferral').value.trim().toUpperCase();
+    const email=$('signupEmail').value.trim();
+    const phone=$('signupPhone').value.trim();
+    const password=$('signupPassword').value;
+    const confirm=$('signupConfirm').value;
+    const question=$('signupQuestion').value;
+    const answer=$('signupAnswer').value.trim();
+    const refCode=$('signupReferral').value.trim().toUpperCase();
 
-    if (password !== confirm) { showAuthErr('Passwords do not match'); return; }
-    if (!question)            { showAuthErr('Please select a security question'); return; }
-    if (!answer)              { showAuthErr('Please enter your security answer'); return; }
+    if(password!==confirm){showAuthErr('Passwords do not match');return;}
+    if(!question){showAuthErr('Please select a security question');return;}
+    if(!answer){showAuthErr('Please enter your security answer');return;}
+    if(!phone){showAuthErr('Please enter your phone number');return;}
 
-    if (refCode) {
-      const { data: ref } = await sb.from('profiles').select('id').eq('referral_code', refCode).single();
-      if (!ref) { showAuthErr('Invalid referral code'); return; }
+    if(refCode){
+      const {data:ref}=await sb.from('profiles').select('id').eq('referral_code',refCode).single();
+      if(!ref){showAuthErr('Invalid referral code');return;}
     }
 
-    const { data: authData, error: authErr } = await sb.auth.signUp({ email, password });
-    if (authErr) {
-      const m = authErr.message.toLowerCase();
-      if (m.includes('already') || m.includes('exists')) {
-        showAuthErr('This email is already registered. Please sign in.');
-      } else showAuthErr(authErr.message);
+    const {data:authData,error:authErr}=await sb.auth.signUp({email,password});
+    if(authErr){
+      const m=authErr.message.toLowerCase();
+      showAuthErr(m.includes('already')||m.includes('exists')?'This email is already registered. Please sign in.':authErr.message);
       return;
     }
-    if (!authData.user || authData.user.identities?.length === 0) {
-      showAuthErr('This email is already registered. Please sign in.');
-      return;
-    }
+    if(!authData.user||authData.user.identities?.length===0){showAuthErr('This email is already registered. Please sign in.');return;}
 
-    const newCode  = genCode();
-    const hashed   = CryptoJS.SHA256(answer.toLowerCase().trim()).toString();
-    const fullName = email.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
+    const newCode=genCode();
+    const hashed=CryptoJS.SHA256(answer.toLowerCase().trim()).toString();
+    const fullName=email.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
 
-    const { error: pErr } = await sb.from('profiles').upsert([{
-      id: authData.user.id, full_name: fullName, email,
-      role: 'applicant', referral_code: newCode,
-      referred_by_code: refCode || null,
-      security_question: question, security_answer_hash: hashed
-    }], { onConflict:'id', ignoreDuplicates:true });
+    const {error:pErr}=await sb.from('profiles').upsert([{
+      id:authData.user.id,full_name:fullName,email,phone,
+      role:'applicant',referral_code:newCode,
+      referred_by_code:refCode||null,
+      security_question:question,security_answer_hash:hashed
+    }],{onConflict:'id',ignoreDuplicates:true});
 
-    if (pErr) { showAuthErr('Profile error: ' + pErr.message); return; }
-
+    if(pErr){showAuthErr('Profile error: '+pErr.message);return;}
     showLoading(true);
     await bootApp(authData.user);
-
-  } finally { setBtnLoading(btn, false); }
+  } finally{setBtnLoading(btn,false);}
 });
 
-async function handleLogout() {
-  await sb.auth.signOut();
-}
+async function handleLogout(){await sb.auth.signOut();}
 
 // =========================================================
 //  BOOT
 // =========================================================
-async function bootApp(user) {
-  CU = user;
-  const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).single();
-  if (!profile) {
-    showLoading(false);
-    $('authScreen').style.display = 'flex';
-    showAuthErr('Profile not found. Please contact support.');
-    return;
-  }
-  CP = profile;
+async function bootApp(user){
+  CU=user;
+  const {data:profile}=await sb.from('profiles').select('*').eq('id',user.id).single();
+  if(!profile){showLoading(false);$('authScreen').style.display='flex';showAuthErr('Profile not found.');return;}
+  CP=profile;
 
-  const name = profile.full_name || user.email.split('@')[0];
-  $('sidebarAvatar').textContent = name.charAt(0).toUpperCase();
-  $('sidebarName').textContent   = name;
-  $('headerEmail').textContent   = user.email;
-  $('heroName').textContent      = name.split(' ')[0];
-  $('greetText').textContent     = greet() + ',';
+  const name=profile.full_name||user.email.split('@')[0];
+  $('sidebarAvatar').textContent=name.charAt(0).toUpperCase();
+  $('sidebarName').textContent=name;
+  $('headerEmail').textContent=user.email;
+  $('heroName').textContent=name.split(' ')[0];
+  $('greetText').textContent=greet()+',';
 
-  const roleBadgeClass = profile.role==='admin' ? 'badge-admin' : profile.role==='staff' ? 'badge-staff' : 'badge-applicant';
-  $('sidebarRoleBadge').className = `badge ${roleBadgeClass}`;
-  $('sidebarRoleBadge').textContent = profile.role.charAt(0).toUpperCase() + profile.role.slice(1);
-  $('headerRoleBadge').className = `badge ${roleBadgeClass}`;
-  $('headerRoleBadge').textContent = profile.role.charAt(0).toUpperCase() + profile.role.slice(1);
+  // Dash user card
+  $('dashUserAvatar').textContent=name.charAt(0).toUpperCase();
+  $('dashUserName').textContent=name;
+  $('dashUserEmail').textContent=user.email;
 
-  if (profile.role === 'admin') {
-    $('navStaff').classList.remove('hidden');
-    $('navStaff').style.display = 'flex';
-    $('navUsers').classList.remove('hidden');
-    $('navUsers').style.display = 'flex';
-    $('appNewBtn').classList.add('hidden');
-    $('newAppHeroBtn').classList.add('hidden');
+  const roleBadgeClass=profile.role==='admin'?'badge-admin':profile.role==='staff'?'badge-staff':'badge-applicant';
+  const roleLabel=profile.role.charAt(0).toUpperCase()+profile.role.slice(1);
+  $('sidebarRoleBadge').className=`badge ${roleBadgeClass}`;
+  $('sidebarRoleBadge').textContent=roleLabel;
+  $('headerRoleBadge').className=`badge ${roleBadgeClass}`;
+  $('headerRoleBadge').textContent=roleLabel;
+  $('dashUserRole').className=`badge ${roleBadgeClass}`;
+  $('dashUserRole').textContent=roleLabel;
+
+  if(profile.role==='admin'){
+    $('navStaff').classList.remove('hidden'); $('navStaff').style.display='flex';
+    $('navUsers').classList.remove('hidden'); $('navUsers').style.display='flex';
+    $('appNewBtn').classList.add('hidden'); $('newAppHeroBtn').classList.add('hidden');
     $('referralWidget').classList.add('hidden');
-  } else if (profile.role === 'staff') {
-    $('navStaff').classList.remove('hidden');
-    $('navStaff').style.display = 'flex';
-    $('appNewBtn').classList.add('hidden');
-    $('newAppHeroBtn').classList.add('hidden');
+  } else if(profile.role==='staff'){
+    $('navStaff').classList.remove('hidden'); $('navStaff').style.display='flex';
+    $('appNewBtn').classList.add('hidden'); $('newAppHeroBtn').classList.add('hidden');
     $('referralWidget').classList.add('hidden');
   } else {
     $('referralWidget').classList.remove('hidden');
-    $('referralDisplay').textContent = profile.referral_code || '--------';
+    $('referralDisplay').textContent=profile.referral_code||'--------';
   }
 
   await loadApps();
-  if (profile.role === 'admin') {
+  if(profile.role==='admin'){
     await loadAllUsers();
-    buildStaffTabs(['applications', 'log']);
-  } else if (profile.role === 'staff') {
-    buildStaffTabs(['myapps']);
+    buildStaffTabs(['applications','requests','log']);
+    await loadApprovalRequests();
+  } else if(profile.role==='staff'){
+    buildStaffTabs(['myapps','messages']);
   }
-  if (profile.role === 'admin' || profile.role === 'staff') {
-    await loadStaff();
-  }
+  if(profile.role==='admin'||profile.role==='staff') await loadStaff();
 
   renderDashboard();
   showSection('dashboard');
-
-  $('authScreen').style.display  = 'none';
-  $('mainApp').style.display     = 'flex';
+  $('authScreen').style.display='none';
+  $('mainApp').style.display='flex';
   showLoading(false);
 }
 
-function buildStaffTabs(tabs) {
-  const bar = $('staffTabBar');
-  bar.innerHTML = '';
-  if (tabs.includes('myapps')) {
-    bar.innerHTML += `<button class="tab-btn active" id="stab-myapps" onclick="switchStaffTab('myapps')">My Applications</button>`;
-    bar.innerHTML += `<button class="tab-btn" id="stab-messages" onclick="switchStaffTab('messages')">Messages</button>`;
-  }
-  if (tabs.includes('applications')) {
-    bar.innerHTML += `<button class="tab-btn active" id="stab-applications" onclick="switchStaffTab('applications')">All Applications</button>`;
-    bar.innerHTML += `<button class="tab-btn" id="stab-log" onclick="switchStaffTab('log')">Activity Log</button>`;
-  }
-}
-
-function switchStaffTab(tab) {
-  $('staffMessagesTab').classList.add('hidden');
-  $('staffAppsTab').classList.add('hidden');
-  $('allApplicantsTab').classList.add('hidden');
-  $('activityLogTab').classList.add('hidden');
-  document.querySelectorAll('#staffTabBar .tab-btn').forEach(b => b.classList.remove('active'));
-
-  if (tab === 'myapps') {
-    $('staffAppsTab').classList.remove('hidden');
-    $('stab-myapps')?.classList.add('active');
-    renderStaffAppList();
-  } else if (tab === 'messages') {
-    $('staffMessagesTab').classList.remove('hidden');
-    $('stab-messages')?.classList.add('active');
-    loadStaffMessages();
-  } else if (tab === 'applications') {
-    $('allApplicantsTab').classList.remove('hidden');
-    $('stab-applications')?.classList.add('active');
-    renderAdminAppList();
-  } else if (tab === 'log') {
-    $('activityLogTab').classList.remove('hidden');
-    $('stab-log')?.classList.add('active');
-    loadLogs();
-  }
-}
-
-function switchUserTab(tab) {
-  currentUserTab = tab;
-  $('userApplicantsTab').classList.toggle('hidden', tab !== 'applicants');
-  $('userStaffTab').classList.toggle('hidden', tab !== 'staff');
-  $('tabApplicants').classList.toggle('active', tab === 'applicants');
-  $('tabStaffList').classList.toggle('active', tab === 'staff');
-  if (tab === 'applicants') renderUserList();
-  else renderStaffList();
-}
-
-// =========================================================
-//  DATA LOADING
-// =========================================================
-async function loadApps() {
-  let q = sb.from('applications').select('*').order('created_at', { ascending: false });
-  if (CP.role === 'applicant') q = q.eq('user_id', CU.id);
-  else if (CP.role === 'staff') q = q.eq('assigned_staff_id', CU.id);
-
-  const { data, error } = await q;
-  if (error) { toast('Failed to load applications: ' + error.message, 'error'); return; }
-  allApps = data || [];
-
-  if ((CP.role === 'admin' || CP.role === 'staff') && allApps.length) {
-    const ids = [...new Set(allApps.map(a => a.user_id).filter(Boolean))];
-    const { data: profs } = await sb.from('profiles').select('id,full_name,email,referral_code,referred_by_code,role').in('id', ids);
-    if (profs?.length) {
-      const map = {};
-      profs.forEach(p => { map[p.id] = p; });
-      allApps = allApps.map(a => ({ ...a, _profile: map[a.user_id] || null }));
-    }
-  }
-}
-
-async function loadStaff() {
-  const { data } = await sb.from('profiles').select('id,full_name,email,role').in('role', ['staff','admin']);
-  allStaff = data || [];
-}
-
-async function loadAllUsers() {
-  const { data } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
-  allUsers = data || [];
-}
-
-async function loadLogs() {
-  const { data } = await sb.from('activity_logs').select('*').order('created_at', { ascending: false }).limit(200);
-  allLogs = data || [];
-  renderLogList();
-}
-
-// =========================================================
-//  LOG
-// =========================================================
-async function logAct(action, appId, detail) {
-  try {
-    await sb.from('activity_logs').insert([{
-      staff_user_id: CU.id, staff_email: CU.email,
-      application_id: appId || null, action, detail
-    }]);
-  } catch(e) { console.warn('Log failed', e); }
-}
-
-// =========================================================
-//  NAVIGATION
-// =========================================================
-function showSection(name) {
-  ['dashboard','applications','staff','users'].forEach(s => {
-    const el = $(s+'Section');
-    if (el) el.classList.add('hidden');
-    const nav = $('nav'+s.charAt(0).toUpperCase()+s.slice(1));
-    if (nav) nav.classList.remove('active');
+function buildStaffTabs(tabs){
+  const bar=$('staffTabBar'); bar.innerHTML='';
+  const defs={
+    myapps:{label:'My Applications',id:'stab-myapps'},
+    messages:{label:'Messages',id:'stab-messages'},
+    applications:{label:'All Applications',id:'stab-applications'},
+    requests:{label:'Approval Requests',id:'stab-requests'},
+    log:{label:'Activity Log',id:'stab-log'},
+  };
+  tabs.forEach((t,i)=>{
+    const d=defs[t];
+    bar.innerHTML+=`<button class="tab-btn ${i===0?'active':''}" id="${d.id}" onclick="switchStaffTab('${t}')">${d.label}</button>`;
   });
+}
 
-  const sect = $(name+'Section');
-  if (sect) sect.classList.remove('hidden');
-  const nav = $('nav'+name.charAt(0).toUpperCase()+name.slice(1));
-  if (nav) nav.classList.add('active');
+function switchStaffTab(tab){
+  ['staffMessagesTab','staffAppsTab','allApplicantsTab','approvalRequestsTab','activityLogTab'].forEach(id=>$(id)?.classList.add('hidden'));
+  document.querySelectorAll('#staffTabBar .tab-btn').forEach(b=>b.classList.remove('active'));
+  const map={myapps:'staffAppsTab',messages:'staffMessagesTab',applications:'allApplicantsTab',requests:'approvalRequestsTab',log:'activityLogTab'};
+  const tabId=`stab-${tab}`;
+  $(map[tab])?.classList.remove('hidden');
+  $(tabId)?.classList.add('active');
+  if(tab==='myapps') renderStaffAppList();
+  else if(tab==='messages') loadStaffMessages();
+  else if(tab==='applications') renderAdminAppList();
+  else if(tab==='requests') loadApprovalRequests();
+  else if(tab==='log') loadLogs();
+}
 
-  const titles = { dashboard:'Dashboard', applications:'Applications', staff:'Staff Portal', users:'User Management' };
-  $('pageTitle').textContent = titles[name] || name;
+function switchUserTab(tab){
+  currentUserTab=tab;
+  $('userApplicantsTab').classList.toggle('hidden',tab!=='applicants');
+  $('userStaffTab').classList.toggle('hidden',tab!=='staff');
+  $('tabApplicants').classList.toggle('active',tab==='applicants');
+  $('tabStaffList').classList.toggle('active',tab==='staff');
+  if(tab==='applicants') renderUserList(); else renderStaffList();
+}
 
-  if (name === 'dashboard')    renderDashboard();
-  if (name === 'applications') renderAppList();
-  if (name === 'staff') {
-    if (CP.role === 'admin') switchStaffTab('applications');
-    else switchStaffTab('myapps');
+// =========================================================
+//  DATA
+// =========================================================
+async function loadApps(){
+  let q=sb.from('applications').select('*').order('created_at',{ascending:false});
+  if(CP.role==='applicant') q=q.eq('user_id',CU.id);
+  else if(CP.role==='staff') q=q.eq('assigned_staff_id',CU.id);
+  const {data,error}=await q;
+  if(error){toast('Failed to load applications: '+error.message,'error');return;}
+  allApps=data||[];
+  if((CP.role==='admin'||CP.role==='staff')&&allApps.length){
+    const ids=[...new Set(allApps.map(a=>a.user_id).filter(Boolean))];
+    const {data:profs}=await sb.from('profiles').select('id,full_name,email,referral_code,referred_by_code,role').in('id',ids);
+    if(profs?.length){const map={};profs.forEach(p=>{map[p.id]=p;});allApps=allApps.map(a=>({...a,_profile:map[a.user_id]||null}));}
   }
-  if (name === 'users') { switchUserTab('applicants'); renderUserList(); }
+}
+
+async function loadStaff(){const {data}=await sb.from('profiles').select('id,full_name,email,role').in('role',['staff','admin']);allStaff=data||[];}
+async function loadAllUsers(){const {data}=await sb.from('profiles').select('*').order('created_at',{ascending:false});allUsers=data||[];}
+async function loadLogs(){const {data}=await sb.from('activity_logs').select('*').order('created_at',{ascending:false}).limit(200);allLogs=data||[];renderLogList();}
+
+async function loadApprovalRequests(){
+  const {data}=await sb.from('stage_requests').select('*').in('status',['pending','pended']).order('created_at',{ascending:false});
+  allRequests=data||[];
+  updateRequestBadge();
+  renderApprovalList();
+}
+
+function updateRequestBadge(){
+  const pending=allRequests.filter(r=>r.status==='pending').length;
+  const badge=$('staffBadge');
+  if(pending>0&&CP?.role==='admin'){badge.textContent=pending;badge.classList.remove('hidden');}
+  else badge.classList.add('hidden');
+}
+
+async function logAct(action,appId,detail){
+  try{await sb.from('activity_logs').insert([{staff_user_id:CU.id,staff_email:CU.email,application_id:appId||null,action,detail}]);}
+  catch(e){console.warn('Log failed',e);}
+}
+
+// =========================================================
+//  NAV
+// =========================================================
+function showSection(name){
+  ['dashboard','applications','staff','users'].forEach(s=>{
+    $(s+'Section')?.classList.add('hidden');
+    const nav=$('nav'+s.charAt(0).toUpperCase()+s.slice(1));
+    if(nav) nav.classList.remove('active');
+  });
+  $(name+'Section')?.classList.remove('hidden');
+  const nav=$('nav'+name.charAt(0).toUpperCase()+name.slice(1));
+  if(nav) nav.classList.add('active');
+  $('pageTitle').textContent={dashboard:'Dashboard',applications:'Applications',staff:'Staff Portal',users:'User Management'}[name]||name;
+  if(name==='dashboard') renderDashboard();
+  if(name==='applications') renderAppList();
+  if(name==='staff'){CP.role==='admin'?switchStaffTab('applications'):switchStaffTab('myapps');}
+  if(name==='users'){switchUserTab('applicants');renderUserList();}
+  closeSidebar();
 }
 
 // =========================================================
 //  DASHBOARD
 // =========================================================
-function renderDashboard() {
-  const total    = allApps.length;
-  const approved = allApps.filter(a => (a.stage||1) === 7).length;
-  const pending  = allApps.filter(a => a.status === 'pending').length;
-  const rejected = allApps.filter(a => a.status === 'rejected').length;
-  const review   = allApps.filter(a => a.status === 'review').length;
+function renderDashboard(){
+  const total=allApps.length;
+  const approved=allApps.filter(a=>(a.stage||1)===7).length;
+  const pending=allApps.filter(a=>a.status==='pending').length;
+  const rejected=allApps.filter(a=>a.status==='rejected').length;
+  const review=allApps.filter(a=>a.status==='review').length;
+  const active=pending+review;
+  $('heroSub').textContent=`${active} active application${active!==1?'s':''}`;
 
-  const active = pending + review;
-  $('heroSub').textContent = `${active} active application${active !== 1 ? 's' : ''}`;
-
-  const rate = total > 0 ? Math.round(approved / total * 100) : 0;
-  const circ = 2 * Math.PI * 38;
-  const fill = circ - (rate / 100 * circ);
-  $('ringFill').setAttribute('stroke-dashoffset', fill);
-  $('ringPct').textContent = rate + '%';
-
-  const statsData = [
-    { label:'Total', val:total,    color:'#3b82f6', icon:'fa-folder', bg:'#eff6ff' },
-    { label:'Approved', val:approved, color:'#22c55e', icon:'fa-check-circle', bg:'#f0fdf4' },
-    { label:'Pending',  val:pending,  color:'#f59e0b', icon:'fa-clock', bg:'#fffbeb' },
-    { label:'Rejected', val:rejected, color:'#ef4444', icon:'fa-times-circle', bg:'#fef2f2' },
+  const statsData=[
+    {label:'Total',val:total,color:'#3b82f6',icon:'fa-folder',bg:'#eff6ff'},
+    {label:'Approved',val:approved,color:'#22c55e',icon:'fa-check-circle',bg:'#f0fdf4'},
+    {label:'Pending',val:pending,color:'#f59e0b',icon:'fa-clock',bg:'#fffbeb'},
+    {label:'Rejected',val:rejected,color:'#ef4444',icon:'fa-times-circle',bg:'#fef2f2'},
   ];
-  $('statsGrid').innerHTML = statsData.map((s,i) => `
+  $('statsGrid').innerHTML=statsData.map((s,i)=>`
     <div class="card stat-card fade-up" style="animation-delay:${i*.06}s;">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="stat-icon" style="background:${s.bg};color:${s.color};"><i class="fas ${s.icon}"></i></div>
@@ -1347,230 +1234,244 @@ function renderDashboard() {
       </div>
     </div>`).join('');
 
-  // Recent list: each card has stage bar + expand
-  $('recentList').innerHTML = allApps.slice(0, 5).map(a => `
+  // pending requests for this app (for dashboard cards)
+  const pendingAppIds=new Set(allRequests.filter(r=>r.status==='pending').map(r=>String(r.application_id)));
+
+  $('recentList').innerHTML=allApps.slice(0,5).map(a=>`
     <div style="border:1px solid var(--border);border-radius:12px;background:var(--card);overflow:hidden;transition:all .2s;" onmouseover="this.style.borderColor='var(--brand-mid)'" onmouseout="this.style.borderColor='var(--border)'">
       <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;" onclick="openDetail('${a.id}')">
         <div class="app-avatar">${san(a.applicant_name).charAt(0).toUpperCase()}</div>
         <div style="flex:1;min-width:0;">
           <p style="font-weight:600;font-size:.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${san(a.applicant_name)}</p>
           <p style="font-size:.75rem;color:var(--muted);">${san(a.package)} · ${fmt(a.created_at)}</p>
-          ${stageBarExpand(a.stage||1, a.id)}
+          ${stageBarExpand(a.stage||1,a.id,pendingAppIds.has(String(a.id)))}
         </div>
       </div>
       <div class="stage-expand-body" id="expand-body-${a.id}"></div>
-    </div>`).join('') || '<p style="color:var(--muted);font-size:.875rem;text-align:center;padding:20px;">No applications yet</p>';
+    </div>`).join('')||'<p style="color:var(--muted);font-size:.875rem;text-align:center;padding:20px;">No applications yet</p>';
 }
 
 // =========================================================
-//  APPLICATION LIST (Applicant)
+//  APP LISTS
 // =========================================================
-function getFilteredApps() {
-  const q = $('appSearch').value.trim().toLowerCase();
-  const s = $('appStatusFilter').value;
-  return allApps.filter(a =>
-    (s === 'all' || a.status === s) &&
-    (!q || a.applicant_name.toLowerCase().includes(q) ||
-           (a.email || '').toLowerCase().includes(q) ||
-           (a.phone || '').includes(q) ||
-           (a.package || '').toLowerCase().includes(q)));
+function getFilteredApps(){
+  const q=$('appSearch').value.trim().toLowerCase();
+  const s=$('appStatusFilter').value;
+  return allApps.filter(a=>(s==='all'||a.status===s)&&(!q||a.applicant_name.toLowerCase().includes(q)||(a.email||'').toLowerCase().includes(q)||(a.phone||'').includes(q)||(a.package||'').toLowerCase().includes(q)));
 }
 
-function renderAppList() {
-  const filtered = getFilteredApps();
-  const total = filtered.length;
-  const start = (appPage - 1) * PER;
-  const items = filtered.slice(start, start + PER);
-  const pages = Math.ceil(total / PER);
-  const q = $('appSearch').value.trim();
-
-  $('appsCount').textContent = total;
-
-  if (!items.length) {
-    $('appList').innerHTML = '';
-    $('appEmpty').classList.remove('hidden');
-    $('appPagination').style.display = 'none';
-    return;
-  }
-  $('appEmpty').classList.add('hidden');
-  $('appPagination').style.display = 'flex';
-
-  $('appList').innerHTML = items.map(a => `
+function renderAppList(){
+  const filtered=getFilteredApps();
+  const total=filtered.length, start=(appPage-1)*PER, items=filtered.slice(start,start+PER), pages=Math.ceil(total/PER);
+  const q=$('appSearch').value.trim();
+  $('appsCount').textContent=total;
+  if(!items.length){$('appList').innerHTML='';$('appEmpty').classList.remove('hidden');$('appPagination').style.display='none';return;}
+  $('appEmpty').classList.add('hidden'); $('appPagination').style.display='flex';
+  $('appList').innerHTML=items.map(a=>`
     <div class="app-row" onclick="openDetail('${a.id}')">
       <div style="font-size:.72rem;font-family:monospace;color:var(--muted);background:var(--surface);padding:4px 8px;border-radius:6px;white-space:nowrap;">#${sid(a.id)}</div>
       <div class="app-avatar">${san(a.applicant_name).charAt(0).toUpperCase()}</div>
       <div style="flex:1;min-width:0;">
-        <p style="font-weight:600;font-size:.875rem;">${hl(a.applicant_name, q)}</p>
-        <p style="font-size:.75rem;color:var(--muted);">${hl(a.package, q)} · ${fmt(a.created_at)}</p>
+        <p style="font-weight:600;font-size:.875rem;">${hl(a.applicant_name,q)}</p>
+        <p style="font-size:.75rem;color:var(--muted);">${hl(a.package,q)} · ${fmt(a.created_at)}</p>
         ${stageBarSmall(a.stage||1)}
       </div>
       <i class="fas fa-chevron-right" style="color:var(--muted);font-size:.75rem;"></i>
     </div>`).join('');
-
-  $('appPageInfo').textContent = `Showing ${start+1}–${Math.min(start+PER, total)} of ${total}`;
-  renderPagination('appPageBtns', pages, appPage, p => { appPage = p; renderAppList(); });
+  $('appPageInfo').textContent=`Showing ${start+1}–${Math.min(start+PER,total)} of ${total}`;
+  renderPagination('appPageBtns',pages,appPage,p=>{appPage=p;renderAppList();});
 }
 
-// Staff: my assigned apps
-function renderStaffAppList() {
-  const q = $('staffAppSearch').value.trim().toLowerCase();
-  const s = $('staffAppStatusFilter').value;
-  const filtered = allApps.filter(a =>
-    (s === 'all' || a.status === s) &&
-    (!q || a.applicant_name.toLowerCase().includes(q) ||
-           (a.email || '').toLowerCase().includes(q) ||
-           (a.package || '').toLowerCase().includes(q)));
-
-  $('staffAppsCount').textContent = filtered.length;
-  if (!filtered.length) { $('staffAppList').innerHTML = ''; $('staffAppEmpty').classList.remove('hidden'); return; }
+function renderStaffAppList(){
+  const q=$('staffAppSearch').value.trim().toLowerCase();
+  const s=$('staffAppStatusFilter').value;
+  const filtered=allApps.filter(a=>(s==='all'||a.status===s)&&(!q||a.applicant_name.toLowerCase().includes(q)||(a.email||'').toLowerCase().includes(q)||(a.package||'').toLowerCase().includes(q)));
+  $('staffAppsCount').textContent=filtered.length;
+  if(!filtered.length){$('staffAppList').innerHTML='';$('staffAppEmpty').classList.remove('hidden');return;}
   $('staffAppEmpty').classList.add('hidden');
-
-  $('staffAppList').innerHTML = filtered.map(a => `
+  const pendingAppIds=new Set(allRequests.filter(r=>r.status==='pending').map(r=>String(r.application_id)));
+  $('staffAppList').innerHTML=filtered.map(a=>`
     <div class="app-row" onclick="openDetail('${a.id}')">
       <div style="font-size:.72rem;font-family:monospace;color:var(--muted);background:var(--surface);padding:4px 8px;border-radius:6px;">#${sid(a.id)}</div>
       <div class="app-avatar">${san(a.applicant_name).charAt(0).toUpperCase()}</div>
       <div style="flex:1;min-width:0;">
-        <p style="font-weight:600;font-size:.875rem;">${hl(a.applicant_name, q)}</p>
-        <p style="font-size:.75rem;color:var(--muted);">${(a._profile?.email || a.email || '')} · ${san(a.package)}</p>
+        <p style="font-weight:600;font-size:.875rem;">${hl(a.applicant_name,q)}</p>
+        <p style="font-size:.75rem;color:var(--muted);">${(a._profile?.email||a.email||'')} · ${san(a.package)}</p>
         ${stageBarSmall(a.stage||1)}
+        ${pendingAppIds.has(String(a.id))?'<span style="font-size:.68rem;background:#fce7f3;color:#9d174d;padding:1px 7px;border-radius:99px;font-weight:600;margin-top:4px;display:inline-block;"><i class="fas fa-clock"></i> Awaiting Approval</span>':''}
       </div>
       <span style="font-size:.75rem;color:var(--muted);">${fmt(a.created_at)}</span>
     </div>`).join('');
 }
 
-// Admin: all apps
-function renderAdminAppList() {
-  const q = $('adminAppSearch').value.trim().toLowerCase();
-  const s = $('adminAppStatusFilter').value;
-  const filtered = allApps.filter(a => {
-    const p = a._profile || {};
-    return (s === 'all' || a.status === s) &&
-      (!q || a.applicant_name.toLowerCase().includes(q) ||
-             (a.email || '').toLowerCase().includes(q) ||
-             (p.email || '').toLowerCase().includes(q) ||
-             (a.package || '').toLowerCase().includes(q));
-  });
-
-  const total = filtered.length;
-  const start = (adminPage - 1) * PER;
-  const items = filtered.slice(start, start + PER);
-  const pages = Math.ceil(total / PER);
-
-  $('adminAppsCount').textContent = total;
-  if (!items.length) { $('adminAppList').innerHTML = ''; $('adminAppEmpty').classList.remove('hidden'); $('adminAppPagination').style.display='none'; return; }
-  $('adminAppEmpty').classList.add('hidden');
-  $('adminAppPagination').style.display = 'flex';
-
-  $('adminAppList').innerHTML = items.map(a => {
-    const p = a._profile || {};
-    const assignedStaff = allStaff.find(s => sstr(s.id) === sstr(a.assigned_staff_id));
-    return `
-    <div class="app-row" onclick="openDetail('${a.id}')">
+function renderAdminAppList(){
+  const q=$('adminAppSearch').value.trim().toLowerCase();
+  const s=$('adminAppStatusFilter').value;
+  const filtered=allApps.filter(a=>{const p=a._profile||{};return(s==='all'||a.status===s)&&(!q||a.applicant_name.toLowerCase().includes(q)||(a.email||'').toLowerCase().includes(q)||(p.email||'').toLowerCase().includes(q)||(a.package||'').toLowerCase().includes(q));});
+  const total=filtered.length, start=(adminPage-1)*PER, items=filtered.slice(start,start+PER), pages=Math.ceil(total/PER);
+  $('adminAppsCount').textContent=total;
+  if(!items.length){$('adminAppList').innerHTML='';$('adminAppEmpty').classList.remove('hidden');$('adminAppPagination').style.display='none';return;}
+  $('adminAppEmpty').classList.add('hidden'); $('adminAppPagination').style.display='flex';
+  $('adminAppList').innerHTML=items.map(a=>{
+    const p=a._profile||{};
+    const assignedStaff=allStaff.find(s=>sstr(s.id)===sstr(a.assigned_staff_id));
+    return `<div class="app-row" onclick="openDetail('${a.id}')">
       <div style="font-size:.72rem;font-family:monospace;color:var(--muted);background:var(--surface);padding:4px 8px;border-radius:6px;">#${sid(a.id)}</div>
       <div class="app-avatar">${san(a.applicant_name).charAt(0).toUpperCase()}</div>
       <div style="flex:1;min-width:0;">
-        <p style="font-weight:600;font-size:.875rem;">${hl(a.applicant_name, q)}</p>
-        <p style="font-size:.75rem;color:var(--muted);">${p.email || a.email || ''} · ${hl(a.package, q)}</p>
+        <p style="font-weight:600;font-size:.875rem;">${hl(a.applicant_name,q)}</p>
+        <p style="font-size:.75rem;color:var(--muted);">${p.email||a.email||''} · ${hl(a.package,q)}</p>
         ${stageBarSmall(a.stage||1)}
       </div>
-      ${assignedStaff ? `<span style="font-size:.72rem;background:#e0f2fe;color:#075985;padding:3px 8px;border-radius:99px;white-space:nowrap;">${san(assignedStaff.full_name)}</span>` : ''}
+      ${assignedStaff?`<span style="font-size:.72rem;background:#e0f2fe;color:#075985;padding:3px 8px;border-radius:99px;white-space:nowrap;hide-mobile">${san(assignedStaff.full_name)}</span>`:''}
       <span style="font-size:.75rem;color:var(--muted);white-space:nowrap;">${fmt(a.created_at)}</span>
     </div>`;
   }).join('');
-
-  $('adminAppPageInfo').textContent = `Showing ${start+1}–${Math.min(start+PER, total)} of ${total}`;
-  renderPagination('adminAppPageBtns', pages, adminPage, p => { adminPage = p; renderAdminAppList(); });
+  $('adminAppPageInfo').textContent=`Showing ${start+1}–${Math.min(start+PER,total)} of ${total}`;
+  renderPagination('adminAppPageBtns',pages,adminPage,p=>{adminPage=p;renderAdminAppList();});
 }
 
 // =========================================================
-//  USER MANAGEMENT (Admin)
+//  APPROVAL REQUESTS (Admin)
 // =========================================================
-function renderUserList() {
-  const q = ($('userSearch')?.value || '').trim().toLowerCase();
-  const applicants = allUsers.filter(u => u.role === 'applicant' &&
-    (!q || (u.full_name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q)));
-  $('applicantCount').textContent = applicants.length;
-  $('applicantList').innerHTML = applicants.map(u => buildUserRow(u)).join('') ||
-    '<p style="color:var(--muted);text-align:center;padding:32px;">No applicants found</p>';
+async function loadApprovalRequests(){
+  const {data}=await sb.from('stage_requests').select('*').in('status',['pending','pended']).order('created_at',{ascending:false});
+  allRequests=data||[];
+  updateRequestBadge();
+  renderApprovalList();
 }
 
-function renderStaffList() {
-  const q = ($('staffSearch')?.value || '').trim().toLowerCase();
-  const members = allUsers.filter(u => (u.role === 'staff' || u.role === 'admin') &&
-    (!q || (u.full_name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q)));
-  $('staffCount').textContent = members.length;
-  $('staffMemberList').innerHTML = members.map(u => buildUserRow(u)).join('') ||
-    '<p style="color:var(--muted);text-align:center;padding:32px;">No staff members found</p>';
+async function renderApprovalList(){
+  const list=$('approvalList');
+  if(!allRequests.length){list.innerHTML='';$('approvalEmpty').classList.remove('hidden');$('reqCount').textContent='0';return;}
+  $('approvalEmpty').classList.add('hidden');
+  const pendingOnly=allRequests.filter(r=>r.status==='pending');
+  $('reqCount').textContent=pendingOnly.length;
+
+  // Enrich with app + requester info
+  const appIds=[...new Set(allRequests.map(r=>r.application_id))];
+  const staffIds=[...new Set(allRequests.map(r=>r.requested_by))];
+  const {data:apps}=await sb.from('applications').select('id,applicant_name,stage,package').in('id',appIds);
+  const {data:staffProfs}=await sb.from('profiles').select('id,full_name,email').in('id',staffIds);
+  const appMap={}, staffMap={};
+  (apps||[]).forEach(a=>appMap[a.id]=a);
+  (staffProfs||[]).forEach(s=>staffMap[s.id]=s);
+
+  list.innerHTML=allRequests.map(r=>{
+    const app=appMap[r.application_id]||{};
+    const staff=staffMap[r.requested_by]||{};
+    const si=stageGet(r.requested_stage);
+    const isPending=r.status==='pending';
+    return `<div class="req-card ${r.status==='pended'?'pended':''}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <p style="font-weight:700;font-size:.9rem;">${san(app.applicant_name||'Unknown')} <span style="font-size:.72rem;font-family:monospace;color:var(--muted);">#${sid(r.application_id)}</span></p>
+          <p style="font-size:.78rem;color:var(--muted);margin-top:2px;">${san(app.package||'')} · Requested by <strong>${san(staff.full_name||staff.email||'Staff')}</strong></p>
+        </div>
+        <span class="badge ${isPending?'badge-awaiting':'badge-pended'}">${isPending?'Pending':'Pended'}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:${si.bg};border-radius:10px;padding:10px 12px;">
+        <div>
+          <p style="font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Stage advance request</p>
+          <p style="font-size:.83rem;font-weight:700;color:${si.clr};margin-top:2px;">→ Stage ${r.requested_stage}: ${si.label}</p>
+        </div>
+      </div>
+      <p style="font-size:.72rem;color:var(--muted);">Requested ${fmt(r.created_at)}</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="handleApprovalDecision('${r.id}','${r.application_id}',${r.requested_stage},'approved')" class="btn btn-primary" style="font-size:.8rem;padding:7px 14px;"><i class="fas fa-check"></i> Approve</button>
+        <button onclick="handleApprovalDecision('${r.id}','${r.application_id}',${r.requested_stage},'pended')" class="btn btn-warn" style="font-size:.8rem;padding:7px 14px;"><i class="fas fa-pause"></i> Pend</button>
+        <button onclick="openDetail('${r.application_id}')" class="btn btn-ghost" style="font-size:.8rem;padding:7px 14px;"><i class="fas fa-eye"></i> View Application</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
-function buildUserRow(u) {
-  const assignedCount = allApps.filter(a => sstr(a.user_id) === sstr(u.id)).length;
-  return `
-  <div class="user-row">
+async function handleApprovalDecision(reqId, appId, requestedStage, decision){
+  if(decision==='approved'){
+    const {error}=await sb.from('applications').update({stage:requestedStage}).eq('id',appId);
+    if(error){toast('Error: '+error.message,'error');return;}
+    await logAct('status_update',appId,`Admin approved stage advance to Stage ${requestedStage} on #${sid(appId)}`);
+    toast(`Approved! Application moved to Stage ${requestedStage}`);
+  } else {
+    toast('Request pended — staff can re-request or you can approve later','info');
+  }
+  await sb.from('stage_requests').update({status:decision,updated_at:new Date().toISOString()}).eq('id',reqId);
+  await loadApps();
+  await loadApprovalRequests();
+  renderDashboard();
+}
+
+// =========================================================
+//  USER MANAGEMENT
+// =========================================================
+function renderUserList(){
+  const q=($('userSearch')?.value||'').trim().toLowerCase();
+  const applicants=allUsers.filter(u=>u.role==='applicant'&&(!q||(u.full_name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)));
+  $('applicantCount').textContent=applicants.length;
+  $('applicantList').innerHTML=applicants.map(u=>buildUserRow(u)).join('')||'<p style="color:var(--muted);text-align:center;padding:32px;">No applicants found</p>';
+}
+
+function renderStaffList(){
+  const q=($('staffSearch')?.value||'').trim().toLowerCase();
+  const members=allUsers.filter(u=>(u.role==='staff'||u.role==='admin')&&(!q||(u.full_name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)));
+  $('staffCount').textContent=members.length;
+  $('staffMemberList').innerHTML=members.map(u=>buildUserRow(u)).join('')||'<p style="color:var(--muted);text-align:center;padding:32px;">No staff members found</p>';
+}
+
+function buildUserRow(u){
+  const assignedCount=allApps.filter(a=>sstr(a.user_id)===sstr(u.id)).length;
+  return `<div class="user-row">
     <div style="width:40px;height:40px;border-radius:12px;background:${u.role==='admin'?'#ede9fe':u.role==='staff'?'#e0f2fe':'#d1fae5'};color:${u.role==='admin'?'#7c3aed':u.role==='staff'?'#0369a1':'#047857'};display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">
       ${san(u.full_name||'?').charAt(0).toUpperCase()}
     </div>
     <div style="flex:1;min-width:0;">
       <p style="font-weight:600;font-size:.875rem;">${san(u.full_name)}</p>
-      <p style="font-size:.75rem;color:var(--muted);">${san(u.email)} · ${assignedCount} application${assignedCount!==1?'s':''}</p>
+      <p style="font-size:.75rem;color:var(--muted);">${san(u.email)} · ${assignedCount} app${assignedCount!==1?'s':''}</p>
     </div>
     <span class="badge badge-${u.role}">${u.role.charAt(0).toUpperCase()+u.role.slice(1)}</span>
     <button onclick="openUserProfile('${u.id}')" class="btn btn-ghost" style="padding:6px 12px;font-size:.78rem;"><i class="fas fa-eye"></i></button>
   </div>`;
 }
 
-async function openUserProfile(userId) {
-  const u = allUsers.find(u => sstr(u.id) === sstr(userId));
-  if (!u) return;
+async function openUserProfile(userId){
+  const u=allUsers.find(u=>sstr(u.id)===sstr(userId)); if(!u) return;
+  const userApps=allApps.filter(a=>sstr(a.user_id)===sstr(userId));
+  const {data:pNotes}=await sb.from('profile_notes').select('*,author:author_id(full_name,role)').eq('profile_id',userId).order('created_at',{ascending:true});
 
-  const userApps = allApps.filter(a => sstr(a.user_id) === sstr(userId));
-  const { data: pNotes } = await sb.from('profile_notes')
-    .select('*, author:author_id(full_name,role)')
-    .eq('profile_id', userId).order('created_at', { ascending: true });
-
-  $('upTitle').textContent = (u.full_name || u.email) + ' — Profile';
-  $('upBody').innerHTML = `
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:22px;padding:18px;background:var(--surface);border-radius:14px;">
-      <div style="width:56px;height:56px;border-radius:16px;background:${u.role==='admin'?'#ede9fe':u.role==='staff'?'#e0f2fe':'#d1fae5'};color:${u.role==='admin'?'#7c3aed':u.role==='staff'?'#0369a1':'#047857'};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.4rem;font-family:'Bricolage Grotesque',sans-serif;">
+  $('upTitle').textContent=(u.full_name||u.email)+' — Profile';
+  $('upBody').innerHTML=`
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:22px;padding:18px;background:var(--surface);border-radius:14px;flex-wrap:wrap;">
+      <div style="width:56px;height:56px;border-radius:16px;background:${u.role==='admin'?'#ede9fe':u.role==='staff'?'#e0f2fe':'#d1fae5'};color:${u.role==='admin'?'#7c3aed':u.role==='staff'?'#0369a1':'#047857'};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.4rem;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">
         ${san(u.full_name||'?').charAt(0).toUpperCase()}
       </div>
       <div>
         <h4 class="syne" style="font-size:1.1rem;font-weight:700;">${san(u.full_name)}</h4>
         <p style="font-size:.83rem;color:var(--muted);">${san(u.email)}</p>
-        <div style="margin-top:4px;display:flex;gap:6px;align-items:center;">
+        ${u.phone?`<p style="font-size:.83rem;color:var(--muted);">${san(u.phone)}</p>`:''}
+        <div style="margin-top:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
           <span class="badge badge-${u.role}">${u.role}</span>
           <span style="font-size:.75rem;color:var(--muted);">Since ${fmt(u.created_at)}</span>
         </div>
       </div>
     </div>
-
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
       <div style="background:var(--surface);border-radius:12px;padding:14px;">
         <p style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;">Referral Code</p>
-        <code style="font-family:monospace;font-weight:700;color:var(--brand);font-size:1rem;">${san(u.referral_code || '—')}</code>
+        <code style="font-family:monospace;font-weight:700;color:var(--brand);font-size:1rem;">${san(u.referral_code||'—')}</code>
       </div>
       <div style="background:var(--surface);border-radius:12px;padding:14px;">
         <p style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;">Applications</p>
         <span class="syne" style="font-size:1.2rem;font-weight:700;color:var(--brand);">${userApps.length}</span>
       </div>
     </div>
-
     <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
-      <h5 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:12px;">
-        Message Thread
-        <span style="font-size:.72rem;font-weight:400;color:var(--muted);font-family:'Manrope',sans-serif;margin-left:6px;">${(pNotes||[]).length} message${(pNotes||[]).length!==1?'s':''}</span>
-      </h5>
-      <div id="pNotesContainer" style="display:flex;flex-direction:column;gap:10px;max-height:280px;overflow-y:auto;margin-bottom:14px;padding-right:4px;">
-        ${(pNotes||[]).map(n => {
-          const isStaffReply = String(n.author_id) === String(userId);
-          const role = n.author?.role || 'admin';
-          const name = n.author?.full_name || 'Admin';
-          return `
-          <div style="display:flex;flex-direction:column;align-items:${isStaffReply?'flex-end':'flex-start'};">
-            <div style="max-width:85%;background:${isStaffReply?'#e0f2fe':'var(--surface)'};color:var(--text);
-              border:1px solid ${isStaffReply?'#bae6fd':'var(--border)'};
-              border-radius:${isStaffReply?'14px 14px 4px 14px':'14px 14px 14px 4px'};
-              padding:10px 14px;">
+      <h5 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:12px;">Message Thread <span style="font-size:.72rem;font-weight:400;color:var(--muted);font-family:'Manrope';">${(pNotes||[]).length} msg${(pNotes||[]).length!==1?'s':''}</span></h5>
+      <div id="pNotesContainer" style="display:flex;flex-direction:column;gap:10px;max-height:260px;overflow-y:auto;margin-bottom:14px;padding-right:4px;">
+        ${(pNotes||[]).map(n=>{
+          const isStaffReply=String(n.author_id)===String(userId);
+          const role=n.author?.role||'admin'; const name=n.author?.full_name||'Admin';
+          return `<div style="display:flex;flex-direction:column;align-items:${isStaffReply?'flex-end':'flex-start'};">
+            <div style="max-width:85%;background:${isStaffReply?'#e0f2fe':'var(--surface)'};color:var(--text);border:1px solid ${isStaffReply?'#bae6fd':'var(--border)'};border-radius:${isStaffReply?'14px 14px 4px 14px':'14px 14px 14px 4px'};padding:10px 14px;">
               <p style="font-size:.83rem;line-height:1.55;">${san(n.content)}</p>
             </div>
             <div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:0 4px;">
@@ -1578,375 +1479,358 @@ async function openUserProfile(userId) {
               <span style="font-size:.7rem;color:var(--muted);">${fmt(n.created_at)}</span>
             </div>
           </div>`;
-        }).join('') || '<p style="font-size:.83rem;color:var(--muted);text-align:center;padding:16px;">No messages yet — start the conversation below</p>'}
+        }).join('')||'<p style="font-size:.83rem;color:var(--muted);text-align:center;padding:16px;">No messages yet</p>'}
       </div>
       <div style="display:flex;gap:8px;">
-        <input type="text" id="pNoteInput" class="inp inp-sm" style="flex:1;" placeholder="Send a message to this staff member…">
+        <input type="text" id="pNoteInput" class="inp inp-sm" style="flex:1;" placeholder="Send a message…">
         <button onclick="addProfileNote('${userId}')" class="btn btn-primary" style="padding:8px 14px;font-size:.8rem;"><i class="fas fa-paper-plane"></i></button>
       </div>
-    </div>
-  `;
+    </div>`;
 
-  $('upFooter').innerHTML = `
+  $('upFooter').innerHTML=`
     <button onclick="closeUserModal()" class="btn btn-ghost">Close</button>
-    ${u.role === 'applicant' ? `<button onclick="promoteToStaff('${userId}')" class="btn btn-secondary" style="font-size:.83rem;"><i class="fas fa-user-shield"></i> Promote to Staff</button>` : ''}
-    ${u.role === 'staff' ? `<button onclick="demoteToApplicant('${userId}')" class="btn btn-ghost" style="font-size:.83rem;color:var(--muted);"><i class="fas fa-user-minus"></i> Demote to Applicant</button>` : ''}
-    ${u.role !== 'admin' ? `<button onclick="deleteAccount('${userId}')" class="btn btn-danger" style="font-size:.83rem;"><i class="fas fa-trash-alt"></i> Delete Account</button>` : ''}
-  `;
-
+    ${u.role==='applicant'?`<button onclick="promoteToStaff('${userId}')" class="btn btn-secondary" style="font-size:.83rem;"><i class="fas fa-user-shield"></i> Promote to Staff</button>`:''}
+    ${u.role==='staff'?`<button onclick="demoteToApplicant('${userId}')" class="btn btn-ghost" style="font-size:.83rem;color:var(--muted);"><i class="fas fa-user-minus"></i> Demote</button>`:''}
+    ${u.role!=='admin'?`<button onclick="deleteAccount('${userId}')" class="btn btn-danger" style="font-size:.83rem;"><i class="fas fa-trash-alt"></i> Delete Account</button>`:''}`;
   $('userProfileModal').classList.remove('hidden');
 }
+function closeUserModal(){$('userProfileModal').classList.add('hidden');}
 
-function closeUserModal() { $('userProfileModal').classList.add('hidden'); }
-
-async function addProfileNote(userId) {
-  const content = $('pNoteInput').value.trim();
-  if (!content) return;
-  const { error } = await sb.from('profile_notes').insert([{ profile_id: userId, author_id: CU.id, content }]);
-  if (error) { toast('Error: ' + error.message, 'error'); return; }
-  toast('Message sent');
-  await logAct('note', null, `Sent message to user profile`);
+async function addProfileNote(userId){
+  const content=$('pNoteInput').value.trim(); if(!content) return;
+  const {error}=await sb.from('profile_notes').insert([{profile_id:userId,author_id:CU.id,content}]);
+  if(error){toast('Error: '+error.message,'error');return;}
+  toast('Message sent'); await logAct('note',null,'Sent message to user profile');
   await openUserProfile(userId);
-  setTimeout(() => {
-    const c = $('pNotesContainer');
-    if (c) c.scrollTop = c.scrollHeight;
-  }, 100);
+  setTimeout(()=>{const c=$('pNotesContainer');if(c)c.scrollTop=c.scrollHeight;},100);
 }
 
-async function promoteToStaff(userId) {
-  if (!confirm('Promote this applicant to Staff? They must sign out and back in to see the change.')) return;
-  const { error } = await sb.from('profiles').update({ role: 'staff' }).eq('id', userId);
-  if (error) { toast('Error: ' + error.message, 'error'); return; }
+async function promoteToStaff(userId){
+  if(!confirm('Promote to Staff? They must sign out and back in.')) return;
+  const {error}=await sb.from('profiles').update({role:'staff'}).eq('id',userId);
+  if(error){toast('Error: '+error.message,'error');return;}
   toast('Promoted to staff — user must sign out and back in');
-  await logAct('promote', null, `Promoted user ${userId} to staff`);
-  await loadAllUsers();
-  await loadStaff();
-  closeUserModal();
-  renderStaffList();
+  await logAct('promote',null,`Promoted user ${userId} to staff`);
+  await loadAllUsers(); await loadStaff(); closeUserModal(); renderStaffList();
 }
 
-async function demoteToApplicant(userId) {
-  if (!confirm('Demote this staff member to Applicant? They must sign out and back in to see the change.')) return;
-  const { error } = await sb.from('profiles').update({ role: 'applicant' }).eq('id', userId);
-  if (error) { toast('Error: ' + error.message, 'error'); return; }
-  toast('Demoted to applicant — user must sign out and back in');
-  await logAct('promote', null, `Demoted user ${userId} to applicant`);
-  await loadAllUsers();
-  await loadStaff();
-  closeUserModal();
-  renderUserList();
+async function demoteToApplicant(userId){
+  if(!confirm('Demote to Applicant? They must sign out and back in.')) return;
+  const {error}=await sb.from('profiles').update({role:'applicant'}).eq('id',userId);
+  if(error){toast('Error: '+error.message,'error');return;}
+  toast('Demoted — user must sign out and back in');
+  await logAct('promote',null,`Demoted user ${userId} to applicant`);
+  await loadAllUsers(); await loadStaff(); closeUserModal(); renderUserList();
 }
 
 // =========================================================
 //  STAFF MESSAGES
 // =========================================================
-async function loadStaffMessages() {
-  const { data, error } = await sb.from('profile_notes')
-    .select('*, author:author_id(full_name, role)')
-    .eq('profile_id', CU.id)
-    .order('created_at', { ascending: true });
-
-  const notes = data || [];
-  const container = $('staffMsgList');
-
-  if (!notes.length) {
-    container.innerHTML = `
-      <div style="text-align:center;padding:48px 24px;color:var(--muted);">
-        <div style="font-size:3rem;margin-bottom:12px;">💬</div>
-        <p style="font-weight:600;">No messages yet</p>
-        <p style="font-size:.83rem;margin-top:4px;">Admin notes on your profile will appear here</p>
-      </div>`;
-    return;
-  }
-
-  container.innerHTML = notes.map(n => {
-    const isMe = String(n.author_id) === String(CU.id);
-    const role  = n.author?.role || 'staff';
-    const name  = n.author?.full_name || (isMe ? 'You' : 'Admin');
-    return `
-      <div style="display:flex;flex-direction:column;align-items:${isMe?'flex-end':'flex-start'};">
-        <div style="max-width:80%;background:${isMe?'var(--brand-mid)':'var(--surface)'};color:${isMe?'#fff':'var(--text)'};
-          border:1px solid ${isMe?'transparent':'var(--border)'};border-radius:${isMe?'14px 14px 4px 14px':'14px 14px 14px 4px'};
-          padding:12px 14px;">
-          <p style="font-size:.83rem;line-height:1.55;">${san(n.content)}</p>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:0 4px;">
-          <span class="badge badge-${role}" style="font-size:.65rem;">${san(name)}</span>
-          <span style="font-size:.7rem;color:var(--muted);">${fmt(n.created_at)}</span>
-        </div>
-      </div>`;
+async function loadStaffMessages(){
+  const {data}=await sb.from('profile_notes').select('*,author:author_id(full_name,role)').eq('profile_id',CU.id).order('created_at',{ascending:true});
+  const notes=data||[]; const container=$('staffMsgList');
+  if(!notes.length){container.innerHTML=`<div style="text-align:center;padding:48px 24px;color:var(--muted);"><div style="font-size:3rem;margin-bottom:12px;">💬</div><p style="font-weight:600;">No messages yet</p></div>`;return;}
+  container.innerHTML=notes.map(n=>{
+    const isMe=String(n.author_id)===String(CU.id);
+    const role=n.author?.role||'staff'; const name=n.author?.full_name||(isMe?'You':'Admin');
+    return `<div style="display:flex;flex-direction:column;align-items:${isMe?'flex-end':'flex-start'};">
+      <div style="max-width:80%;background:${isMe?'var(--brand-mid)':'var(--surface)'};color:${isMe?'#fff':'var(--text)'};border:1px solid ${isMe?'transparent':'var(--border)'};border-radius:${isMe?'14px 14px 4px 14px':'14px 14px 14px 4px'};padding:12px 14px;">
+        <p style="font-size:.83rem;line-height:1.55;">${san(n.content)}</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:0 4px;">
+        <span class="badge badge-${role}" style="font-size:.65rem;">${san(name)}</span>
+        <span style="font-size:.7rem;color:var(--muted);">${fmt(n.created_at)}</span>
+      </div>
+    </div>`;
   }).join('');
-
-  container.scrollTop = container.scrollHeight;
+  container.scrollTop=container.scrollHeight;
 }
 
-async function sendStaffReply() {
-  const content = $('staffReplyInput').value.trim();
-  if (!content) return;
-
-  const btn = document.querySelector('[onclick="sendStaffReply()"]');
-  setBtnLoading(btn, true);
+async function sendStaffReply(){
+  const content=$('staffReplyInput').value.trim(); if(!content) return;
+  const btn=document.querySelector('[onclick="sendStaffReply()"]'); setBtnLoading(btn,true);
   try {
-    const { error } = await sb.from('profile_notes').insert([{
-      profile_id: CU.id,
-      author_id:  CU.id,
-      content
-    }]);
-    if (error) { toast('Error: ' + error.message, 'error'); return; }
-    $('staffReplyInput').value = '';
-    toast('Reply sent');
-    await loadStaffMessages();
-  } finally { setBtnLoading(btn, false); }
+    const {error}=await sb.from('profile_notes').insert([{profile_id:CU.id,author_id:CU.id,content}]);
+    if(error){toast('Error: '+error.message,'error');return;}
+    $('staffReplyInput').value=''; toast('Reply sent'); await loadStaffMessages();
+  } finally{setBtnLoading(btn,false);}
 }
 
-async function deleteAccount(userId) {
-  const u = allUsers.find(u => sstr(u.id) === sstr(userId));
-  if (!confirm(`Delete ${u?.full_name || 'this user'}'s account? This cannot be undone.`)) return;
-  await logAct('delete', null, `Deleted account for user ${userId}`);
-  const userApps = allApps.filter(a => sstr(a.user_id) === sstr(userId));
-  for (const a of userApps) {
-    const { data: docs } = await sb.from('application_documents').select('file_path').eq('application_id', a.id);
-    for (const d of docs || []) await sb.storage.from('documents').remove([d.file_path]);
-    await sb.from('applications').delete().eq('id', a.id);
+async function deleteAccount(userId){
+  const u=allUsers.find(u=>sstr(u.id)===sstr(userId));
+  if(!confirm(`Delete ${u?.full_name||'this user'}'s account? This cannot be undone.`)) return;
+  await logAct('delete',null,`Deleted account for user ${userId}`);
+  const userApps=allApps.filter(a=>sstr(a.user_id)===sstr(userId));
+  for(const a of userApps){
+    const {data:docs}=await sb.from('application_documents').select('file_path').eq('application_id',a.id);
+    for(const d of docs||[]) await sb.storage.from('documents').remove([d.file_path]);
+    await sb.from('applications').delete().eq('id',a.id);
   }
-  await sb.from('profiles').delete().eq('id', userId);
-  toast('Account deleted');
-  await loadAllUsers();
-  await loadApps();
-  closeUserModal();
-  renderUserList();
+  await sb.from('profiles').delete().eq('id',userId);
+  toast('Account deleted'); await loadAllUsers(); await loadApps(); closeUserModal(); renderUserList();
 }
 
 // =========================================================
 //  APPLICATION DETAIL MODAL
 // =========================================================
-async function openDetail(appId) {
-  selAppId = String(appId);
-  const app = allApps.find(a => String(a.id) === selAppId);
-  if (!app) return;
+async function openDetail(appId){
+  selAppId=String(appId);
+  const app=allApps.find(a=>String(a.id)===selAppId); if(!app) return;
+  const currentStage=app.stage||1;
+  if(CP.role!=='applicant') await logAct('view',selAppId,`Viewed application #${sid(selAppId)}`);
 
-  const currentStage = app.stage || 1;
+  const isAdmin=CP.role==='admin';
+  const isStaff=CP.role==='staff';
+  const isOwner=CP.role==='applicant'&&String(app.user_id)===String(CU.id);
+  const canEdit=isAdmin||(isStaff&&String(app.assigned_staff_id)===String(CU.id))||isOwner;
 
-  if (CP.role !== 'applicant') {
-    await logAct('view', selAppId, `Viewed application #${sid(selAppId)}`);
-  }
+  // Check for pending request on this app
+  const pendingReq=allRequests.find(r=>String(r.application_id)===selAppId&&r.status==='pending');
+  const pendedReq=allRequests.find(r=>String(r.application_id)===selAppId&&r.status==='pended');
 
-  const isAdmin = CP.role === 'admin';
-  const isStaff = CP.role === 'staff';
-  const isOwner = CP.role === 'applicant' && String(app.user_id) === String(CU.id);
-  const canEdit = isAdmin || (isStaff && String(app.assigned_staff_id) === String(CU.id)) || isOwner;
+  $('detailTitle').textContent=`#${sid(app.id)} — ${app.applicant_name}`;
+  $('detailSubtitle').textContent=`Submitted ${fmt(app.created_at)} · Stage ${currentStage} of 7`;
 
-  $('detailTitle').textContent    = `#${sid(app.id)} — ${app.applicant_name}`;
-  $('detailSubtitle').textContent = `Submitted ${fmt(app.created_at)} · Stage ${currentStage} of 7`;
+  const si=stageGet(currentStage);
+  $('detailStatusBadge').style.cssText=`background:${si.bg};color:${si.clr};`;
+  $('detailStatusBadge').textContent=`${stagePct(currentStage)}% — ${si.short}`;
 
-  // Badge shows stage info
-  const si = stageGet(currentStage);
-  $('detailStatusBadge').style.cssText = `background:${si.bg};color:${si.clr};`;
-  $('detailStatusBadge').textContent = `${stagePct(currentStage)}% — ${si.short}`;
+  $('modalStageTracker').innerHTML=fullTrackerHtml(currentStage);
 
-  // Full stage tracker at top of modal body
-  $('modalStageTracker').innerHTML = fullTrackerHtml(currentStage);
-
-  // Info view
-  $('detailViewGrid').innerHTML = `
+  $('detailViewGrid').innerHTML=`
     <div><p style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:4px;">Applicant Name</p><p style="font-weight:600;">${san(app.applicant_name)}</p></div>
     <div><p style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:4px;">Email</p><p style="font-weight:600;">${san(app.email)}</p></div>
-    <div><p style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:4px;">Phone</p><p style="font-weight:600;">${san(app.phone || '—')}</p></div>
+    <div><p style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:4px;">Phone</p><p style="font-weight:600;">${san(app.phone||'—')}</p></div>
     <div><p style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:4px;">Package</p><p style="font-weight:600;">${san(app.package)}</p></div>`;
 
-  const refLocked = isOwner && !!CP.referred_by_code;
-  if (canEdit) {
-    $('detailEditGrid').innerHTML = `
+  const refLocked=isOwner&&!!CP.referred_by_code;
+  if(canEdit){
+    $('detailEditGrid').innerHTML=`
       <div><label class="lbl">Full Name</label><input id="eN" type="text" class="inp inp-sm" value="${san(app.applicant_name)}"></div>
       <div><label class="lbl">Email</label><input id="eE" type="email" class="inp inp-sm" value="${san(app.email)}"></div>
       <div><label class="lbl">Phone</label><input id="eP" type="tel" class="inp inp-sm" value="${san(app.phone||'')}"></div>
       <div><label class="lbl">Package</label>
-        <select id="ePkg" class="inp inp-sm">
-          ${['Canada PR','USA Skilled Worker','Student Visa','UK Work Permit','Australia PR','Schengen Visa','Other'].map(p=>`<option ${app.package===p?'selected':''}>${p}</option>`).join('')}
-        </select>
+        <select id="ePkg" class="inp inp-sm">${['Canada PR','USA Skilled Worker','Student Visa','UK Work Permit','Australia PR','Schengen Visa','Other'].map(p=>`<option ${app.package===p?'selected':''}>${p}</option>`).join('')}</select>
       </div>
-      ${isOwner ? `<div style="grid-column:1/-1;">
-        <label class="lbl">Referral Code ${refLocked ? '<span style="color:#ef4444;text-transform:none;font-weight:400;">(locked — already applied)</span>' : '<span style="color:var(--muted);text-transform:none;font-weight:400;">(one-time use)</span>'}</label>
-        <input id="eRef" type="text" class="inp inp-sm" style="text-transform:uppercase;font-family:monospace;letter-spacing:.1em;" maxlength="8"
-          value="${san(CP.referred_by_code||'')}" ${refLocked?'disabled':''} placeholder="${refLocked?'Already applied and locked':'Enter referral code (optional)'}">
-      </div>` : ''}`;
-    $('detailEditBtn').style.display = 'inline-flex';
-    $('detailEditBtn').innerHTML = '<i class="fas fa-pen" style="font-size:.75rem;"></i> Edit';
-  } else {
-    $('detailEditBtn').style.display = 'none';
-  }
+      ${isOwner?`<div style="grid-column:1/-1;"><label class="lbl">Referral Code ${refLocked?'<span style="color:#ef4444;text-transform:none;font-weight:400;">(locked)</span>':'<span style="color:var(--muted);text-transform:none;font-weight:400;">(one-time)</span>'}</label>
+        <input id="eRef" type="text" class="inp inp-sm" style="text-transform:uppercase;font-family:monospace;letter-spacing:.1em;" maxlength="8" value="${san(CP.referred_by_code||'')}" ${refLocked?'disabled':''} placeholder="${refLocked?'Already applied':'Enter referral code (optional)'}">
+      </div>`:''}`;
+    $('detailEditBtn').style.display='inline-flex';
+    $('detailEditBtn').innerHTML='<i class="fas fa-pen" style="font-size:.75rem;"></i> Edit';
+  } else { $('detailEditBtn').style.display='none'; }
 
   cancelDetailEdit();
 
-  // Assign section (admin only)
-  if (isAdmin) {
+  if(isAdmin){
     $('assignSection').classList.remove('hidden');
-    $('assignSelect').innerHTML = '<option value="">— Unassigned —</option>' +
-      allStaff.map(s => `<option value="${s.id}" ${String(s.id)===String(app.assigned_staff_id)?'selected':''}>${san(s.full_name)} (${s.role})</option>`).join('');
-  } else {
-    $('assignSection').classList.add('hidden');
-  }
+    $('assignSelect').innerHTML='<option value="">— Unassigned —</option>'+allStaff.map(s=>`<option value="${s.id}" ${String(s.id)===String(app.assigned_staff_id)?'selected':''}>${san(s.full_name)} (${s.role})</option>`).join('');
+  } else { $('assignSection').classList.add('hidden'); }
 
-  // Stage control (staff/admin only)
-  if (isAdmin || isStaff) {
+  if(isAdmin||isStaff){
     $('stageControlSection').classList.remove('hidden');
-    renderStageControls(currentStage);
-  } else {
-    $('stageControlSection').classList.add('hidden');
-  }
+    renderStageControls(currentStage, pendingReq, pendedReq, isAdmin);
+  } else { $('stageControlSection').classList.add('hidden'); }
 
-  // Documents
-  $('uploadInput').value = '';
-  (isAdmin || isStaff || isOwner) ? $('uploadBtn').classList.remove('hidden') : $('uploadBtn').classList.add('hidden');
+  $('uploadInput').value='';
+  (isAdmin||isStaff||isOwner)?$('uploadBtn').classList.remove('hidden'):$('uploadBtn').classList.add('hidden');
   await refreshDocs();
-
-  // Notes
-  await refreshNotes(isOwner, isStaff, isAdmin);
+  await refreshNotes(isOwner,isStaff,isAdmin);
 
   // Referral info
-  const rp = app._profile || CP;
-  $('detailRefCode').textContent = rp.referral_code || CP.referral_code || '—';
-  const refBy = rp.referred_by_code || CP.referred_by_code;
-  if (refBy) {
-    referrerCode = refBy;
-    $('referredByRow').classList.remove('hidden');
-  } else {
-    $('referredByRow').classList.add('hidden');
-    referrerCode = null;
-  }
+  const rp=app._profile||CP;
+  const refCodeVal=rp.referral_code||CP.referral_code||'—';
+  detailRefCodeVal=refCodeVal;
+  const refCode=$('detailRefCode');
+  refCode.textContent=refCodeVal;
+  // Make clickable for staff/admin
+  if((isAdmin||isStaff)&&refCodeVal!=='—'){
+    refCode.style.cursor='pointer'; refCode.title='Click to view profile';
+    refCode.style.textDecoration='underline dotted';
+  } else { refCode.style.cursor='default'; refCode.title=''; refCode.style.textDecoration=''; }
 
-  $('deleteAppBtn').classList.toggle('hidden', !(isAdmin || isStaff));
+  const refBy=rp.referred_by_code||CP.referred_by_code;
+  if(refBy){referrerCode=refBy;$('referredByRow').classList.remove('hidden');}
+  else{$('referredByRow').classList.add('hidden');referrerCode=null;}
+
+  $('deleteAppBtn').classList.toggle('hidden',!(isAdmin||isStaff));
   $('detailModal').classList.remove('hidden');
 }
 
-// Render stage nav buttons inside the modal
-function renderStageControls(currentStage) {
-  let html = '';
-  if (currentStage > 1) {
-    html += `<button class="stage-btn" onclick="moveStage(${currentStage - 1})">
-      <i class="fas fa-arrow-left"></i> Back to Stage ${currentStage - 1}
+function renderStageControls(currentStage, pendingReq, pendedReq, isAdmin){
+  let html='';
+  if(pendingReq&&!isAdmin){
+    // Staff sees pending state
+    $('stagePendingNote').classList.remove('hidden');
+    html+=`<button class="stage-btn" onclick="cancelStageRequest('${pendingReq.id}')" style="border-color:#fca5a5;color:#dc2626;">
+      <i class="fas fa-times"></i> Cancel Request
     </button>`;
+  } else {
+    $('stagePendingNote').classList.add('hidden');
+    if(pendedReq&&!isAdmin){
+      html+=`<div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:10px;padding:10px 12px;font-size:.8rem;color:#6b21a8;margin-bottom:6px;width:100%;">
+        <i class="fas fa-pause-circle"></i> <strong>Pended by Admin</strong> — You can re-request below.
+      </div>`;
+    }
+    if(currentStage>1){
+      html+=`<button class="stage-btn" onclick="${isAdmin?`moveStage(${currentStage-1})`:`requestStageAdvance(${currentStage-1})`}">
+        <i class="fas fa-arrow-left"></i> ${isAdmin?`Back to Stage ${currentStage-1}`:`Request Stage ${currentStage-1}`}
+      </button>`;
+    }
+    if(currentStage<6){
+      html+=`<button class="stage-btn" onclick="${isAdmin?`moveStage(${currentStage+1})`:`requestStageAdvance(${currentStage+1})`}">
+        ${isAdmin?`Advance to Stage ${currentStage+1}`:`Request Stage ${currentStage+1}`} <i class="fas fa-arrow-right"></i>
+      </button>`;
+    }
+    if(currentStage===6){
+      html+=`<button class="stage-btn" style="background:var(--brand-mid);color:#fff;border-color:var(--brand-mid);" onclick="${isAdmin?'finalApprove()':'requestFinalApprove()'}">
+        <i class="fas fa-check-circle"></i> ${isAdmin?'Mark as Approved (Stage 7)':'Request Final Approval'}
+      </button>`;
+    }
+    if(currentStage===7){
+      html+=`<span style="color:#1db96b;font-weight:600;font-size:.875rem;display:flex;align-items:center;gap:6px;"><i class="fas fa-check-circle"></i> Fully Approved</span>`;
+    }
   }
-  if (currentStage < 6) {
-    html += `<button class="stage-btn" onclick="moveStage(${currentStage + 1})">
-      Advance to Stage ${currentStage + 1} <i class="fas fa-arrow-right"></i>
-    </button>`;
-  }
-  if (currentStage === 6) {
-    html += `<button class="stage-btn" style="background:var(--brand-mid);color:#fff;border-color:var(--brand-mid);" onclick="finalApprove()">
-      <i class="fas fa-check-circle"></i> Mark as Approved (Stage 7)
-    </button>`;
-  }
-  if (currentStage === 7) {
-    html += `<span style="color:#1db96b;font-weight:600;font-size:.875rem;display:flex;align-items:center;gap:6px;">
-      <i class="fas fa-check-circle"></i> Fully Approved
-    </span>`;
-  }
-  $('stageControlBtns').innerHTML = html;
+  $('stageControlBtns').innerHTML=html;
 }
 
-async function moveStage(newStage) {
-  const app = allApps.find(a => String(a.id) === selAppId);
-  const { error } = await sb.from('applications').update({ stage: newStage }).eq('id', selAppId);
-  if (error) { toast('Error: ' + error.message, 'error'); return; }
-  const si = stageGet(newStage);
-  await logAct('status_update', selAppId, `Stage ${app?.stage||1} → ${newStage}: ${si.label} on #${sid(selAppId)}`);
-  toast(`Stage ${newStage}: ${si.label}`);
-  await loadApps();
+// Staff: request stage advance
+async function requestStageAdvance(newStage){
+  const app=allApps.find(a=>String(a.id)===selAppId);
+  if(!app) return;
+  const si=stageGet(newStage);
+  if(!confirm(`Request advance to Stage ${newStage}: ${si.label}?\nAdmin will be notified to approve.`)) return;
+
+  // Upsert — one request per application (replace any existing pended/pending)
+  await sb.from('stage_requests').delete().eq('application_id',selAppId).in('status',['pending','pended']);
+  const {error}=await sb.from('stage_requests').insert([{
+    application_id:selAppId, requested_by:CU.id,
+    requested_stage:newStage, current_stage:app.stage||1, status:'pending'
+  }]);
+  if(error){toast('Error: '+error.message,'error');return;}
+  await logAct('status_update',selAppId,`Stage advance requested to Stage ${newStage} on #${sid(selAppId)}`);
+  toast(`Request sent to admin for Stage ${newStage} approval`,'info');
+  // Reload requests
+  const {data}=await sb.from('stage_requests').select('*').in('status',['pending','pended']).order('created_at',{ascending:false});
+  allRequests=data||[];
   openDetail(selAppId);
 }
 
-async function finalApprove() {
-  if (!confirm('Mark this application as fully Approved (Stage 7)?')) return;
-  await moveStage(7);
+async function requestFinalApprove(){await requestStageAdvance(7);}
+
+async function cancelStageRequest(reqId){
+  await sb.from('stage_requests').delete().eq('id',reqId);
+  const {data}=await sb.from('stage_requests').select('*').in('status',['pending','pended']).order('created_at',{ascending:false});
+  allRequests=data||[];
+  toast('Request cancelled');
+  openDetail(selAppId);
 }
 
-function toggleDetailEdit() {
-  editMode = !editMode;
-  $('detailViewGrid').classList.toggle('hidden', editMode);
-  $('detailEditGrid').classList.toggle('hidden', !editMode);
-  $('detailSaveRow').classList.toggle('hidden', !editMode);
-  $('detailEditBtn').innerHTML = editMode ? '<i class="fas fa-times" style="font-size:.75rem;"></i> Cancel' : '<i class="fas fa-pen" style="font-size:.75rem;"></i> Edit';
+// Admin: directly move stage
+async function moveStage(newStage){
+  const app=allApps.find(a=>String(a.id)===selAppId);
+  const {error}=await sb.from('applications').update({stage:newStage}).eq('id',selAppId);
+  if(error){toast('Error: '+error.message,'error');return;}
+  const si=stageGet(newStage);
+  await logAct('status_update',selAppId,`Stage ${app?.stage||1} → ${newStage}: ${si.label} on #${sid(selAppId)}`);
+  toast(`Stage ${newStage}: ${si.label}`);
+  await loadApps(); openDetail(selAppId);
 }
 
-function cancelDetailEdit() {
-  editMode = false;
-  $('detailViewGrid').classList.remove('hidden');
-  $('detailEditGrid').classList.add('hidden');
-  $('detailSaveRow').classList.add('hidden');
-  if ($('detailEditBtn').style.display !== 'none') {
-    $('detailEditBtn').innerHTML = '<i class="fas fa-pen" style="font-size:.75rem;"></i> Edit';
-  }
+async function finalApprove(){if(!confirm('Mark as fully Approved (Stage 7)?')) return; await moveStage(7);}
+
+function toggleDetailEdit(){
+  editMode=!editMode;
+  $('detailViewGrid').classList.toggle('hidden',editMode);
+  $('detailEditGrid').classList.toggle('hidden',!editMode);
+  $('detailSaveRow').classList.toggle('hidden',!editMode);
+  $('detailEditBtn').innerHTML=editMode?'<i class="fas fa-times" style="font-size:.75rem;"></i> Cancel':'<i class="fas fa-pen" style="font-size:.75rem;"></i> Edit';
+}
+function cancelDetailEdit(){
+  editMode=false;
+  $('detailViewGrid').classList.remove('hidden'); $('detailEditGrid').classList.add('hidden'); $('detailSaveRow').classList.add('hidden');
+  if($('detailEditBtn').style.display!=='none') $('detailEditBtn').innerHTML='<i class="fas fa-pen" style="font-size:.75rem;"></i> Edit';
 }
 
-async function saveDetailEdits() {
-  const btn = $('detailSaveBtn');
-  setBtnLoading(btn, true);
+async function saveDetailEdits(){
+  const btn=$('detailSaveBtn'); setBtnLoading(btn,true);
   try {
-    const { error } = await sb.from('applications').update({
-      applicant_name: $('eN').value.trim(),
-      email: $('eE').value.trim(),
-      phone: $('eP').value.trim(),
-      package: $('ePkg').value
-    }).eq('id', selAppId);
-    if (error) { toast('Save error: ' + error.message, 'error'); return; }
-
-    if (CP.role === 'applicant' && !CP.referred_by_code) {
-      const refEl = $('eRef');
-      if (refEl) {
-        const code = refEl.value.trim().toUpperCase();
-        if (code) {
-          const { data: ref } = await sb.from('profiles').select('id').eq('referral_code', code).single();
-          if (!ref) { toast('Invalid referral code', 'error'); return; }
-          if (sstr(ref.id) === sstr(CU.id)) { toast('Cannot use your own referral code', 'error'); return; }
-          const { error: re } = await sb.from('profiles').update({ referred_by_code: code }).eq('id', CU.id);
-          if (!re) { CP.referred_by_code = code; toast('Referral code applied and locked!'); }
+    const {error}=await sb.from('applications').update({applicant_name:$('eN').value.trim(),email:$('eE').value.trim(),phone:$('eP').value.trim(),package:$('ePkg').value}).eq('id',selAppId);
+    if(error){toast('Save error: '+error.message,'error');return;}
+    if(CP.role==='applicant'&&!CP.referred_by_code){
+      const refEl=$('eRef');
+      if(refEl){
+        const code=refEl.value.trim().toUpperCase();
+        if(code){
+          const {data:ref}=await sb.from('profiles').select('id').eq('referral_code',code).single();
+          if(!ref){toast('Invalid referral code','error');return;}
+          if(sstr(ref.id)===sstr(CU.id)){toast('Cannot use your own code','error');return;}
+          const {error:re}=await sb.from('profiles').update({referred_by_code:code}).eq('id',CU.id);
+          if(!re){CP.referred_by_code=code;toast('Referral code applied and locked!');}
         }
       }
     }
-
-    await logAct('edit', selAppId, `Updated application #${sid(selAppId)}`);
-    toast('Changes saved!');
-    await loadApps();
-    openDetail(selAppId);
-  } finally { setBtnLoading(btn, false); }
+    await logAct('edit',selAppId,`Updated application #${sid(selAppId)}`);
+    toast('Changes saved!'); await loadApps(); openDetail(selAppId);
+  } finally{setBtnLoading(btn,false);}
 }
 
-async function assignStaff() {
-  const sid2 = $('assignSelect').value;
-  const { error } = await sb.from('applications').update({ assigned_staff_id: sid2 || null }).eq('id', selAppId);
-  if (error) { toast('Error: ' + error.message, 'error'); return; }
-  const sname = sid2 ? allStaff.find(s => sstr(s.id) === sstr(sid2))?.full_name || 'Staff' : 'nobody';
-  await logAct('assign', selAppId, `Assigned #${sid(selAppId)} to ${sname}`);
-  toast(`Assigned to ${sname}`);
-  await loadApps();
-  openDetail(selAppId);
+async function assignStaff(){
+  const sid2=$('assignSelect').value;
+  const {error}=await sb.from('applications').update({assigned_staff_id:sid2||null}).eq('id',selAppId);
+  if(error){toast('Error: '+error.message,'error');return;}
+  const sname=sid2?allStaff.find(s=>sstr(s.id)===sstr(sid2))?.full_name||'Staff':'nobody';
+  await logAct('assign',selAppId,`Assigned #${sid(selAppId)} to ${sname}`);
+  toast(`Assigned to ${sname}`); await loadApps(); openDetail(selAppId);
 }
 
-async function deleteApplication() {
-  if (!confirm('Delete this application? This cannot be undone.')) return;
-  await logAct('delete', selAppId, `Deleted application #${sid(selAppId)}`);
-  const { data: docs } = await sb.from('application_documents').select('file_path').eq('application_id', selAppId);
-  for (const d of docs || []) await sb.storage.from('documents').remove([d.file_path]);
-  await sb.from('applications').delete().eq('id', selAppId);
-  toast('Application deleted');
-  closeDetailModal();
-  await loadApps();
-  renderDashboard();
-  if (!$('applicationsSection').classList.contains('hidden')) renderAppList();
-  if (!$('staffSection').classList.contains('hidden')) { CP.role==='admin' ? renderAdminAppList() : renderStaffAppList(); }
+async function deleteApplication(){
+  if(!confirm('Delete this application? This cannot be undone.')) return;
+  await logAct('delete',selAppId,`Deleted application #${sid(selAppId)}`);
+  const {data:docs}=await sb.from('application_documents').select('file_path').eq('application_id',selAppId);
+  for(const d of docs||[]) await sb.storage.from('documents').remove([d.file_path]);
+  await sb.from('stage_requests').delete().eq('application_id',selAppId);
+  await sb.from('applications').delete().eq('id',selAppId);
+  toast('Application deleted'); closeDetailModal(); await loadApps(); renderDashboard();
+  if(!$('applicationsSection').classList.contains('hidden')) renderAppList();
+  if(!$('staffSection').classList.contains('hidden')){CP.role==='admin'?renderAdminAppList():renderStaffAppList();}
 }
+function closeDetailModal(){$('detailModal').classList.add('hidden');selAppId=null;editMode=false;}
 
-function closeDetailModal() { $('detailModal').classList.add('hidden'); selAppId = null; editMode = false; }
+// =========================================================
+//  REFERRAL CODE OWNER (clickable code on detail)
+// =========================================================
+async function openCodeOwnerProfile(){
+  if(!detailRefCodeVal||detailRefCodeVal==='—') return;
+  if(CP.role!=='admin'&&CP.role!=='staff') return;
+  const {data:owner}=await sb.from('profiles').select('*').eq('referral_code',detailRefCodeVal).single();
+  if(!owner){toast('Profile not found','error');return;}
+  const {count}=await sb.from('profiles').select('id',{count:'exact',head:true}).eq('referred_by_code',detailRefCodeVal);
+  const ownerApps=allApps.filter(a=>sstr(a.user_id)===sstr(owner.id));
+  $('codeOwnerBody').innerHTML=`
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="width:64px;height:64px;background:linear-gradient(135deg,var(--brand-lite),var(--brand));border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.6rem;color:#fff;margin:0 auto 12px;font-family:'Bricolage Grotesque',sans-serif;">${san(owner.full_name||'?').charAt(0).toUpperCase()}</div>
+      <h4 class="syne" style="font-size:1.1rem;font-weight:700;">${san(owner.full_name)}</h4>
+      <p style="font-size:.83rem;color:var(--muted);">${san(owner.email)}</p>
+      ${owner.phone?`<p style="font-size:.83rem;color:var(--muted);">${san(owner.phone)}</p>`:''}
+      <span class="badge badge-${owner.role}" style="margin-top:6px;">${owner.role}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;background:var(--surface);border-radius:12px;padding:16px;">
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="font-size:.83rem;color:var(--muted);">Member Since</span><span style="font-size:.83rem;font-weight:600;">${fmt(owner.created_at)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="font-size:.83rem;color:var(--muted);">Referral Code</span><code style="font-family:monospace;font-weight:700;background:#f0fdf4;color:var(--brand);padding:2px 10px;border-radius:6px;">${san(owner.referral_code)}</code></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="font-size:.83rem;color:var(--muted);">Applications</span><span class="syne" style="font-size:1rem;font-weight:700;color:var(--brand);">${ownerApps.length}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="font-size:.83rem;color:var(--muted);">Total Referrals</span><span class="syne" style="font-size:1rem;font-weight:700;color:var(--brand-mid);">${count||0}</span></div>
+    </div>`;
+  $('codeOwnerModal').classList.remove('hidden');
+}
 
 // =========================================================
 //  DOCUMENTS
 // =========================================================
-async function refreshDocs() {
-  const { data } = await sb.from('application_documents').select('*').eq('application_id', selAppId).order('created_at', { ascending: false });
-  const docs = data || [];
-  $('docCountBadge').textContent = `(${docs.length})`;
-  $('docList').innerHTML = docs.length ? docs.map(d => `
+async function refreshDocs(){
+  const {data}=await sb.from('application_documents').select('*').eq('application_id',selAppId).order('created_at',{ascending:false});
+  const docs=data||[];
+  $('docCountBadge').textContent=`(${docs.length})`;
+  $('docList').innerHTML=docs.length?docs.map(d=>`
     <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface);border-radius:10px;border:1px solid var(--border);">
       <i class="fas fa-file-${getFileIcon(d.document_type)}" style="color:var(--brand-mid);font-size:1.1rem;flex-shrink:0;"></i>
       <div style="flex:1;min-width:0;">
@@ -1954,243 +1838,193 @@ async function refreshDocs() {
         <p style="font-size:.72rem;color:var(--muted);">${(d.file_size/1024).toFixed(1)} KB · ${fmt(d.created_at)}</p>
       </div>
       <button onclick="downloadDoc('${d.file_path}','${san(d.file_name)}')" class="btn btn-ghost" style="padding:6px 10px;font-size:.75rem;"><i class="fas fa-download"></i></button>
-      ${CP.role === 'admin' || CP.role === 'staff' ? `<button onclick="deleteDoc('${d.id}','${d.file_path}')" class="btn btn-ghost" style="padding:6px 10px;font-size:.75rem;color:#ef4444;"><i class="fas fa-trash"></i></button>` : ''}
-    </div>`).join('') : '<p style="font-size:.83rem;color:var(--muted);padding:12px;text-align:center;">No documents uploaded</p>';
+      ${CP.role==='admin'||CP.role==='staff'?`<button onclick="deleteDoc('${d.id}','${d.file_path}')" class="btn btn-ghost" style="padding:6px 10px;font-size:.75rem;color:#ef4444;"><i class="fas fa-trash"></i></button>`:''}
+    </div>`).join(''):'<p style="font-size:.83rem;color:var(--muted);padding:12px;text-align:center;">No documents uploaded</p>';
 }
 
-async function handleDocUpload(e) {
-  const files = Array.from(e.target.files);
-  if (!files.length) return;
-  const uploaded = [];
-  for (const f of files) {
-    const path = `${selAppId}/${Date.now()}_${f.name}`;
-    const { error } = await sb.storage.from('documents').upload(path, f);
-    if (error) continue;
-    await sb.from('application_documents').insert([{
-      application_id: selAppId, document_type: f.name.split('.').pop().toLowerCase(),
-      file_name: f.name, file_path: path, file_size: f.size, uploaded_by: CU.id
-    }]);
+async function handleDocUpload(e){
+  const files=Array.from(e.target.files); if(!files.length) return;
+  const uploaded=[];
+  for(const f of files){
+    const path=`${selAppId}/${Date.now()}_${f.name}`;
+    const {error}=await sb.storage.from('documents').upload(path,f); if(error) continue;
+    await sb.from('application_documents').insert([{application_id:selAppId,document_type:f.name.split('.').pop().toLowerCase(),file_name:f.name,file_path:path,file_size:f.size,uploaded_by:CU.id}]);
     uploaded.push(f.name);
   }
-  if (uploaded.length) {
-    await logAct('upload', selAppId, `Uploaded ${uploaded.length} file(s): ${uploaded.join(', ')}`);
-    toast(`${uploaded.length} file(s) uploaded`);
-    await refreshDocs();
-  }
-  e.target.value = '';
+  if(uploaded.length){await logAct('upload',selAppId,`Uploaded ${uploaded.length} file(s): ${uploaded.join(', ')}`);toast(`${uploaded.length} file(s) uploaded`);await refreshDocs();}
+  e.target.value='';
 }
 
-async function downloadDoc(path, name) {
-  const { data, error } = await sb.storage.from('documents').download(path);
-  if (error) { toast('Download failed', 'error'); return; }
-  const url = URL.createObjectURL(data);
-  const a = document.createElement('a');
-  a.href = url; a.download = name;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
+async function downloadDoc(path,name){
+  const {data,error}=await sb.storage.from('documents').download(path);
+  if(error){toast('Download failed','error');return;}
+  const url=URL.createObjectURL(data); const a=document.createElement('a'); a.href=url; a.download=name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
-async function deleteDoc(id, path) {
-  if (!confirm('Delete this document?')) return;
+async function deleteDoc(id,path){
+  if(!confirm('Delete this document?')) return;
   await sb.storage.from('documents').remove([path]);
-  await sb.from('application_documents').delete().eq('id', id);
-  toast('Document deleted');
-  await refreshDocs();
+  await sb.from('application_documents').delete().eq('id',id);
+  toast('Document deleted'); await refreshDocs();
 }
 
-function getFileIcon(ext) {
-  if (ext === 'pdf') return 'pdf';
-  if (['jpg','jpeg','png','gif','webp'].includes(ext)) return 'image';
-  if (['doc','docx'].includes(ext)) return 'word';
-  return 'alt';
-}
+function getFileIcon(ext){if(ext==='pdf')return 'pdf';if(['jpg','jpeg','png','gif','webp'].includes(ext))return 'image';if(['doc','docx'].includes(ext))return 'word';return 'alt';}
 
 // =========================================================
 //  NOTES
 // =========================================================
-async function refreshNotes(isOwner, isStaff, isAdmin) {
-  const { data } = await sb.from('notes')
-    .select('*, author:user_id(full_name,role)')
-    .eq('application_id', selAppId)
-    .order('created_at', { ascending: true });
-  const notes = data || [];
-
-  $('notesList').innerHTML = notes.length ? notes.map(n => `
-    <div class="note-bubble ${n.author?.role || 'applicant'}">
+async function refreshNotes(isOwner,isStaff,isAdmin){
+  const {data}=await sb.from('notes').select('*,author:user_id(full_name,role)').eq('application_id',selAppId).order('created_at',{ascending:true});
+  const notes=data||[];
+  $('notesList').innerHTML=notes.length?notes.map(n=>`
+    <div class="note-bubble ${n.author?.role||'applicant'}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
         <span class="badge badge-${n.author?.role||'applicant'}" style="font-size:.7rem;">${san(n.author?.full_name||'Unknown')}</span>
         <span style="font-size:.72rem;color:var(--muted);">${fmt(n.created_at)}</span>
       </div>
       <p style="font-size:.83rem;line-height:1.5;">${san(n.content)}</p>
-    </div>`).join('') : '<p style="font-size:.83rem;color:var(--muted);text-align:center;padding:16px;">No notes yet</p>';
-
-  $('noteInput').placeholder = isOwner ? 'Send a message to staff…' : 'Add a note or update…';
+    </div>`).join(''):'<p style="font-size:.83rem;color:var(--muted);text-align:center;padding:16px;">No notes yet</p>';
+  $('noteInput').placeholder=isOwner?'Send a message to staff…':'Add a note or update…';
 }
 
-async function addNote() {
-  const content = $('noteInput').value.trim();
-  if (!content || !selAppId) return;
-  const { error } = await sb.from('notes').insert([{ application_id: selAppId, user_id: CU.id, content }]);
-  if (error) { toast('Error: ' + error.message, 'error'); return; }
-  await logAct('note', selAppId, `Note on #${sid(selAppId)}: ${content.substring(0, 60)}`);
-  $('noteInput').value = '';
-  toast('Note added');
-  const isOwner = CP.role === 'applicant';
-  const isStaff = CP.role === 'staff';
-  const isAdmin = CP.role === 'admin';
-  await refreshNotes(isOwner, isStaff, isAdmin);
+async function addNote(){
+  const content=$('noteInput').value.trim(); if(!content||!selAppId) return;
+  const {error}=await sb.from('notes').insert([{application_id:selAppId,user_id:CU.id,content}]);
+  if(error){toast('Error: '+error.message,'error');return;}
+  await logAct('note',selAppId,`Note on #${sid(selAppId)}: ${content.substring(0,60)}`);
+  $('noteInput').value=''; toast('Note added');
+  const isOwner=CP.role==='applicant', isStaff=CP.role==='staff', isAdmin=CP.role==='admin';
+  await refreshNotes(isOwner,isStaff,isAdmin);
 }
 
 // =========================================================
-//  NEW APPLICATION MODAL
+//  NEW APPLICATION
 // =========================================================
-function openNewAppModal() {
-  tempFiles = [];
-  $('naName').value = $('naEmail').value = $('naPhone').value = '';
-  $('naPkg').value = '';
-  $('naFileList').innerHTML = '';
-  $('newAppErr').classList.add('hidden');
-  $('newAppModal').classList.remove('hidden');
-}
-function closeNewAppModal() { $('newAppModal').classList.add('hidden'); }
+const DOC_CHECKLIST = [
+  { label: 'Academic Transcript',          optional: false },
+  { label: 'Passport Data Page',           optional: false },
+  { label: 'School Certificate',           optional: false },
+  { label: 'IELTS Result',                 optional: false },
+  { label: 'Credential Assessment Result', optional: false },
+  { label: 'Change of Name Proof',         optional: true  },
+  { label: 'Birth Certificate',            optional: false },
+  { label: 'CV / Resume',                  optional: false },
+];
 
-function handleNaDrop(e) {
-  e.preventDefault();
-  $('naDropZone').classList.remove('drag-active');
-  addNaFiles(Array.from(e.dataTransfer.files));
-}
-function handleNaFiles(e) { addNaFiles(Array.from(e.target.files)); }
-
-function addNaFiles(files) {
-  const valid = ['pdf','jpg','jpeg','png','doc','docx'];
-  files.forEach(f => {
-    const ext = f.name.split('.').pop().toLowerCase();
-    if (valid.includes(ext) && f.size <= 10 * 1024 * 1024) tempFiles.push(f);
-  });
-  renderNaFileList();
-}
-
-function renderNaFileList() {
-  $('naFileList').innerHTML = tempFiles.map((f, i) => `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
-      <i class="fas fa-file" style="color:var(--brand-mid);flex-shrink:0;"></i>
-      <div style="flex:1;min-width:0;">
-        <p style="font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${san(f.name)}</p>
-        <p style="font-size:.72rem;color:var(--muted);">${(f.size/1024/1024).toFixed(2)} MB</p>
-      </div>
-      <button onclick="removeNaFile(${i})" style="background:none;border:none;cursor:pointer;color:#ef4444;padding:4px;"><i class="fas fa-times"></i></button>
+function renderDocChecklist(){
+  const el=$('docChecklist'); if(!el) return;
+  el.innerHTML=DOC_CHECKLIST.map((d,i)=>`
+    <div style="display:flex;align-items:center;gap:7px;padding:5px 0;">
+      <span style="width:20px;height:20px;border-radius:6px;border:1.5px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.65rem;color:var(--muted);">${i+1}</span>
+      <span style="font-size:.8rem;color:var(--text);">${san(d.label)} ${d.optional?'<span style="font-size:.68rem;color:var(--muted);">(if applicable)</span>':''}</span>
     </div>`).join('');
 }
 
-function removeNaFile(i) { tempFiles.splice(i, 1); renderNaFileList(); }
+function toggleOtherPkg(){
+  const val=$('naPkg').value;
+  $('otherPkgWrap').classList.toggle('hidden', val!=='Other');
+  if(val!=='Other') $('naOtherPkg').value='';
+}
 
-async function createApplication() {
-  const name = $('naName').value.trim();
-  const email = $('naEmail').value.trim();
-  const phone = $('naPhone').value.trim();
-  const pkg   = $('naPkg').value;
+function openNewAppModal(){
+  tempFiles=[];
+  ['naFirstName','naMiddleName','naLastName','naEmail','naPhone','naOtherPkg'].forEach(id=>{if($(id))$(id).value='';});
+  $('naPkg').value='';
+  $('otherPkgWrap').classList.add('hidden');
+  $('naFileList').innerHTML='';
+  $('newAppErr').classList.add('hidden');
+  renderDocChecklist();
+  $('newAppModal').classList.remove('hidden');
+}
+function closeNewAppModal(){$('newAppModal').classList.add('hidden');}
+function handleNaDrop(e){e.preventDefault();$('naDropZone').classList.remove('drag-active');addNaFiles(Array.from(e.dataTransfer.files));}
+function handleNaFiles(e){addNaFiles(Array.from(e.target.files));}
+function addNaFiles(files){const valid=['pdf','jpg','jpeg','png','doc','docx'];files.forEach(f=>{const ext=f.name.split('.').pop().toLowerCase();if(valid.includes(ext)&&f.size<=10*1024*1024)tempFiles.push(f);});renderNaFileList();}
+function renderNaFileList(){
+  $('naFileList').innerHTML=tempFiles.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+      <i class="fas fa-file" style="color:var(--brand-mid);flex-shrink:0;"></i>
+      <div style="flex:1;min-width:0;"><p style="font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${san(f.name)}</p><p style="font-size:.72rem;color:var(--muted);">${(f.size/1024/1024).toFixed(2)} MB</p></div>
+      <button onclick="removeNaFile(${i})" style="background:none;border:none;cursor:pointer;color:#ef4444;padding:4px;"><i class="fas fa-times"></i></button>
+    </div>`).join('');
+}
+function removeNaFile(i){tempFiles.splice(i,1);renderNaFileList();}
 
-  if (!name || !email || !phone || !pkg) {
-    $('newAppErr').textContent = 'Please fill all required fields';
-    $('newAppErr').classList.remove('hidden');
-    return;
+async function createApplication(){
+  const firstName=$('naFirstName').value.trim();
+  const middleName=$('naMiddleName').value.trim();
+  const lastName=$('naLastName').value.trim();
+  const email=$('naEmail').value.trim();
+  const phone=$('naPhone').value.trim();
+  let pkg=$('naPkg').value;
+
+  if(pkg==='Other'){
+    const custom=$('naOtherPkg').value.trim();
+    if(!custom){$('newAppErr').textContent='Please specify your package';$('newAppErr').classList.remove('hidden');return;}
+    pkg='Other — '+custom;
   }
 
-  const btn = $('naSubmitBtn');
-  setBtnLoading(btn, true);
+  if(!firstName||!lastName||!email||!phone||!pkg){
+    $('newAppErr').textContent='Please fill all required fields (First Name, Last Name, Email, Phone, Package)';
+    $('newAppErr').classList.remove('hidden'); return;
+  }
+
+  const fullName=[firstName,middleName,lastName].filter(Boolean).join(' ');
+  const btn=$('naSubmitBtn'); setBtnLoading(btn,true);
   try {
-    const { data: app, error } = await sb.from('applications')
-      .insert([{ user_id: CU.id, applicant_name: name, email, phone, package: pkg, status: 'pending', stage: 1 }])
-      .select().single();
-    if (error) throw error;
-
-    for (const f of tempFiles) {
-      const path = `${app.id}/${Date.now()}_${f.name}`;
-      const { error: ue } = await sb.storage.from('documents').upload(path, f);
-      if (ue) continue;
-      await sb.from('application_documents').insert([{
-        application_id: app.id, document_type: f.name.split('.').pop().toLowerCase(),
-        file_name: f.name, file_path: path, file_size: f.size, uploaded_by: CU.id
-      }]);
+    const {data:app,error}=await sb.from('applications').insert([{user_id:CU.id,applicant_name:fullName,email,phone,package:pkg,status:'pending',stage:1}]).select().single();
+    if(error) throw error;
+    for(const f of tempFiles){
+      const path=`${app.id}/${Date.now()}_${f.name}`;
+      const {error:ue}=await sb.storage.from('documents').upload(path,f); if(ue) continue;
+      await sb.from('application_documents').insert([{application_id:app.id,document_type:f.name.split('.').pop().toLowerCase(),file_name:f.name,file_path:path,file_size:f.size,uploaded_by:CU.id}]);
     }
-
-    await logAct('upload', app.id, `Submitted new application for ${name}`);
-    toast('Application submitted!');
-    closeNewAppModal();
-    await loadApps();
-    renderDashboard();
-    if (!$('applicationsSection').classList.contains('hidden')) renderAppList();
-  } catch(e) {
-    $('newAppErr').textContent = e.message;
-    $('newAppErr').classList.remove('hidden');
-  } finally { setBtnLoading(btn, false); }
+    await logAct('upload',app.id,`Submitted new application for ${fullName}`);
+    toast('Application submitted!'); closeNewAppModal(); await loadApps(); renderDashboard();
+    if(!$('applicationsSection').classList.contains('hidden')) renderAppList();
+  } catch(e){$('newAppErr').textContent=e.message;$('newAppErr').classList.remove('hidden');}
+  finally{setBtnLoading(btn,false);}
 }
 
 // =========================================================
 //  REFERRAL
 // =========================================================
-function copyReferral() {
-  const code = $('referralDisplay').textContent;
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(code).then(() => toast('Referral code copied!'));
-  } else {
-    const el = document.createElement('textarea');
-    el.value = code;
-    el.style.position = 'fixed'; el.style.opacity = '0';
-    document.body.appendChild(el);
-    el.select(); document.execCommand('copy');
-    document.body.removeChild(el);
-    toast('Referral code copied!');
-  }
+function copyReferral(){
+  const code=$('referralDisplay').textContent;
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(code).then(()=>toast('Referral code copied!'));}
+  else{const el=document.createElement('textarea');el.value=code;el.style.position='fixed';el.style.opacity='0';document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);toast('Referral code copied!');}
 }
 
-async function openReferrerModal() {
-  if (!referrerCode) return;
-  const { data: r } = await sb.from('profiles').select('full_name,email,created_at,referral_code').eq('referral_code', referrerCode).single();
-  if (!r) { toast('Referrer not found', 'error'); return; }
-  const { count } = await sb.from('profiles').select('id', { count:'exact', head:true }).eq('referred_by_code', referrerCode);
-
-  $('referrerBody').innerHTML = `
+async function openReferrerModal(){
+  if(!referrerCode) return;
+  const {data:r}=await sb.from('profiles').select('full_name,email,created_at,referral_code').eq('referral_code',referrerCode).single();
+  if(!r){toast('Referrer not found','error');return;}
+  const {count}=await sb.from('profiles').select('id',{count:'exact',head:true}).eq('referred_by_code',referrerCode);
+  $('referrerBody').innerHTML=`
     <div style="text-align:center;margin-bottom:20px;">
-      <div style="width:64px;height:64px;background:linear-gradient(135deg,var(--brand-lite),var(--brand));border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.6rem;color:#fff;margin:0 auto 12px;font-family:'Bricolage Grotesque',sans-serif;">
-        ${san(r.full_name||'?').charAt(0).toUpperCase()}
-      </div>
+      <div style="width:64px;height:64px;background:linear-gradient(135deg,var(--brand-lite),var(--brand));border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.6rem;color:#fff;margin:0 auto 12px;font-family:'Bricolage Grotesque',sans-serif;">${san(r.full_name||'?').charAt(0).toUpperCase()}</div>
       <h4 class="syne" style="font-size:1.15rem;font-weight:700;">${san(r.full_name)}</h4>
       <p style="font-size:.83rem;color:var(--muted);">${san(r.email||'')}</p>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;background:var(--surface);border-radius:12px;padding:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-        <span style="font-size:.83rem;color:var(--muted);">Member Since</span>
-        <span style="font-size:.83rem;font-weight:600;">${fmt(r.created_at)}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-        <span style="font-size:.83rem;color:var(--muted);">Referral Code</span>
-        <code style="font-family:monospace;font-weight:700;background:#f0fdf4;color:var(--brand);padding:2px 10px;border-radius:6px;">${san(r.referral_code)}</code>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
-        <span style="font-size:.83rem;color:var(--muted);">Total Referrals</span>
-        <span class="syne" style="font-size:1.1rem;font-weight:700;color:var(--brand-mid);">${count || 0}</span>
-      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><span style="font-size:.83rem;color:var(--muted);">Member Since</span><span style="font-size:.83rem;font-weight:600;">${fmt(r.created_at)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><span style="font-size:.83rem;color:var(--muted);">Referral Code</span><code style="font-family:monospace;font-weight:700;background:#f0fdf4;color:var(--brand);padding:2px 10px;border-radius:6px;">${san(r.referral_code)}</code></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;"><span style="font-size:.83rem;color:var(--muted);">Total Referrals</span><span class="syne" style="font-size:1.1rem;font-weight:700;color:var(--brand-mid);">${count||0}</span></div>
     </div>`;
-
   $('referrerModal').classList.remove('hidden');
 }
-
-function closeReferrerModal() { $('referrerModal').classList.add('hidden'); }
+function closeReferrerModal(){$('referrerModal').classList.add('hidden');}
 
 // =========================================================
 //  ACTIVITY LOG
 // =========================================================
-function renderLogList() {
-  const q = ($('logSearch')?.value || '').trim().toLowerCase();
-  const f = ($('logTypeFilter')?.value || 'all');
-  const filtered = allLogs.filter(l =>
-    (f === 'all' || l.action === f) &&
-    (!q || (l.staff_email || '').toLowerCase().includes(q) || (l.detail || '').toLowerCase().includes(q)));
-
-  const actionColors = { view:'#3b82f6', status_update:'#22c55e', delete:'#ef4444', upload:'#8b5cf6', note:'#f59e0b', assign:'#0891b2', edit:'#f97316', promote:'#7c3aed' };
-
-  $('logList').innerHTML = filtered.map(l => `
+function renderLogList(){
+  const q=($('logSearch')?.value||'').trim().toLowerCase();
+  const f=($('logTypeFilter')?.value||'all');
+  const filtered=allLogs.filter(l=>(f==='all'||l.action===f)&&(!q||(l.staff_email||'').toLowerCase().includes(q)||(l.detail||'').toLowerCase().includes(q)));
+  const actionColors={view:'#3b82f6',status_update:'#22c55e',delete:'#ef4444',upload:'#8b5cf6',note:'#f59e0b',assign:'#0891b2',edit:'#f97316',promote:'#7c3aed'};
+  $('logList').innerHTML=filtered.map(l=>`
     <div style="display:flex;gap:12px;padding:12px 14px;background:var(--surface);border-radius:10px;border-left:3px solid ${actionColors[l.action]||'#ccc'};">
       <div style="flex:1;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap;">
@@ -2200,62 +2034,46 @@ function renderLogList() {
         <p style="font-size:.8rem;color:var(--muted);">${san(l.detail)}</p>
         <p style="font-size:.72rem;color:#bbb;margin-top:3px;">${fmt(l.created_at)} · ${new Date(l.created_at).toLocaleTimeString()}</p>
       </div>
-    </div>`).join('') || '<p style="color:var(--muted);text-align:center;padding:32px;font-size:.875rem;">No activity logs found</p>';
+    </div>`).join('')||'<p style="color:var(--muted);text-align:center;padding:32px;font-size:.875rem;">No activity logs found</p>';
 }
 
 // =========================================================
 //  PAGINATION
 // =========================================================
-function renderPagination(containerId, total, current, onPage) {
-  if (total <= 1) { $(containerId).innerHTML = ''; return; }
-  let h = `<button onclick="(${onPage})(${current-1})" ${current===1?'disabled':''} style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:.8rem;cursor:pointer;background:${current===1?'#f9fafb':'var(--card)'};${current===1?'opacity:.4;':''};"><i class="fas fa-chevron-left"></i></button>`;
-  for (let i = 1; i <= total; i++) {
-    if (i === 1 || i === total || (i >= current - 1 && i <= current + 1)) {
-      h += `<button onclick="(${onPage})(${i})" style="padding:6px 12px;border:1px solid ${i===current?'var(--brand-mid)':'var(--border)'};border-radius:8px;font-size:.8rem;cursor:pointer;background:${i===current?'var(--brand-mid)':'var(--card)'};color:${i===current?'#fff':'var(--text)'};">${i}</button>`;
-    } else if ((i === current - 2 && i > 2) || (i === current + 2 && i < total - 1)) {
-      h += `<span style="padding:6px 4px;font-size:.8rem;color:var(--muted);">…</span>`;
-    }
+function renderPagination(containerId,total,current,onPage){
+  if(total<=1){$(containerId).innerHTML='';return;}
+  let h=`<button onclick="(${onPage})(${current-1})" ${current===1?'disabled':''} style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:.8rem;cursor:pointer;background:${current===1?'#f9fafb':'var(--card)'};${current===1?'opacity:.4;':''}"><i class="fas fa-chevron-left"></i></button>`;
+  for(let i=1;i<=total;i++){
+    if(i===1||i===total||(i>=current-1&&i<=current+1)) h+=`<button onclick="(${onPage})(${i})" style="padding:6px 12px;border:1px solid ${i===current?'var(--brand-mid)':'var(--border)'};border-radius:8px;font-size:.8rem;cursor:pointer;background:${i===current?'var(--brand-mid)':'var(--card)'};color:${i===current?'#fff':'var(--text)'};">${i}</button>`;
+    else if((i===current-2&&i>2)||(i===current+2&&i<total-1)) h+=`<span style="padding:6px 4px;font-size:.8rem;color:var(--muted);">…</span>`;
   }
-  h += `<button onclick="(${onPage})(${current+1})" ${current===total?'disabled':''} style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:.8rem;cursor:pointer;background:${current===total?'#f9fafb':'var(--card)'};${current===total?'opacity:.4;':''}"><i class="fas fa-chevron-right"></i></button>`;
-  $(containerId).innerHTML = h;
+  h+=`<button onclick="(${onPage})(${current+1})" ${current===total?'disabled':''} style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:.8rem;cursor:pointer;background:${current===total?'#f9fafb':'var(--card)'};${current===total?'opacity:.4;':''}"><i class="fas fa-chevron-right"></i></button>`;
+  $(containerId).innerHTML=h;
 }
 
 // =========================================================
-//  KEYBOARD SHORTCUTS
+//  KEYBOARD
 // =========================================================
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    $('detailModal').classList.add('hidden');
-    $('newAppModal').classList.add('hidden');
-    $('userProfileModal').classList.add('hidden');
-    $('referrerModal').classList.add('hidden');
-    selAppId = null; editMode = false;
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    ['detailModal','newAppModal','userProfileModal','referrerModal','codeOwnerModal'].forEach(id=>$(id)?.classList.add('hidden'));
+    selAppId=null; editMode=false; closeSidebar();
   }
 });
 
 // =========================================================
 //  INIT
 // =========================================================
-window.addEventListener('load', async () => {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    await bootApp(session.user);
-  } else {
-    showLoading(false);
-    $('authScreen').style.display = 'flex';
-    switchAuthMode('login');
-  }
-  sb.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_OUT') {
-      $('mainApp').style.display  = 'none';
-      $('authScreen').style.display = 'flex';
-      switchAuthMode('login');
-      CU = null; CP = null;
-      allApps = []; allUsers = []; allStaff = []; allLogs = [];
+window.addEventListener('load',async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){await bootApp(session.user);}
+  else{showLoading(false);$('authScreen').style.display='flex';switchAuthMode('login');}
+  sb.auth.onAuthStateChange((event,session)=>{
+    if(event==='SIGNED_OUT'){
+      $('mainApp').style.display='none'; $('authScreen').style.display='flex'; switchAuthMode('login');
+      CU=null;CP=null;allApps=[];allUsers=[];allStaff=[];allLogs=[];allRequests=[];
     }
-    if (event === 'SIGNED_IN' && session && !CP) {
-      bootApp(session.user);
-    }
+    if(event==='SIGNED_IN'&&session&&!CP) bootApp(session.user);
   });
 });
 </script>
