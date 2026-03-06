@@ -1507,7 +1507,7 @@ async function addProfileNote(userId){
 
 async function promoteToStaff(userId){
   if(!confirm('Promote to Staff? They must sign out and back in.')) return;
-  const {error}=await sb.from('profiles').update({role:'staff'}).eq('id',userId);
+  const {error}=await sb.rpc('update_user_role',{target_user_id:userId,new_role:'staff'});
   if(error){toast('Error: '+error.message,'error');return;}
   toast('Promoted to staff — user must sign out and back in');
   await logAct('promote',null,`Promoted user ${userId} to staff`);
@@ -1516,7 +1516,7 @@ async function promoteToStaff(userId){
 
 async function demoteToApplicant(userId){
   if(!confirm('Demote to Applicant? They must sign out and back in.')) return;
-  const {error}=await sb.from('profiles').update({role:'applicant'}).eq('id',userId);
+  const {error}=await sb.rpc('update_user_role',{target_user_id:userId,new_role:'applicant'});
   if(error){toast('Error: '+error.message,'error');return;}
   toast('Demoted — user must sign out and back in');
   await logAct('promote',null,`Demoted user ${userId} to applicant`);
