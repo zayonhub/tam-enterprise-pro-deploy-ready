@@ -948,9 +948,10 @@ let currentUserTab='applicants', referrerCode=null, detailRefCodeVal=null;
 let _notifInterval=null;       // repeating chime interval handle
 let _pollTimer=null;           // polling interval handle
 let _audioCtx=null;
-let _staffUnreadMsgs=0;        // staff: unread admin notes count
-let _adminUnreadStaffMsgs=0;   // admin: unread staff messages count
-let _staffUnreadReqs=0;        // staff: their pending requests count
+let _staffUnreadMsgs=0;        // staff: unread admin notes count (set once on login, increments only on NEW)
+let _adminUnreadStaffMsgs=0;   // admin: unread staff messages (set once on login, increments only on NEW)
+let _staffMsgBaseCount=0;      // baseline total count when staff last opened Messages tab
+let _adminMsgBaseCount=0;      // baseline total count when admin last opened Users section
 let _chimeActive=false;        // whether chime loop is active
 
 // =========================================================
@@ -1064,9 +1065,10 @@ async function handleLogout(){
 //  BOOT
 // =========================================================
 async function bootApp(user){
+  try {
   CU=user;
   const {data:profile}=await sb.from('profiles').select('*').eq('id',user.id).single();
-  if(!profile){showLoading(false);$('authScreen').style.display='flex';showAuthErr('Profile not found.');return;}
+  if(!profile){$('authScreen').style.display='flex';showAuthErr('Profile not found.');return;}
   CP=profile;
 
   const name=profile.full_name||user.email.split('@')[0];
@@ -1114,21 +1116,32 @@ async function bootApp(user){
   }
   if(profile.role==='admin'||profile.role==='staff') await loadStaff();
 
-  // ── Seed notification counts on sign-in ──
-  if(profile.role==='staff'){
-    const {count}=await sb.from('profile_notes')
-      .select('id',{count:'exact',head:true})
-      .eq('profile_id',user.id)
-      .neq('author_id',user.id);
-    _staffUnreadMsgs=count||0;
-  }
-  if(profile.role==='admin'){
-    const {data:sIds}=await sb.from('profiles').select('id').eq('role','staff');
-    if(sIds?.length){
-      const {count}=await sb.from('profile_notes').select('id',{count:'exact',head:true}).in('author_id',sIds.map(s=>s.id));
-      _adminUnreadStaffMsgs=count||0;
+  // ── Seed notification baselines on sign-in ──
+  try {
+    if(profile.role==='staff'){
+      // Total admin→staff notes = baseline. Any count above this after opening = new.
+      const {count}=await sb.from('profile_notes')
+        .select('id',{count:'exact',head:true})
+        .eq('profile_id',user.id)
+        .neq('author_id',user.id);
+      const total=count||0;
+      // On sign-in these are all "unread" — staff must open Messages to clear
+      _staffMsgBaseCount=0; // zero baseline means all existing are unread
+      _staffUnreadMsgs=total;
     }
-  }
+    if(profile.role==='admin'){
+      const {data:sIds}=await sb.from('profiles').select('id').eq('role','staff');
+      if(sIds?.length){
+        const {count}=await sb.from('profile_notes')
+          .select('id',{count:'exact',head:true})
+          .in('author_id',sIds.map(s=>s.id));
+        const total=count||0;
+        _adminMsgBaseCount=0;
+        _adminUnreadStaffMsgs=total;
+      }
+    }
+  } catch(e){ console.warn('Notif seed failed',e); }
+
   updateAllBadges();
 
   // Play chime on sign-in if there are pre-existing unread notifications
@@ -1143,7 +1156,15 @@ async function bootApp(user){
   showSection('dashboard');
   $('authScreen').style.display='none';
   $('mainApp').style.display='flex';
-  showLoading(false);
+
+  } catch(err){
+    console.error('bootApp error:', err);
+    CU=null; CP=null;
+    $('authScreen').style.display='flex';
+    showAuthErr('Something went wrong. Please try again.');
+  } finally {
+    showLoading(false);
+  }
 }
 
 function buildStaffTabs(tabs){
@@ -1171,12 +1192,13 @@ function switchStaffTab(tab){
 
   // Clear relevant badges + chime when tab opened
   if(tab==='messages'&&CP?.role==='staff'){
+    // Set baseline to current total so polling only counts NEW messages from here on
+    _staffMsgBaseCount = _staffMsgBaseCount + _staffUnreadMsgs;
     _staffUnreadMsgs=0;
     stopChimeLoop();
     updateAllBadges();
   }
   if(tab==='requests'&&CP?.role==='admin'){
-    // Don't clear — admin must approve/pend to clear; just stop chime
     stopChimeLoop();
   }
 
@@ -1321,50 +1343,44 @@ async function pollNotifications(){
   if(!CU||!CP) return;
   try{
     if(CP.role==='staff'){
-      // Count admin notes on this staff's profile
       const {count}=await sb.from('profile_notes')
         .select('id',{count:'exact',head:true})
         .eq('profile_id',CU.id)
-        .neq('author_id',CU.id); // notes NOT from self = from admin
-      const newCount=count||0;
+        .neq('author_id',CU.id);
+      const total=count||0;
+      // Unread = total minus what was seen when tab was last opened
+      const unread=Math.max(0, total - _staffMsgBaseCount);
       const prev=_staffUnreadMsgs;
-      // Only fire chime if user hasn't opened Messages tab and count grew
-      if(newCount>prev){
-        _staffUnreadMsgs=newCount;
-        updateAllBadges();
-        if(!_staffMessagesOpen()) startChimeLoop();
-      }
+      _staffUnreadMsgs=unread;
+      updateAllBadges();
+      // Only chime if count grew AND messages tab is not open
+      if(unread>prev && !_staffMessagesOpen()) startChimeLoop();
     }
 
     if(CP.role==='admin'){
-      // Count profile_notes where author is staff/applicant (messages to admin)
-      const {data:staffIds}=await sb.from('profiles').select('id').eq('role','staff');
-      if(staffIds?.length){
-        const ids=staffIds.map(s=>s.id);
+      // Staff messages unread
+      const {data:sIds}=await sb.from('profiles').select('id').eq('role','staff');
+      if(sIds?.length){
         const {count}=await sb.from('profile_notes')
           .select('id',{count:'exact',head:true})
-          .in('author_id',ids);
-        const newCount=count||0;
+          .in('author_id',sIds.map(s=>s.id));
+        const total=count||0;
+        const unread=Math.max(0, total - _adminMsgBaseCount);
         const prev=_adminUnreadStaffMsgs;
-        if(newCount>prev){
-          _adminUnreadStaffMsgs=newCount;
-          updateAllBadges();
-          if(!_adminUsersOpen()) startChimeLoop();
-        }
+        _adminUnreadStaffMsgs=unread;
+        if(unread>prev && !_adminUsersOpen()) startChimeLoop();
       }
 
-      // Also reload approval requests silently
-      const {data:reqs}=await sb.from('stage_requests').select('*').in('status',['pending','pended']).order('created_at',{ascending:false});
+      // Approval requests — reload silently
+      const {data:reqs}=await sb.from('stage_requests')
+        .select('*').in('status',['pending','pended']).order('created_at',{ascending:false});
       const newReqs=reqs||[];
       const prevPending=allRequests.filter(r=>r.status==='pending').length;
       const newPending=newReqs.filter(r=>r.status==='pending').length;
       allRequests=newReqs;
-      if(newPending>prevPending){
-        updateAllBadges();
-        if(!_adminRequestsOpen()) startChimeLoop();
-      } else {
-        updateAllBadges();
-      }
+      if(newPending>prevPending && !_adminRequestsOpen()) startChimeLoop();
+
+      updateAllBadges();
     }
   } catch(e){ console.warn('Poll failed',e); }
 }
@@ -1404,8 +1420,9 @@ function showSection(name){
   if(name==='staff'){CP.role==='admin'?switchStaffTab('applications'):switchStaffTab('myapps');}
   if(name==='users'){
     switchUserTab('applicants'); renderUserList();
-    // Clear unread staff messages badge for admin
+    // Set baseline to current total so future polls only count truly new messages
     if(CP?.role==='admin'){
+      _adminMsgBaseCount = _adminMsgBaseCount + _adminUnreadStaffMsgs;
       _adminUnreadStaffMsgs=0;
       stopChimeLoop();
       updateAllBadges();
@@ -1742,11 +1759,13 @@ async function loadStaffMessages(){
 
   // Recount admin messages (from others = admin notes)
   const adminNotes=notes.filter(n=>String(n.author_id)!==String(CU.id));
-  // If messages tab is open, mark as read
+  const totalAdminNotes=adminNotes.length;
+  // If messages tab is open right now, update baseline and clear unread
   if(_staffMessagesOpen()){
-    _staffUnreadMsgs=0; stopChimeLoop(); updateAllBadges();
-  } else {
-    _staffUnreadMsgs=adminNotes.length; updateAllBadges();
+    _staffMsgBaseCount=totalAdminNotes; // everything seen
+    _staffUnreadMsgs=0;
+    stopChimeLoop();
+    updateAllBadges();
   }
 
   if(!notes.length){container.innerHTML=`<div style="text-align:center;padding:48px 24px;color:var(--muted);"><div style="font-size:3rem;margin-bottom:12px;">💬</div><p style="font-weight:600;">No messages yet</p></div>`;return;}
