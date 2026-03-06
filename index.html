@@ -945,14 +945,19 @@ const PER=12;
 let currentUserTab='applicants', referrerCode=null, detailRefCodeVal=null;
 
 // ── Notification state ──
-let _notifInterval=null;       // repeating chime interval handle
-let _pollTimer=null;           // polling interval handle
+let _notifInterval=null;
+let _pollTimer=null;
 let _audioCtx=null;
-let _staffUnreadMsgs=0;        // staff: unread admin notes count (set once on login, increments only on NEW)
-let _adminUnreadStaffMsgs=0;   // admin: unread staff messages (set once on login, increments only on NEW)
-let _staffMsgBaseCount=0;      // baseline total count when staff last opened Messages tab
-let _adminMsgBaseCount=0;      // baseline total count when admin last opened Users section
-let _chimeActive=false;        // whether chime loop is active
+let _staffUnreadMsgs=0;
+let _adminUnreadStaffMsgs=0;
+let _staffMsgBaseCount=0;
+let _adminMsgBaseCount=0;
+let _chimeActive=false;
+
+// Persist baselines in localStorage so re-login doesn't re-count already-read messages
+function _saveBaseline(key, val){ try{ localStorage.setItem('nst_'+key, String(val)); }catch(e){} }
+function _loadBaseline(key){ try{ return parseInt(localStorage.getItem('nst_'+key)||'0',10)||0; }catch(e){ return 0; } }
+function _clearBaselines(uid){ try{ localStorage.removeItem('nst_staff_base_'+uid); localStorage.removeItem('nst_admin_base_'+uid); }catch(e){} }
 
 // =========================================================
 //  UTILITIES
@@ -1119,25 +1124,25 @@ async function bootApp(user){
   // ── Seed notification baselines on sign-in ──
   try {
     if(profile.role==='staff'){
-      // Total admin→staff notes = baseline. Any count above this after opening = new.
+      // Load persisted baseline for this user
+      _staffMsgBaseCount = _loadBaseline('staff_base_'+user.id);
       const {count}=await sb.from('profile_notes')
         .select('id',{count:'exact',head:true})
         .eq('profile_id',user.id)
         .neq('author_id',user.id);
       const total=count||0;
-      // On sign-in these are all "unread" — staff must open Messages to clear
-      _staffMsgBaseCount=0; // zero baseline means all existing are unread
-      _staffUnreadMsgs=total;
+      // Unread = anything above baseline
+      _staffUnreadMsgs=Math.max(0, total - _staffMsgBaseCount);
     }
     if(profile.role==='admin'){
+      _adminMsgBaseCount = _loadBaseline('admin_base_'+user.id);
       const {data:sIds}=await sb.from('profiles').select('id').eq('role','staff');
       if(sIds?.length){
         const {count}=await sb.from('profile_notes')
           .select('id',{count:'exact',head:true})
           .in('author_id',sIds.map(s=>s.id));
         const total=count||0;
-        _adminMsgBaseCount=0;
-        _adminUnreadStaffMsgs=total;
+        _adminUnreadStaffMsgs=Math.max(0, total - _adminMsgBaseCount);
       }
     }
   } catch(e){ console.warn('Notif seed failed',e); }
@@ -1158,10 +1163,10 @@ async function bootApp(user){
   $('mainApp').style.display='flex';
 
   } catch(err){
-    console.error('bootApp error:', err);
+    console.error('bootApp error:', err?.message||err, err?.stack||'');
     CU=null; CP=null;
     $('authScreen').style.display='flex';
-    showAuthErr('Something went wrong. Please try again.');
+    showAuthErr('Something went wrong loading your account: '+(err?.message||'Unknown error'));
   } finally {
     showLoading(false);
   }
@@ -1192,8 +1197,9 @@ function switchStaffTab(tab){
 
   // Clear relevant badges + chime when tab opened
   if(tab==='messages'&&CP?.role==='staff'){
-    // Set baseline to current total so polling only counts NEW messages from here on
+    // Set baseline to current total — persist so re-login doesn't re-count
     _staffMsgBaseCount = _staffMsgBaseCount + _staffUnreadMsgs;
+    _saveBaseline('staff_base_'+CU.id, _staffMsgBaseCount);
     _staffUnreadMsgs=0;
     stopChimeLoop();
     updateAllBadges();
@@ -1235,8 +1241,16 @@ async function loadApps(){
   }
 }
 
-async function loadStaff(){const {data}=await sb.from('profiles').select('id,full_name,email,role').in('role',['staff','admin']);allStaff=data||[];}
-async function loadAllUsers(){const {data}=await sb.from('profiles').select('*').order('created_at',{ascending:false});allUsers=data||[];}
+async function loadStaff(){
+  const {data,error}=await sb.from('profiles').select('id,full_name,email,role').in('role',['staff','admin']);
+  if(error) console.error('loadStaff error:',error);
+  allStaff=data||[];
+}
+async function loadAllUsers(){
+  const {data,error}=await sb.from('profiles').select('*').order('created_at',{ascending:false});
+  if(error) console.error('loadAllUsers error:',error);
+  allUsers=data||[];
+}
 async function loadLogs(){const {data}=await sb.from('activity_logs').select('*').order('created_at',{ascending:false}).limit(200);allLogs=data||[];renderLogList();}
 
 async function loadApprovalRequests(){
@@ -1423,6 +1437,7 @@ function showSection(name){
     // Set baseline to current total so future polls only count truly new messages
     if(CP?.role==='admin'){
       _adminMsgBaseCount = _adminMsgBaseCount + _adminUnreadStaffMsgs;
+      _saveBaseline('admin_base_'+CU.id, _adminMsgBaseCount);
       _adminUnreadStaffMsgs=0;
       stopChimeLoop();
       updateAllBadges();
@@ -1437,16 +1452,16 @@ function showSection(name){
 function renderDashboard(){
   const total=allApps.length;
   const approved=allApps.filter(a=>(a.stage||1)===7).length;
-  const pending=allApps.filter(a=>a.status==='pending').length;
+  const inProgress=allApps.filter(a=>{const s=a.stage||1;return s>=2&&s<=6;}).length;
+  const notStarted=allApps.filter(a=>(a.stage||1)===1).length;
   const rejected=allApps.filter(a=>a.status==='rejected').length;
-  const review=allApps.filter(a=>a.status==='review').length;
-  const active=pending+review;
+  const active=inProgress+notStarted;
   $('heroSub').textContent=`${active} active application${active!==1?'s':''}`;
 
   const statsData=[
     {label:'Total',val:total,color:'#3b82f6',icon:'fa-folder',bg:'#eff6ff'},
     {label:'Approved',val:approved,color:'#22c55e',icon:'fa-check-circle',bg:'#f0fdf4'},
-    {label:'Pending',val:pending,color:'#f59e0b',icon:'fa-clock',bg:'#fffbeb'},
+    {label:'In Progress',val:inProgress,color:'#f59e0b',icon:'fa-clock',bg:'#fffbeb'},
     {label:'Rejected',val:rejected,color:'#ef4444',icon:'fa-times-circle',bg:'#fef2f2'},
   ];
   $('statsGrid').innerHTML=statsData.map((s,i)=>`
@@ -1762,7 +1777,8 @@ async function loadStaffMessages(){
   const totalAdminNotes=adminNotes.length;
   // If messages tab is open right now, update baseline and clear unread
   if(_staffMessagesOpen()){
-    _staffMsgBaseCount=totalAdminNotes; // everything seen
+    _staffMsgBaseCount=totalAdminNotes;
+    _saveBaseline('staff_base_'+CU.id, _staffMsgBaseCount);
     _staffUnreadMsgs=0;
     stopChimeLoop();
     updateAllBadges();
