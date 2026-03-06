@@ -954,6 +954,7 @@ let _adminUnreadStaffMsgs=0;
 let _staffMsgBaseCount=0;
 let _adminMsgBaseCount=0;
 let _chimeActive=false;
+let _perUserUnread={};   // admin: map of profileId -> unread count for per-row badges
 
 // Persist baselines in localStorage so re-login doesn't re-count already-read messages
 function _saveBaseline(key, val){ try{ localStorage.setItem('nst_'+key, String(val)); }catch(e){} }
@@ -1137,14 +1138,17 @@ async function bootApp(user){
     }
     if(profile.role==='admin'){
       _adminMsgBaseCount = _loadBaseline('admin_base_'+user.id);
-      const {data:sIds}=await sb.from('profiles').select('id').eq('role','staff');
-      if(sIds?.length){
+      // Count ALL non-admin authored notes (staff + applicants)
+      const {data:nonAdminIds}=await sb.from('profiles').select('id').neq('role','admin');
+      if(nonAdminIds?.length){
         const {count}=await sb.from('profile_notes')
           .select('id',{count:'exact',head:true})
-          .in('author_id',sIds.map(s=>s.id));
+          .in('author_id',nonAdminIds.map(s=>s.id));
         const total=count||0;
         _adminUnreadStaffMsgs=Math.max(0, total - _adminMsgBaseCount);
       }
+      // Seed per-user unread map
+      await refreshPerUserUnread();
     }
   } catch(e){ console.warn('Notif seed failed',e); }
 
@@ -1154,9 +1158,9 @@ async function bootApp(user){
   if(profile.role==='staff'&&_staffUnreadMsgs>0) startChimeLoop();
   if(profile.role==='admin'&&(_adminUnreadStaffMsgs>0||allRequests.filter(r=>r.status==='pending').length>0)) startChimeLoop();
 
-  // Start polling every 30s
+  // Start polling every 15s
   clearInterval(_pollTimer);
-  _pollTimer=setInterval(pollNotifications, 30000);
+  _pollTimer=setInterval(pollNotifications, 15000);
 
   renderDashboard();
   showSection('dashboard');
@@ -1289,12 +1293,14 @@ function playSoftChime(){
 }
 
 function startChimeLoop(){
+  // Always play immediately
+  playSoftChime();
+  // Start repeat loop only if not already running
   if(_chimeActive) return;
   _chimeActive=true;
-  playSoftChime();
   _notifInterval=setInterval(()=>{
     if(_chimeActive) playSoftChime();
-  }, 7*60*1000); // every 7 minutes
+  }, 7*60*1000);
 }
 
 function stopChimeLoop(){
@@ -1352,7 +1358,7 @@ function setTabBadge(tabId, count){
 }
 
 // =========================================================
-//  POLLING — checks for new notifications every 30s
+//  POLLING — checks for new notifications every 15s
 // =========================================================
 async function pollNotifications(){
   if(!CU||!CP) return;
@@ -1363,41 +1369,87 @@ async function pollNotifications(){
         .eq('profile_id',CU.id)
         .neq('author_id',CU.id);
       const total=count||0;
-      // Unread = total minus what was seen when tab was last opened
       const unread=Math.max(0, total - _staffMsgBaseCount);
       const prev=_staffUnreadMsgs;
       _staffUnreadMsgs=unread;
       updateAllBadges();
-      // Only chime if count grew AND messages tab is not open
-      if(unread>prev && !_staffMessagesOpen()) startChimeLoop();
+      // Chime on every new message — even if tab is open (so user hears it arrive)
+      if(unread>prev) startChimeLoop();
+      // Auto-refresh messages if tab is open
+      if(_staffMessagesOpen()) loadStaffMessages();
     }
 
     if(CP.role==='admin'){
-      // Staff messages unread
-      const {data:sIds}=await sb.from('profiles').select('id').eq('role','staff');
-      if(sIds?.length){
+      // Count ALL non-admin authored notes (staff + applicant messages)
+      const {data:nonAdminIds}=await sb.from('profiles').select('id').neq('role','admin');
+      if(nonAdminIds?.length){
+        const ids=nonAdminIds.map(s=>s.id);
         const {count}=await sb.from('profile_notes')
           .select('id',{count:'exact',head:true})
-          .in('author_id',sIds.map(s=>s.id));
+          .in('author_id',ids);
         const total=count||0;
         const unread=Math.max(0, total - _adminMsgBaseCount);
         const prev=_adminUnreadStaffMsgs;
         _adminUnreadStaffMsgs=unread;
-        if(unread>prev && !_adminUsersOpen()) startChimeLoop();
+        if(unread>prev) startChimeLoop();
       }
 
-      // Approval requests — reload silently
+      // Per-user unread counts for row badges
+      await refreshPerUserUnread();
+
+      // Approval requests
       const {data:reqs}=await sb.from('stage_requests')
         .select('*').in('status',['pending','pended']).order('created_at',{ascending:false});
       const newReqs=reqs||[];
       const prevPending=allRequests.filter(r=>r.status==='pending').length;
       const newPending=newReqs.filter(r=>r.status==='pending').length;
       allRequests=newReqs;
-      if(newPending>prevPending && !_adminRequestsOpen()) startChimeLoop();
+      if(newPending>prevPending) startChimeLoop();
 
       updateAllBadges();
+
+      // Auto-refresh open admin views
+      if(_adminUsersOpen()) { await loadAllUsers(); renderUserList(); renderStaffList(); }
+      if(_adminRequestsOpen()) renderApprovalList();
     }
+
+    // Auto-refresh apps for all roles when any section is visible
+    const prevCount=allApps.length;
+    await loadApps();
+    if(allApps.length!==prevCount){
+      renderDashboard();
+      if(!$('applicationsSection').classList.contains('hidden')) renderAppList();
+      if(!$('staffSection').classList.contains('hidden')){
+        CP.role==='admin'?renderAdminAppList():renderStaffAppList();
+      }
+    }
+
   } catch(e){ console.warn('Poll failed',e); }
+}
+
+// Build per-profile unread map for admin row badges
+async function refreshPerUserUnread(){
+  try{
+    // Get all profile_notes grouped by profile_id where author is not admin
+    const {data:notes}=await sb.from('profile_notes')
+      .select('profile_id,author_id')
+      .neq('author_id',CU.id); // not sent by admin
+    if(!notes) return;
+    const map={};
+    notes.forEach(n=>{ map[n.profile_id]=(map[n.profile_id]||0)+1; });
+    // Subtract per-profile baselines
+    const newMap={};
+    Object.keys(map).forEach(pid=>{
+      const base=_loadBaseline('puser_base_'+CU.id+'_'+pid);
+      newMap[pid]=Math.max(0,(map[pid]||0)-base);
+    });
+    _perUserUnread=newMap;
+    // Re-render staff/applicant lists if open to reflect badges
+    if(_adminUsersOpen()){
+      if(!$('userStaffTab').classList.contains('hidden')) renderStaffList();
+      if(!$('userApplicantsTab').classList.contains('hidden')) renderUserList();
+    }
+  }catch(e){}
 }
 
 function _staffMessagesOpen(){
@@ -1415,6 +1467,19 @@ function _adminRequestsOpen(){
 async function logAct(action,appId,detail){
   try{await sb.from('activity_logs').insert([{staff_user_id:CU.id,staff_email:CU.email,application_id:appId||null,action,detail}]);}
   catch(e){console.warn('Log failed',e);}
+}
+
+// Refresh all visible data after any mutation
+async function autoRefresh(){
+  await loadApps();
+  renderDashboard();
+  if(!$('applicationsSection').classList.contains('hidden')) renderAppList();
+  if(!$('staffSection').classList.contains('hidden')){
+    CP.role==='admin'?renderAdminAppList():renderStaffAppList();
+  }
+  if(!$('usersSection').classList.contains('hidden')&&CP.role==='admin'){
+    await loadAllUsers(); renderUserList(); renderStaffList();
+  }
 }
 
 // =========================================================
@@ -1632,9 +1697,8 @@ async function handleApprovalDecision(reqId, appId, requestedStage, decision){
     toast('Request pended — staff can re-request or you can approve later','info');
   }
   await sb.from('stage_requests').update({status:decision,updated_at:new Date().toISOString()}).eq('id',reqId);
-  await loadApps();
+  await autoRefresh();
   await loadApprovalRequests();
-  renderDashboard();
 }
 
 // =========================================================
@@ -1656,16 +1720,22 @@ function renderStaffList(){
 
 function buildUserRow(u){
   const assignedCount=allApps.filter(a=>sstr(a.user_id)===sstr(u.id)).length;
-  return `<div class="user-row">
-    <div style="width:40px;height:40px;border-radius:12px;background:${u.role==='admin'?'#ede9fe':u.role==='staff'?'#e0f2fe':'#d1fae5'};color:${u.role==='admin'?'#7c3aed':u.role==='staff'?'#0369a1':'#047857'};display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">
-      ${san(u.full_name||'?').charAt(0).toUpperCase()}
+  const unread=_perUserUnread[u.id]||0;
+  const unreadBadge=unread>0?`<span style="background:#ef4444;color:#fff;border-radius:99px;font-size:.62rem;font-weight:700;padding:2px 6px;min-width:16px;text-align:center;">${unread}</span>`:'';
+  return `<div class="user-row" style="cursor:pointer;" onclick="openUserProfile('${u.id}')">
+    <div style="position:relative;width:40px;height:40px;flex-shrink:0;">
+      <div style="width:40px;height:40px;border-radius:12px;background:${u.role==='admin'?'#ede9fe':u.role==='staff'?'#e0f2fe':'#d1fae5'};color:${u.role==='admin'?'#7c3aed':u.role==='staff'?'#0369a1':'#047857'};display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque',sans-serif;">
+        ${san(u.full_name||'?').charAt(0).toUpperCase()}
+      </div>
+      ${unread>0?`<span style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:99px;font-size:.55rem;font-weight:700;padding:1px 4px;min-width:14px;text-align:center;border:1.5px solid #fff;">${unread}</span>`:''}
     </div>
     <div style="flex:1;min-width:0;">
       <p style="font-weight:600;font-size:.875rem;">${san(u.full_name)}</p>
       <p style="font-size:.75rem;color:var(--muted);">${san(u.email)} · ${assignedCount} app${assignedCount!==1?'s':''}</p>
     </div>
     <span class="badge badge-${u.role}">${u.role.charAt(0).toUpperCase()+u.role.slice(1)}</span>
-    <button onclick="openUserProfile('${u.id}')" class="btn btn-ghost" style="padding:6px 12px;font-size:.78rem;"><i class="fas fa-eye"></i></button>
+    ${unreadBadge}
+    <button onclick="event.stopPropagation();openUserProfile('${u.id}')" class="btn btn-ghost" style="padding:6px 12px;font-size:.78rem;"><i class="fas fa-eye"></i></button>
   </div>`;
 }
 
@@ -1673,6 +1743,18 @@ async function openUserProfile(userId){
   const u=allUsers.find(u=>sstr(u.id)===sstr(userId)); if(!u) return;
   const userApps=allApps.filter(a=>sstr(a.user_id)===sstr(userId));
   const {data:pNotes}=await sb.from('profile_notes').select('*,author:author_id(full_name,role)').eq('profile_id',userId).order('created_at',{ascending:true});
+
+  // Clear per-user unread for this profile
+  if(CP.role==='admin'){
+    const totalNonAdmin=(pNotes||[]).filter(n=>String(n.author_id)!==String(CU.id)).length;
+    _saveBaseline('puser_base_'+CU.id+'_'+userId, totalNonAdmin);
+    _perUserUnread[userId]=0;
+    // Recalculate total admin unread
+    _adminMsgBaseCount=_adminMsgBaseCount+(_perUserUnread[userId]||0);
+    updateAllBadges();
+    if(!$('userStaffTab').classList.contains('hidden')) renderStaffList();
+    if(!$('userApplicantsTab').classList.contains('hidden')) renderUserList();
+  }
 
   $('upTitle').textContent=(u.full_name||u.email)+' — Profile';
   $('upBody').innerHTML=`
@@ -1982,7 +2064,7 @@ async function moveStage(newStage){
   const si=stageGet(newStage);
   await logAct('status_update',selAppId,`Stage ${app?.stage||1} → ${newStage}: ${si.label} on #${sid(selAppId)}`);
   toast(`Stage ${newStage}: ${si.label}`);
-  await loadApps(); openDetail(selAppId);
+  await autoRefresh(); openDetail(selAppId);
 }
 
 async function finalApprove(){if(!confirm('Mark as fully Approved (Stage 7)?')) return; await moveStage(7);}
@@ -2019,20 +2101,13 @@ async function saveDetailEdits(){
       }
     }
     await logAct('edit',selAppId,`Updated application #${sid(selAppId)}`);
-    toast('Changes saved!'); await loadApps(); openDetail(selAppId);
+    toast('Changes saved!'); await autoRefresh(); openDetail(selAppId);
   } finally{setBtnLoading(btn,false);}
 }
 
 async function saveAndClose(){
-  // If in edit mode, save first then close; otherwise just close
-  if(editMode){
-    await saveDetailEdits();
-    // Only close if save didn't surface an error toast
-    if(!editMode) closeDetailModal(); // saveDetailEdits calls openDetail which resets editMode
-    else closeDetailModal(); // close anyway
-  } else {
-    closeDetailModal();
-  }
+  if(editMode){ await saveDetailEdits(); closeDetailModal(); }
+  else { closeDetailModal(); }
 }
 
 async function assignStaff(){
@@ -2041,7 +2116,7 @@ async function assignStaff(){
   if(error){toast('Error: '+error.message,'error');return;}
   const sname=sid2?allStaff.find(s=>sstr(s.id)===sstr(sid2))?.full_name||'Staff':'nobody';
   await logAct('assign',selAppId,`Assigned #${sid(selAppId)} to ${sname}`);
-  toast(`Assigned to ${sname}`); await loadApps(); openDetail(selAppId);
+  toast(`Assigned to ${sname}`); await autoRefresh(); openDetail(selAppId);
 }
 
 async function deleteApplication(){
@@ -2051,9 +2126,7 @@ async function deleteApplication(){
   for(const d of docs||[]) await sb.storage.from('documents').remove([d.file_path]);
   await sb.from('stage_requests').delete().eq('application_id',selAppId);
   await sb.from('applications').delete().eq('id',selAppId);
-  toast('Application deleted'); closeDetailModal(); await loadApps(); renderDashboard();
-  if(!$('applicationsSection').classList.contains('hidden')) renderAppList();
-  if(!$('staffSection').classList.contains('hidden')){CP.role==='admin'?renderAdminAppList():renderStaffAppList();}
+  toast('Application deleted'); closeDetailModal(); await autoRefresh();
 }
 function closeDetailModal(){$('detailModal').classList.add('hidden');selAppId=null;editMode=false;}
 
@@ -2242,8 +2315,7 @@ async function createApplication(){
       await sb.from('application_documents').insert([{application_id:app.id,document_type:f.name.split('.').pop().toLowerCase(),file_name:f.name,file_path:path,file_size:f.size,uploaded_by:CU.id}]);
     }
     await logAct('upload',app.id,`Submitted new application for ${fullName}`);
-    toast('Application submitted!'); closeNewAppModal(); await loadApps(); renderDashboard();
-    if(!$('applicationsSection').classList.contains('hidden')) renderAppList();
+    toast('Application submitted!'); closeNewAppModal(); await autoRefresh();
   } catch(e){$('newAppErr').textContent=e.message;$('newAppErr').classList.remove('hidden');}
   finally{setBtnLoading(btn,false);}
 }
