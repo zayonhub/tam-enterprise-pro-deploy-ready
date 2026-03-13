@@ -1038,10 +1038,27 @@ $('signupForm').addEventListener('submit',async e=>{
     const {data:authData,error:authErr}=await sb.auth.signUp({email,password});
     if(authErr){
       const m=authErr.message.toLowerCase();
-      showAuthErr(m.includes('already')||m.includes('exists')?'This email is already registered. Please sign in.':authErr.message);
+      if(m.includes('already')||m.includes('exists')){
+        // Auth user exists — try signing them in and completing their profile
+        const {data:signInData,error:signInErr}=await sb.auth.signInWithPassword({email,password});
+        if(signInErr){showAuthErr('This email is already registered. Please sign in with your password.');return;}
+        // Complete missing profile if needed
+        await ensureProfile(signInData.user,{phone,question,answer,refCode});
+        showLoading(true);
+        await bootApp(signInData.user);
+        return;
+      }
+      showAuthErr(authErr.message); return;
+    }
+    // Supabase returns identities:[] when email already exists (no error thrown)
+    if(!authData.user||authData.user.identities?.length===0){
+      const {data:signInData,error:signInErr}=await sb.auth.signInWithPassword({email,password});
+      if(signInErr){showAuthErr('This email is already registered. Please sign in with your password.');return;}
+      await ensureProfile(signInData.user,{phone,question,answer,refCode});
+      showLoading(true);
+      await bootApp(signInData.user);
       return;
     }
-    if(!authData.user||authData.user.identities?.length===0){showAuthErr('This email is already registered. Please sign in.');return;}
 
     const newCode=genCode();
     const hashed=CryptoJS.SHA256(answer.toLowerCase().trim()).toString();
@@ -1072,6 +1089,22 @@ $('signupForm').addEventListener('submit',async e=>{
   } finally{setBtnLoading(btn,false);}
 });
 
+// Create profile if it doesn't exist yet (handles orphaned auth users)
+async function ensureProfile(user, extras={}){
+  const {data:existing}=await sb.from('profiles').select('id').eq('id',user.id).single();
+  if(existing) return; // already has profile
+  const {phone='',question='',answer='',refCode=''}=extras;
+  const newCode=genCode();
+  const hashed=answer?CryptoJS.SHA256(answer.toLowerCase().trim()).toString():'';
+  const fullName=user.email.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
+  await sb.from('profiles').upsert([{
+    id:user.id, full_name:fullName, email:user.email, phone,
+    role:'applicant', referral_code:newCode,
+    referred_by_code:refCode||null,
+    security_question:question||null, security_answer_hash:hashed||null
+  }],{onConflict:'id'});
+}
+
 async function handleLogout(){
   stopChimeLoop();
   clearInterval(_pollTimer);
@@ -1086,9 +1119,16 @@ async function handleLogout(){
 async function bootApp(user){
   try {
   CU=user;
-  const {data:profile}=await sb.from('profiles').select('*').eq('id',user.id).single();
-  if(!profile){$('authScreen').style.display='flex';showAuthErr('Profile not found.');return;}
-  CP=profile;
+  const {data:profile, error:profErr}=await sb.from('profiles').select('*').eq('id',user.id).single();
+  if(!profile){
+    // Profile missing — auto-create a basic one so they can access the app
+    await ensureProfile(user);
+    const {data:newProfile}=await sb.from('profiles').select('*').eq('id',user.id).single();
+    if(!newProfile){$('authScreen').style.display='flex';showAuthErr('Could not create your profile. Please contact support.');return;}
+    CP=newProfile;
+  } else {
+    CP=profile;
+  }
 
   const name=profile.full_name||user.email.split('@')[0];
   $('sidebarAvatar').textContent=name.charAt(0).toUpperCase();
