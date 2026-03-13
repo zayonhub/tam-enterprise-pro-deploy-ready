@@ -954,7 +954,8 @@ let _adminUnreadStaffMsgs=0;
 let _staffMsgBaseCount=0;
 let _adminMsgBaseCount=0;
 let _chimeActive=false;
-let _perUserUnread={};   // admin: map of profileId -> unread count for per-row badges
+let _perUserUnread={};
+let _signingUp=false;  // blocks onAuthStateChange from calling bootApp during signup
 
 // Persist baselines in localStorage so re-login doesn't re-count already-read messages
 function _saveBaseline(key, val){ try{ localStorage.setItem('nst_'+key, String(val)); }catch(e){} }
@@ -1016,6 +1017,7 @@ $('loginForm').addEventListener('submit',async e=>{
 
 $('signupForm').addEventListener('submit',async e=>{
   e.preventDefault(); const btn=$('signupBtn'); setBtnLoading(btn,true);
+  _signingUp=true;
   try {
     const email=$('signupEmail').value.trim();
     const phone=$('signupPhone').value.trim();
@@ -1039,22 +1041,21 @@ $('signupForm').addEventListener('submit',async e=>{
     if(authErr){
       const m=authErr.message.toLowerCase();
       if(m.includes('already')||m.includes('exists')){
-        // Auth user exists — try signing them in and completing their profile
         const {data:signInData,error:signInErr}=await sb.auth.signInWithPassword({email,password});
         if(signInErr){showAuthErr('This email is already registered. Please sign in with your password.');return;}
-        // Complete missing profile if needed
         await ensureProfile(signInData.user,{phone,question,answer,refCode});
+        _signingUp=false;
         showLoading(true);
         await bootApp(signInData.user);
         return;
       }
       showAuthErr(authErr.message); return;
     }
-    // Supabase returns identities:[] when email already exists (no error thrown)
     if(!authData.user||authData.user.identities?.length===0){
       const {data:signInData,error:signInErr}=await sb.auth.signInWithPassword({email,password});
       if(signInErr){showAuthErr('This email is already registered. Please sign in with your password.');return;}
       await ensureProfile(signInData.user,{phone,question,answer,refCode});
+      _signingUp=false;
       showLoading(true);
       await bootApp(signInData.user);
       return;
@@ -1083,26 +1084,28 @@ $('signupForm').addEventListener('submit',async e=>{
       const {data:{session}}=await sb.auth.getSession();
       const usr=session?.user||authData.user;
       const {data:check}=await sb.from('profiles').select('id').eq('id',usr.id).single();
-      if(check){await bootApp(usr);booted=true;break;}
+      if(check){_signingUp=false;await bootApp(usr);booted=true;break;}
     }
     if(!booted){showLoading(false);showAuthErr('Registration complete! Please sign in with your new account.');}
-  } finally{setBtnLoading(btn,false);}
+  } finally{_signingUp=false;setBtnLoading(btn,false);}
 });
 
 // Create profile if it doesn't exist yet (handles orphaned auth users)
 async function ensureProfile(user, extras={}){
   const {data:existing}=await sb.from('profiles').select('id').eq('id',user.id).single();
-  if(existing) return; // already has profile
+  if(existing) return true;
   const {phone='',question='',answer='',refCode=''}=extras;
   const newCode=genCode();
   const hashed=answer?CryptoJS.SHA256(answer.toLowerCase().trim()).toString():'';
   const fullName=user.email.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
-  await sb.from('profiles').upsert([{
-    id:user.id, full_name:fullName, email:user.email, phone,
+  const {error}=await sb.from('profiles').upsert([{
+    id:user.id, full_name:fullName, email:user.email, phone:phone||null,
     role:'applicant', referral_code:newCode,
     referred_by_code:refCode||null,
     security_question:question||null, security_answer_hash:hashed||null
   }],{onConflict:'id'});
+  if(error){ console.error('ensureProfile error:', error); return false; }
+  return true;
 }
 
 async function handleLogout(){
@@ -1122,9 +1125,10 @@ async function bootApp(user){
   const {data:profile, error:profErr}=await sb.from('profiles').select('*').eq('id',user.id).single();
   if(!profile){
     // Profile missing — auto-create a basic one so they can access the app
-    await ensureProfile(user);
+    const ok=await ensureProfile(user);
+    if(!ok){$('authScreen').style.display='flex';showAuthErr('Profile setup failed. Please open the browser console (F12) and share the error with support.');return;}
     const {data:newProfile}=await sb.from('profiles').select('*').eq('id',user.id).single();
-    if(!newProfile){$('authScreen').style.display='flex';showAuthErr('Could not create your profile. Please contact support.');return;}
+    if(!newProfile){$('authScreen').style.display='flex';showAuthErr('Profile created but could not be loaded. Please sign in again.');return;}
     CP=newProfile;
   } else {
     CP=profile;
@@ -2461,7 +2465,7 @@ window.addEventListener('load',async()=>{
       $('mainApp').style.display='none'; $('authScreen').style.display='flex'; switchAuthMode('login');
       CU=null;CP=null;allApps=[];allUsers=[];allStaff=[];allLogs=[];allRequests=[];
     }
-    if(event==='SIGNED_IN'&&session&&!CP) bootApp(session.user);
+    if(event==='SIGNED_IN'&&session&&!CP&&!_signingUp) bootApp(session.user);
   });
 });
 </script>
