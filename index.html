@@ -1047,16 +1047,28 @@ $('signupForm').addEventListener('submit',async e=>{
     const hashed=CryptoJS.SHA256(answer.toLowerCase().trim()).toString();
     const fullName=email.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
 
+    // Insert profile — no ignoreDuplicates so it actually writes
     const {error:pErr}=await sb.from('profiles').upsert([{
       id:authData.user.id,full_name:fullName,email,phone,
       role:'applicant',referral_code:newCode,
       referred_by_code:refCode||null,
       security_question:question,security_answer_hash:hashed
-    }],{onConflict:'id',ignoreDuplicates:true});
+    }],{onConflict:'id'});
 
-    if(pErr){showAuthErr('Profile error: '+pErr.message);return;}
+    if(pErr){showAuthErr('Account created but profile setup failed: '+pErr.message+'. Please sign in and try again.');return;}
+
+    // Small delay to let DB commit, then retry bootApp up to 3 times
     showLoading(true);
-    await bootApp(authData.user);
+    let booted=false;
+    for(let i=0;i<3;i++){
+      await new Promise(r=>setTimeout(r,700));
+      // Re-fetch session in case it refreshed
+      const {data:{session}}=await sb.auth.getSession();
+      const usr=session?.user||authData.user;
+      const {data:check}=await sb.from('profiles').select('id').eq('id',usr.id).single();
+      if(check){await bootApp(usr);booted=true;break;}
+    }
+    if(!booted){showLoading(false);showAuthErr('Registration complete! Please sign in with your new account.');}
   } finally{setBtnLoading(btn,false);}
 });
 
