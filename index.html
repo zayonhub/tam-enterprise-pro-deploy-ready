@@ -232,7 +232,7 @@
 <body>
 
 <div id="loadingOverlay">
-  <div class="ldr-plane">✈️</div>
+  <div class="ldr-plane"><img src="https://nonstoptravels.co/wp-content/uploads/2025/04/logo-nonstop-1-e1744980029776.png" alt="NonStop Travels" style="height:64px;object-fit:contain;filter:brightness(0) invert(1);"></div>
   <svg width="44" height="44" viewBox="0 0 44 44" class="ldr-ring">
     <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="3"/>
     <circle cx="22" cy="22" r="18" fill="none" stroke="#1db96b" stroke-width="3" stroke-dasharray="30 90" stroke-linecap="round"/>
@@ -244,7 +244,7 @@
 <div id="authScreen" style="display:none;">
   <div class="auth-card">
     <div class="auth-header">
-      <span class="plane-icon">✈️</span>
+      <span class="plane-icon"><img src="https://nonstoptravels.co/wp-content/uploads/2025/04/logo-nonstop-1-e1744980029776.png" alt="NonStop Travels" style="height:56px;object-fit:contain;filter:brightness(0) invert(1);"></span>
       <h1 class="syne" style="font-size:1.75rem;font-weight:800;margin-bottom:4px;">NonStop Travels</h1>
       <p style="opacity:.7;font-size:.875rem;" id="authSubtitle">Sign in to your account</p>
     </div>
@@ -327,7 +327,7 @@
   <aside class="sidebar" id="sidebar">
     <div style="padding:24px 20px 16px;border-bottom:1px solid rgba(255,255,255,.1);">
       <div style="display:flex;align-items:center;gap:12px;">
-        <span style="font-size:1.6rem;">✈️</span>
+        <span style="font-size:1.6rem;"><img src="https://nonstoptravels.co/wp-content/uploads/2025/04/logo-nonstop-1-e1744980029776.png" alt="NonStop" style="height:32px;object-fit:contain;filter:brightness(0) invert(1);"></span>
         <div>
           <div class="syne" style="font-size:1.1rem;font-weight:800;color:#fff;line-height:1.1;">NonStop</div>
           <div style="font-size:.7rem;color:rgba(255,255,255,.5);letter-spacing:.1em;text-transform:uppercase;">Travels AMS</div>
@@ -337,7 +337,7 @@
     <nav style="flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;">
       <div id="navDashboard"     class="nav-item active" onclick="showSection('dashboard')"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
       <div id="navApplications"  class="nav-item"        onclick="showSection('applications')"><i class="fas fa-folder-open"></i><span>Applications</span></div>
-      <div id="navStaff"         class="nav-item hidden"  onclick="showSection('staff')"><i class="fas fa-headset"></i><span>Staff Portal</span><span id="staffBadge" class="nav-badge hidden">0</span></div>
+      <div id="navStaff"         class="nav-item hidden"  onclick="showSection('staff')"><i class="fas fa-headset"></i><span>Staff Portal</span><span id="staffBadge" class="nav-badge hidden">0</span><span id="deleteReqsBadge" class="nav-badge hidden" style="right:32px;background:#dc2626;">0</span></div>
       <div id="navUsers"         class="nav-item hidden"  onclick="showSection('users')"><i class="fas fa-users-cog"></i><span>User Management</span><span id="usersBadge" class="nav-badge hidden">0</span></div>
     </nav>
     <div style="padding:14px 12px;border-top:1px solid rgba(255,255,255,.1);">
@@ -559,6 +559,23 @@
             </div>
           </div>
         </div>
+        <!-- Admin: Delete Requests -->
+        <div id="deleteRequestsTab" class="hidden">
+          <div class="card" style="padding:24px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+              <div>
+                <h2 class="syne" style="font-size:1.1rem;font-weight:700;">Application Delete Requests</h2>
+                <p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="deleteReqCount">0</span> pending</p>
+              </div>
+              <button onclick="loadDeleteRequests()" class="btn btn-ghost" style="padding:8px 12px;"><i class="fas fa-sync-alt"></i></button>
+            </div>
+            <div id="deleteReqList" style="display:flex;flex-direction:column;gap:12px;"></div>
+            <div id="deleteReqEmpty" class="hidden" style="text-align:center;padding:48px;color:var(--muted);">
+              <div style="font-size:3rem;margin-bottom:12px;">✅</div>
+              <p style="font-weight:600;">No pending delete requests</p>
+            </div>
+          </div>
+        </div>
         <!-- Activity Log -->
         <div id="activityLogTab" class="hidden">
           <div class="card" style="padding:24px;">
@@ -751,12 +768,23 @@
           </div>
 
           <div style="border:1px solid var(--border);border-radius:14px;padding:20px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
               <h4 class="syne" style="font-weight:700;font-size:.95rem;">Documents <span id="docCountBadge" style="font-size:.75rem;color:var(--muted);font-family:'Manrope';font-weight:400;"></span></h4>
-              <div id="uploadBtn" class="hidden">
-                <input type="file" id="uploadInput" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="handleDocUpload(event)">
-                <button onclick="$('uploadInput').click()" class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem;"><i class="fas fa-upload"></i> Upload</button>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <div id="uploadBtn" class="hidden">
+                  <input type="file" id="uploadInput" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="handleDocUpload(event,'applicant')">
+                  <button onclick="$('uploadInput').click()" class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem;"><i class="fas fa-upload"></i> Upload</button>
+                </div>
+                <div id="uploadSupportingBtn" class="hidden">
+                  <input type="file" id="uploadSupportingInput" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="handleDocUpload(event,'supporting')">
+                  <button onclick="$('uploadSupportingInput').click()" class="btn btn-ghost" style="padding:6px 14px;font-size:.78rem;border:1.5px solid var(--border);"><i class="fas fa-users"></i> Upload Supporting</button>
+                </div>
               </div>
+            </div>
+            <!-- Doc type tabs -->
+            <div style="display:flex;gap:6px;margin-bottom:12px;">
+              <button id="docTabApplicant" onclick="switchDocTab('applicant')" class="btn btn-primary" style="padding:5px 14px;font-size:.78rem;">Applicant Docs</button>
+              <button id="docTabSupporting" onclick="switchDocTab('supporting')" class="btn btn-ghost" style="padding:5px 14px;font-size:.78rem;border:1.5px solid var(--border);">Spouse / Children</button>
             </div>
             <div id="docList" style="display:flex;flex-direction:column;gap:6px;"></div>
           </div>
@@ -793,6 +821,8 @@
               <button onclick="saveAndClose()" class="btn btn-primary" style="justify-content:center;width:100%;font-size:.83rem;"><i class="fas fa-save"></i> Save & Close</button>
               <button onclick="closeDetailModal()" class="btn btn-ghost" style="justify-content:center;width:100%;font-size:.83rem;">Close without Saving</button>
               <button id="deleteAppBtn" onclick="deleteApplication()" class="btn btn-danger hidden" style="justify-content:center;width:100%;font-size:.83rem;"><i class="fas fa-trash-alt"></i> Delete Application</button>
+              <button id="requestDeleteBtn" onclick="requestDeleteApplication()" class="btn btn-danger hidden" style="justify-content:center;width:100%;font-size:.83rem;background:#fef2f2;"><i class="fas fa-trash-alt"></i> Request Deletion</button>
+              <div id="deleteRequestedBanner" class="hidden" style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:10px 12px;font-size:.8rem;color:#991b1b;text-align:center;"><i class="fas fa-clock"></i> Deletion requested — awaiting admin approval</div>
             </div>
           </div>
         </div>
@@ -939,11 +969,12 @@ function toggleExpand(appId) {
 //  STATE
 // =========================================================
 let CU=null, CP=null;
-let allApps=[], allUsers=[], allStaff=[], allLogs=[], allRequests=[];
+let allApps=[], allUsers=[], allStaff=[], allLogs=[], allRequests=[], allDeleteRequests=[];
 let tempFiles=[], selAppId=null, editMode=false;
 let appPage=1, adminPage=1;
 const PER=12;
 let currentUserTab='applicants', referrerCode=null, detailRefCodeVal=null;
+let _currentDocTab='applicant';
 
 // ── Notification state ──
 let _notifInterval=null;
@@ -1159,10 +1190,14 @@ async function bootApp(user){
   await loadApps();
   if(profile.role==='admin'){
     await loadAllUsers();
-    buildStaffTabs(['applications','requests','log']);
+    buildStaffTabs(['applications','requests','deletereqs','log']);
     await loadApprovalRequests();
+    await loadDeleteRequests();
   } else if(profile.role==='staff'){
     buildStaffTabs(['myapps','messages']);
+    // Load delete requests for staff (so they can see pending status in openDetail)
+    const {data:delReqs}=await sb.from('delete_requests').select('*').eq('status','pending').eq('requested_by',user.id);
+    allDeleteRequests=delReqs||[];
   }
   if(profile.role==='admin'||profile.role==='staff') await loadStaff();
 
@@ -1227,6 +1262,7 @@ function buildStaffTabs(tabs){
     messages:{label:'Messages',id:'stab-messages'},
     applications:{label:'All Applications',id:'stab-applications'},
     requests:{label:'Approval Requests',id:'stab-requests'},
+    deletereqs:{label:'Delete Requests',id:'stab-deletereqs'},
     log:{label:'Activity Log',id:'stab-log'},
   };
   tabs.forEach((t,i)=>{
@@ -1236,9 +1272,9 @@ function buildStaffTabs(tabs){
 }
 
 function switchStaffTab(tab){
-  ['staffMessagesTab','staffAppsTab','allApplicantsTab','approvalRequestsTab','activityLogTab'].forEach(id=>$(id)?.classList.add('hidden'));
+  ['staffMessagesTab','staffAppsTab','allApplicantsTab','approvalRequestsTab','deleteRequestsTab','activityLogTab'].forEach(id=>$(id)?.classList.add('hidden'));
   document.querySelectorAll('#staffTabBar .tab-btn').forEach(b=>b.classList.remove('active'));
-  const map={myapps:'staffAppsTab',messages:'staffMessagesTab',applications:'allApplicantsTab',requests:'approvalRequestsTab',log:'activityLogTab'};
+  const map={myapps:'staffAppsTab',messages:'staffMessagesTab',applications:'allApplicantsTab',requests:'approvalRequestsTab',deletereqs:'deleteRequestsTab',log:'activityLogTab'};
   const tabId=`stab-${tab}`;
   $(map[tab])?.classList.remove('hidden');
   $(tabId)?.classList.add('active');
@@ -1260,6 +1296,7 @@ function switchStaffTab(tab){
   else if(tab==='messages') loadStaffMessages();
   else if(tab==='applications') renderAdminAppList();
   else if(tab==='requests') loadApprovalRequests();
+  else if(tab==='deletereqs') loadDeleteRequests();
   else if(tab==='log') loadLogs();
 }
 
@@ -1416,10 +1453,30 @@ async function pollNotifications(){
       const prev=_staffUnreadMsgs;
       _staffUnreadMsgs=unread;
       updateAllBadges();
-      // Chime on every new message — even if tab is open (so user hears it arrive)
       if(unread>prev) startChimeLoop();
-      // Auto-refresh messages if tab is open
       if(_staffMessagesOpen()) loadStaffMessages();
+
+      // Check for stage request decisions (approved/pended) since last poll
+      const {data:myReqs}=await sb.from('stage_requests')
+        .select('*').eq('requested_by',CU.id)
+        .order('updated_at',{ascending:false}).limit(20);
+      const prevReqs=allRequests.filter(r=>String(r.requested_by)===String(CU.id));
+      const newlyDecided=(myReqs||[]).filter(r=>{
+        if(r.status==='pending') return false;
+        const old=prevReqs.find(p=>String(p.id)===String(r.id));
+        return old&&old.status==='pending'; // was pending, now changed
+      });
+      if(newlyDecided.length){
+        newlyDecided.forEach(r=>{
+          if(r.status==='approved') toast(`✅ Stage ${r.requested_stage} approved for application #${sid(r.application_id)}`,'success');
+          else if(r.status==='pended') toast(`⏸ Stage request pended by admin for #${sid(r.application_id)}`,'info');
+        });
+        startChimeLoop();
+      }
+      // Refresh allRequests for staff
+      const {data:reqs}=await sb.from('stage_requests').select('*').in('status',['pending','pended']).order('created_at',{ascending:false});
+      allRequests=reqs||[];
+      updateAllBadges();
     }
 
     if(CP.role==='admin'){
@@ -1454,6 +1511,15 @@ async function pollNotifications(){
       // Auto-refresh open admin views
       if(_adminUsersOpen()) { await loadAllUsers(); renderUserList(); renderStaffList(); }
       if(_adminRequestsOpen()) renderApprovalList();
+
+      // Poll delete requests for admin
+      const {data:delReqs}=await sb.from('delete_requests').select('*').eq('status','pending').order('created_at',{ascending:false});
+      const prevDelCount=allDeleteRequests.length;
+      allDeleteRequests=delReqs||[];
+      if(allDeleteRequests.length>prevDelCount) startChimeLoop();
+      setBadge('deleteReqsBadge', allDeleteRequests.length);
+      setTabBadge('stab-deletereqs', allDeleteRequests.length);
+      if(!$('deleteRequestsTab')?.classList.contains('hidden')) renderDeleteRequests();
     }
 
     // Auto-refresh apps for all roles when any section is visible
@@ -1515,6 +1581,9 @@ async function logAct(action,appId,detail){
 // Refresh all visible data after any mutation
 async function autoRefresh(){
   await loadApps();
+  // Reload delete requests for both roles
+  const {data:delReqs}=await sb.from('delete_requests').select('*').eq('status','pending');
+  allDeleteRequests=delReqs||[];
   renderDashboard();
   if(!$('applicationsSection').classList.contains('hidden')) renderAppList();
   if(!$('staffSection').classList.contains('hidden')){
@@ -1984,7 +2053,30 @@ async function openDetail(appId){
       <div><label class="lbl">Email</label><input id="eE" type="email" class="inp inp-sm" value="${san(app.email)}"></div>
       <div><label class="lbl">Phone</label><input id="eP" type="tel" class="inp inp-sm" value="${san(app.phone||'')}"></div>
       <div><label class="lbl">Package</label>
-        <select id="ePkg" class="inp inp-sm">${['Canada PR','USA Skilled Worker','Student Visa','UK Work Permit','Australia PR','Schengen Visa','Other'].map(p=>`<option ${app.package===p?'selected':''}>${p}</option>`).join('')}</select>
+        <select id="ePkg" class="inp inp-sm">
+          <optgroup label="🇨🇦 Canada">
+            <option ${app.package==='Canada — Permanent Residency'?'selected':''} value="Canada — Permanent Residency">Canada — Permanent Residency</option>
+            <option ${app.package==='Canada — Work Visa'?'selected':''} value="Canada — Work Visa">Canada — Work Visa</option>
+            <option ${app.package==='Canada — Visiting Visa'?'selected':''} value="Canada — Visiting Visa">Canada — Visiting Visa</option>
+            <option ${app.package==='Canada — Student Visa'?'selected':''} value="Canada — Student Visa">Canada — Student Visa</option>
+          </optgroup>
+          <optgroup label="🇦🇺 Australia">
+            <option ${app.package==='Australia — Permanent Residency'?'selected':''} value="Australia — Permanent Residency">Australia — Permanent Residency</option>
+            <option ${app.package==='Australia — Work Visa'?'selected':''} value="Australia — Work Visa">Australia — Work Visa</option>
+            <option ${app.package==='Australia — Visiting Visa'?'selected':''} value="Australia — Visiting Visa">Australia — Visiting Visa</option>
+            <option ${app.package==='Australia — Student Visa'?'selected':''} value="Australia — Student Visa">Australia — Student Visa</option>
+          </optgroup>
+          <optgroup label="🌍 Work Visa with Job Placement">
+            <option ${app.package==='Cape Verde — Work Visa'?'selected':''} value="Cape Verde — Work Visa">Cape Verde — Work Visa</option>
+            <option ${app.package==='Mauritius — Work Visa'?'selected':''} value="Mauritius — Work Visa">Mauritius — Work Visa</option>
+            <option ${app.package==='Qatar — Work Visa'?'selected':''} value="Qatar — Work Visa">Qatar — Work Visa</option>
+            <option ${app.package==='Schengen (Romania & Bulgaria) — Work Visa'?'selected':''} value="Schengen (Romania & Bulgaria) — Work Visa">Schengen (Romania & Bulgaria) — Work Visa</option>
+            <option ${app.package==='Singapore — Work Visa'?'selected':''} value="Singapore — Work Visa">Singapore — Work Visa</option>
+            <option ${app.package==='Kazakhstan — Work Visa'?'selected':''} value="Kazakhstan — Work Visa">Kazakhstan — Work Visa</option>
+            <option ${app.package==='Luxembourg — Work Visa'?'selected':''} value="Luxembourg — Work Visa">Luxembourg — Work Visa</option>
+          </optgroup>
+          <option value="${app.package}" selected>${app.package}</option>
+        </select>
       </div>
       ${isOwner?`<div style="grid-column:1/-1;"><label class="lbl">Referral Code ${refLocked?'<span style="color:#ef4444;text-transform:none;font-weight:400;">(locked)</span>':'<span style="color:var(--muted);text-transform:none;font-weight:400;">(one-time)</span>'}</label>
         <input id="eRef" type="text" class="inp inp-sm" style="text-transform:uppercase;font-family:monospace;letter-spacing:.1em;" maxlength="8" value="${san(CP.referred_by_code||'')}" ${refLocked?'disabled':''} placeholder="${refLocked?'Already applied':'Enter referral code (optional)'}">
@@ -2006,7 +2098,11 @@ async function openDetail(appId){
   } else { $('stageControlSection').classList.add('hidden'); }
 
   $('uploadInput').value='';
+  if($('uploadSupportingInput')) $('uploadSupportingInput').value='';
   (isAdmin||isStaff||isOwner)?$('uploadBtn').classList.remove('hidden'):$('uploadBtn').classList.add('hidden');
+  (isAdmin||isStaff||isOwner)?$('uploadSupportingBtn').classList.remove('hidden'):$('uploadSupportingBtn').classList.add('hidden');
+  _currentDocTab='applicant';
+  switchDocTab('applicant');
   await refreshDocs();
   await refreshNotes(isOwner,isStaff,isAdmin);
 
@@ -2026,7 +2122,14 @@ async function openDetail(appId){
   if(refBy){referrerCode=refBy;$('referredByRow').classList.remove('hidden');}
   else{$('referredByRow').classList.add('hidden');referrerCode=null;}
 
-  $('deleteAppBtn').classList.toggle('hidden',!(isAdmin||isStaff));
+  // Check for pending delete request on this app
+  const pendingDelReq=allDeleteRequests.find(r=>String(r.application_id)===selAppId&&r.status==='pending');
+
+  // Delete buttons
+  $('deleteAppBtn').classList.toggle('hidden',!isAdmin);
+  $('requestDeleteBtn').classList.toggle('hidden',!isStaff||!!pendingDelReq);
+  $('deleteRequestedBanner').classList.toggle('hidden',!isStaff||!pendingDelReq);
+
   $('detailModal').classList.remove('hidden');
 }
 
@@ -2163,13 +2266,101 @@ async function assignStaff(){
 }
 
 async function deleteApplication(){
-  if(!confirm('Delete this application? This cannot be undone.')) return;
-  await logAct('delete',selAppId,`Deleted application #${sid(selAppId)}`);
+  // Admin: direct delete
+  if(!confirm('Delete this application permanently? This cannot be undone.')) return;
+  await logAct('delete',selAppId,`Admin deleted application #${sid(selAppId)}`);
   const {data:docs}=await sb.from('application_documents').select('file_path').eq('application_id',selAppId);
   for(const d of docs||[]) await sb.storage.from('documents').remove([d.file_path]);
   await sb.from('stage_requests').delete().eq('application_id',selAppId);
+  await sb.from('delete_requests').delete().eq('application_id',selAppId);
   await sb.from('applications').delete().eq('id',selAppId);
   toast('Application deleted'); closeDetailModal(); await autoRefresh();
+}
+
+async function requestDeleteApplication(){
+  if(!confirm('Request deletion of this application? Admin will be notified to approve.')) return;
+  const app=allApps.find(a=>String(a.id)===selAppId); if(!app) return;
+  const {error}=await sb.from('delete_requests').insert([{
+    application_id:selAppId,
+    requested_by:CU.id,
+    applicant_name:app.applicant_name,
+    status:'pending'
+  }]);
+  if(error){
+    if(error.code==='23505'){toast('Delete already requested','info');return;}
+    toast('Error: '+error.message,'error');return;
+  }
+  await logAct('delete',selAppId,`Staff requested deletion of #${sid(selAppId)}`);
+  toast('Deletion request sent to admin','info');
+  // Reload delete requests
+  const {data}=await sb.from('delete_requests').select('*').eq('status','pending');
+  allDeleteRequests=data||[];
+  openDetail(selAppId);
+}
+
+async function loadDeleteRequests(){
+  const {data,error}=await sb.from('delete_requests').select('*').eq('status','pending').order('created_at',{ascending:false});
+  if(error){console.error('loadDeleteRequests:',error);return;}
+  allDeleteRequests=data||[];
+  renderDeleteRequests();
+  // Update badge
+  setBadge('deleteReqsBadge', allDeleteRequests.length);
+  setTabBadge('stab-deletereqs', allDeleteRequests.length);
+}
+
+async function renderDeleteRequests(){
+  const list=$('deleteReqList'); if(!list) return;
+  $('deleteReqCount').textContent=allDeleteRequests.length;
+  if(!allDeleteRequests.length){
+    list.innerHTML='';
+    $('deleteReqEmpty')?.classList.remove('hidden');
+    return;
+  }
+  $('deleteReqEmpty')?.classList.add('hidden');
+
+  // Enrich with requester names
+  const staffIds=[...new Set(allDeleteRequests.map(r=>r.requested_by))];
+  const {data:staffProfs}=await sb.from('profiles').select('id,full_name,email').in('id',staffIds);
+  const staffMap={};
+  (staffProfs||[]).forEach(s=>staffMap[s.id]=s);
+
+  list.innerHTML=allDeleteRequests.map(r=>{
+    const staff=staffMap[r.requested_by]||{};
+    return `<div class="req-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <p style="font-weight:700;font-size:.9rem;">${san(r.applicant_name||'Unknown')} <span style="font-size:.72rem;font-family:monospace;color:var(--muted);">#${sid(r.application_id)}</span></p>
+          <p style="font-size:.78rem;color:var(--muted);margin-top:2px;">Requested by <strong>${san(staff.full_name||staff.email||'Staff')}</strong></p>
+          <p style="font-size:.72rem;color:var(--muted);">Requested ${fmt(r.created_at)}</p>
+        </div>
+        <span class="badge badge-awaiting">Pending Deletion</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="approveDeleteRequest('${r.id}','${r.application_id}')" class="btn btn-danger" style="font-size:.8rem;padding:7px 14px;"><i class="fas fa-trash"></i> Approve & Delete</button>
+        <button onclick="rejectDeleteRequest('${r.id}')" class="btn btn-warn" style="font-size:.8rem;padding:7px 14px;"><i class="fas fa-times"></i> Reject</button>
+        <button onclick="openDetail('${r.application_id}')" class="btn btn-ghost" style="font-size:.8rem;padding:7px 14px;"><i class="fas fa-eye"></i> View Application</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function approveDeleteRequest(reqId, appId){
+  if(!confirm('Permanently delete this application? This cannot be undone.')) return;
+  const {data:docs}=await sb.from('application_documents').select('file_path').eq('application_id',appId);
+  for(const d of docs||[]) await sb.storage.from('documents').remove([d.file_path]);
+  await sb.from('stage_requests').delete().eq('application_id',appId);
+  await sb.from('delete_requests').delete().eq('id',reqId);
+  await sb.from('applications').delete().eq('id',appId);
+  await logAct('delete',appId,`Admin approved deletion of #${sid(appId)}`);
+  toast('Application deleted');
+  await autoRefresh();
+  await loadDeleteRequests();
+}
+
+async function rejectDeleteRequest(reqId){
+  await sb.from('delete_requests').update({status:'rejected'}).eq('id',reqId);
+  toast('Delete request rejected','info');
+  await loadDeleteRequests();
 }
 function closeDetailModal(){$('detailModal').classList.add('hidden');selAppId=null;editMode=false;}
 
@@ -2203,32 +2394,56 @@ async function openCodeOwnerProfile(){
 // =========================================================
 //  DOCUMENTS
 // =========================================================
+function switchDocTab(tab){
+  _currentDocTab=tab;
+  const isApplicant=tab==='applicant';
+  $('docTabApplicant').className=isApplicant?'btn btn-primary':'btn btn-ghost';
+  $('docTabApplicant').style.cssText=isApplicant?'padding:5px 14px;font-size:.78rem;':'padding:5px 14px;font-size:.78rem;border:1.5px solid var(--border);';
+  $('docTabSupporting').className=isApplicant?'btn btn-ghost':'btn btn-primary';
+  $('docTabSupporting').style.cssText=isApplicant?'padding:5px 14px;font-size:.78rem;border:1.5px solid var(--border);':'padding:5px 14px;font-size:.78rem;';
+  refreshDocs();
+}
+
 async function refreshDocs(){
   const {data}=await sb.from('application_documents').select('*').eq('application_id',selAppId).order('created_at',{ascending:false});
   const docs=data||[];
-  $('docCountBadge').textContent=`(${docs.length})`;
-  $('docList').innerHTML=docs.length?docs.map(d=>`
+  const applicantDocs=docs.filter(d=>d.doc_category!=='supporting');
+  const supportingDocs=docs.filter(d=>d.doc_category==='supporting');
+  const showDocs=_currentDocTab==='applicant'?applicantDocs:supportingDocs;
+  $('docCountBadge').textContent=`(${applicantDocs.length} applicant · ${supportingDocs.length} supporting)`;
+  const canDelete=CP.role==='admin'||CP.role==='staff';
+  $('docList').innerHTML=showDocs.length?showDocs.map(d=>`
     <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface);border-radius:10px;border:1px solid var(--border);">
-      <i class="fas fa-file-${getFileIcon(d.document_type)}" style="color:var(--brand-mid);font-size:1.1rem;flex-shrink:0;"></i>
+      <i class="fas fa-file-${getFileIcon(d.document_type)}" style="color:${_currentDocTab==='supporting'?'#7c3aed':'var(--brand-mid)'};font-size:1.1rem;flex-shrink:0;"></i>
       <div style="flex:1;min-width:0;">
         <p style="font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${san(d.file_name)}</p>
         <p style="font-size:.72rem;color:var(--muted);">${(d.file_size/1024).toFixed(1)} KB · ${fmt(d.created_at)}</p>
       </div>
       <button onclick="downloadDoc('${d.file_path}','${san(d.file_name)}')" class="btn btn-ghost" style="padding:6px 10px;font-size:.75rem;"><i class="fas fa-download"></i></button>
-      ${CP.role==='admin'||CP.role==='staff'?`<button onclick="deleteDoc('${d.id}','${d.file_path}')" class="btn btn-ghost" style="padding:6px 10px;font-size:.75rem;color:#ef4444;"><i class="fas fa-trash"></i></button>`:''}
-    </div>`).join(''):'<p style="font-size:.83rem;color:var(--muted);padding:12px;text-align:center;">No documents uploaded</p>';
+      ${canDelete?`<button onclick="deleteDoc('${d.id}','${d.file_path}')" class="btn btn-ghost" style="padding:6px 10px;font-size:.75rem;color:#ef4444;"><i class="fas fa-trash"></i></button>`:''}
+    </div>`).join(''):`<p style="font-size:.83rem;color:var(--muted);padding:12px;text-align:center;">No ${_currentDocTab==='supporting'?'spouse/children':'applicant'} documents uploaded</p>`;
 }
 
-async function handleDocUpload(e){
+async function handleDocUpload(e, category='applicant'){
   const files=Array.from(e.target.files); if(!files.length) return;
   const uploaded=[];
   for(const f of files){
-    const path=`${selAppId}/${Date.now()}_${f.name}`;
+    const path=`${selAppId}/${category}/${Date.now()}_${f.name}`;
     const {error}=await sb.storage.from('documents').upload(path,f); if(error) continue;
-    await sb.from('application_documents').insert([{application_id:selAppId,document_type:f.name.split('.').pop().toLowerCase(),file_name:f.name,file_path:path,file_size:f.size,uploaded_by:CU.id}]);
+    await sb.from('application_documents').insert([{
+      application_id:selAppId,
+      document_type:f.name.split('.').pop().toLowerCase(),
+      file_name:f.name,file_path:path,file_size:f.size,
+      uploaded_by:CU.id,
+      doc_category:category
+    }]);
     uploaded.push(f.name);
   }
-  if(uploaded.length){await logAct('upload',selAppId,`Uploaded ${uploaded.length} file(s): ${uploaded.join(', ')}`);toast(`${uploaded.length} file(s) uploaded`);await refreshDocs();}
+  if(uploaded.length){
+    await logAct('upload',selAppId,`Uploaded ${uploaded.length} ${category} file(s): ${uploaded.join(', ')}`);
+    toast(`${uploaded.length} file(s) uploaded`);
+    await refreshDocs();
+  }
   e.target.value='';
 }
 
