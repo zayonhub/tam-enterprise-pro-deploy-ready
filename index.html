@@ -377,7 +377,8 @@
           <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;">
             <div>
               <p id="greetText" style="color:rgba(255,255,255,.7);font-size:.875rem;margin-bottom:4px;"></p>
-              <h2 id="heroName" class="syne" style="font-size:2rem;font-weight:800;margin-bottom:8px;"></h2>
+              <h2 id="heroName" class="syne" style="font-size:2rem;font-weight:800;margin-bottom:2px;"></h2>
+              <p id="heroEmail" style="color:rgba(255,255,255,.55);font-size:.78rem;margin-bottom:8px;"></p>
               <p id="heroSub" style="color:rgba(255,255,255,.65);font-size:.875rem;"></p>
             </div>
             <button id="newAppHeroBtn" onclick="openNewAppModal()" class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.3);backdrop-filter:blur(8px);">
@@ -699,20 +700,32 @@
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;">
           <p style="font-size:.75rem;color:var(--muted);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Document Checklist</p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;" id="docChecklist">
-            <!-- rendered by JS -->
-          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;" id="docChecklist"></div>
           <p style="font-size:.72rem;color:var(--muted);margin-top:10px;"><i class="fas fa-info-circle" style="color:var(--brand-mid);"></i> Upload as many as possible. Missing documents can be added later.</p>
         </div>
 
-        <!-- Upload zone -->
-        <div id="naDropZone" class="drop-zone" onclick="$('naFileInput').click()" ondragover="event.preventDefault();this.classList.add('drag-active')" ondragleave="this.classList.remove('drag-active')" ondrop="handleNaDrop(event)">
+        <!-- Applicant documents upload -->
+        <p style="font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:6px;"><i class="fas fa-user" style="color:var(--brand-mid);margin-right:5px;"></i> My Documents</p>
+        <div id="naDropZone" class="drop-zone" onclick="$('naFileInput').click()" ondragover="event.preventDefault();this.classList.add('drag-active')" ondragleave="this.classList.remove('drag-active')" ondrop="handleNaDrop(event,'applicant')">
           <i class="fas fa-cloud-upload-alt" style="font-size:2rem;color:var(--muted);margin-bottom:8px;display:block;"></i>
           <p style="color:var(--muted);font-size:.875rem;margin-bottom:4px;">Drag & drop or click to upload</p>
           <p style="font-size:.75rem;color:#aaa;">PDF, JPG, PNG, DOC, DOCX · Max 10 MB each</p>
-          <input type="file" id="naFileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="handleNaFiles(event)">
+          <input type="file" id="naFileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="handleNaFiles(event,'applicant')">
         </div>
-        <div id="naFileList" style="margin-top:12px;display:flex;flex-direction:column;gap:6px;"></div>
+        <div id="naFileList" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;"></div>
+
+        <!-- Supporting documents upload -->
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+          <p style="font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:4px;"><i class="fas fa-users" style="color:#7c3aed;margin-right:5px;"></i> Spouse / Children Documents <span style="font-weight:400;color:var(--muted);font-size:.72rem;">(optional)</span></p>
+          <p style="font-size:.72rem;color:var(--muted);margin-bottom:8px;">Passports, birth certificates, marriage certificates for dependants</p>
+          <div id="naDropZoneSupporting" class="drop-zone" style="border-color:#ddd6fe;background:#faf5ff;" onclick="$('naFileInputSupporting').click()" ondragover="event.preventDefault();this.classList.add('drag-active')" ondragleave="this.classList.remove('drag-active')" ondrop="handleNaDrop(event,'supporting')">
+            <i class="fas fa-users" style="font-size:2rem;color:#7c3aed;margin-bottom:8px;display:block;"></i>
+            <p style="color:#7c3aed;font-size:.875rem;margin-bottom:4px;">Upload spouse / children documents</p>
+            <p style="font-size:.75rem;color:#aaa;">PDF, JPG, PNG, DOC, DOCX · Max 10 MB each</p>
+            <input type="file" id="naFileInputSupporting" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="handleNaFiles(event,'supporting')">
+          </div>
+          <div id="naFileListSupporting" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -770,21 +783,22 @@
           <div style="border:1px solid var(--border);border-radius:14px;padding:20px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
               <h4 class="syne" style="font-weight:700;font-size:.95rem;">Documents <span id="docCountBadge" style="font-size:.75rem;color:var(--muted);font-family:'Manrope';font-weight:400;"></span></h4>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <div id="uploadBtn" class="hidden">
-                  <input type="file" id="uploadInput" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="handleDocUpload(event,'applicant')">
-                  <button onclick="$('uploadInput').click()" class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem;"><i class="fas fa-upload"></i> Upload</button>
-                </div>
-                <div id="uploadSupportingBtn" class="hidden">
-                  <input type="file" id="uploadSupportingInput" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="handleDocUpload(event,'supporting')">
-                  <button onclick="$('uploadSupportingInput').click()" class="btn btn-ghost" style="padding:6px 14px;font-size:.78rem;border:1.5px solid var(--border);"><i class="fas fa-users"></i> Upload Supporting</button>
-                </div>
-              </div>
             </div>
             <!-- Doc type tabs -->
-            <div style="display:flex;gap:6px;margin-bottom:12px;">
-              <button id="docTabApplicant" onclick="switchDocTab('applicant')" class="btn btn-primary" style="padding:5px 14px;font-size:.78rem;">Applicant Docs</button>
-              <button id="docTabSupporting" onclick="switchDocTab('supporting')" class="btn btn-ghost" style="padding:5px 14px;font-size:.78rem;border:1.5px solid var(--border);">Spouse / Children</button>
+            <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+              <button id="docTabApplicant" onclick="switchDocTab('applicant')" class="btn btn-primary" style="padding:6px 16px;font-size:.78rem;gap:6px;"><i class="fas fa-user"></i> My Documents</button>
+              <button id="docTabSupporting" onclick="switchDocTab('supporting')" class="btn btn-ghost" style="padding:6px 16px;font-size:.78rem;border:1.5px solid var(--border);gap:6px;"><i class="fas fa-users"></i> Spouse / Children</button>
+            </div>
+            <!-- Upload buttons shown per tab -->
+            <div id="uploadBtnRow" class="hidden" style="margin-bottom:10px;display:flex;gap:8px;align-items:center;">
+              <div id="uploadBtn">
+                <input type="file" id="uploadInput" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="handleDocUpload(event,'applicant')">
+                <button onclick="$('uploadInput').click()" class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem;"><i class="fas fa-upload"></i> Upload My Documents</button>
+              </div>
+              <div id="uploadSupportingBtn">
+                <input type="file" id="uploadSupportingInput" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="handleDocUpload(event,'supporting')">
+                <button onclick="$('uploadSupportingInput').click()" class="btn btn-ghost" style="padding:6px 14px;font-size:.78rem;border:1.5px solid #ddd6fe;color:#6b21a8;"><i class="fas fa-users"></i> Upload Spouse/Children Docs</button>
+              </div>
             </div>
             <div id="docList" style="display:flex;flex-direction:column;gap:6px;"></div>
           </div>
@@ -970,7 +984,7 @@ function toggleExpand(appId) {
 // =========================================================
 let CU=null, CP=null;
 let allApps=[], allUsers=[], allStaff=[], allLogs=[], allRequests=[], allDeleteRequests=[];
-let tempFiles=[], selAppId=null, editMode=false;
+let tempFiles=[], tempSupportingFiles=[], selAppId=null, editMode=false;
 let appPage=1, adminPage=1;
 const PER=12;
 let currentUserTab='applicants', referrerCode=null, detailRefCodeVal=null;
@@ -1153,10 +1167,12 @@ async function bootApp(user){
   }
 
   const name=profile.full_name||user.email.split('@')[0];
+  const firstName=name.split(' ')[0];
   $('sidebarAvatar').textContent=name.charAt(0).toUpperCase();
   $('sidebarName').textContent=name;
   $('headerEmail').textContent=user.email;
-  $('heroName').textContent=name.split(' ')[0];
+  $('heroName').textContent=name;
+  $('heroEmail').textContent=user.email;
   $('greetText').textContent=greet()+',';
 
   // Dash user card
@@ -2001,16 +2017,12 @@ async function sendStaffReply(){
 
 async function deleteAccount(userId){
   const u=allUsers.find(u=>sstr(u.id)===sstr(userId));
-  if(!confirm(`Delete ${u?.full_name||'this user'}'s account? This cannot be undone.`)) return;
-  await logAct('delete',null,`Deleted account for user ${userId}`);
-  const userApps=allApps.filter(a=>sstr(a.user_id)===sstr(userId));
-  for(const a of userApps){
-    const {data:docs}=await sb.from('application_documents').select('file_path').eq('application_id',a.id);
-    for(const d of docs||[]) await sb.storage.from('documents').remove([d.file_path]);
-    await sb.from('applications').delete().eq('id',a.id);
-  }
-  await sb.from('profiles').delete().eq('id',userId);
-  toast('Account deleted'); await loadAllUsers(); await loadApps(); closeUserModal(); renderUserList();
+  if(!confirm(`Delete ${u?.full_name||'this user'}'s account permanently? This cannot be undone.`)) return;
+  const {error}=await sb.rpc('admin_delete_user',{target_id:userId});
+  if(error){toast('Delete failed: '+error.message,'error');console.error(error);return;}
+  await logAct('delete',null,`Admin deleted account for ${u?.full_name||userId}`);
+  toast('Account deleted'); closeUserModal(); await autoRefresh();
+  await loadAllUsers(); renderUserList();
 }
 
 // =========================================================
@@ -2099,8 +2111,9 @@ async function openDetail(appId){
 
   $('uploadInput').value='';
   if($('uploadSupportingInput')) $('uploadSupportingInput').value='';
-  (isAdmin||isStaff||isOwner)?$('uploadBtn').classList.remove('hidden'):$('uploadBtn').classList.add('hidden');
-  (isAdmin||isStaff||isOwner)?$('uploadSupportingBtn').classList.remove('hidden'):$('uploadSupportingBtn').classList.add('hidden');
+  const canUpload=isAdmin||isStaff||isOwner;
+  $('uploadBtnRow')?.classList.toggle('hidden',!canUpload);
+  if(canUpload) $('uploadBtnRow').style.display='flex';
   _currentDocTab='applicant';
   switchDocTab('applicant');
   await refreshDocs();
@@ -2266,15 +2279,14 @@ async function assignStaff(){
 }
 
 async function deleteApplication(){
-  // Admin: direct delete
   if(!confirm('Delete this application permanently? This cannot be undone.')) return;
-  await logAct('delete',selAppId,`Admin deleted application #${sid(selAppId)}`);
-  const {data:docs}=await sb.from('application_documents').select('file_path').eq('application_id',selAppId);
-  for(const d of docs||[]) await sb.storage.from('documents').remove([d.file_path]);
-  await sb.from('stage_requests').delete().eq('application_id',selAppId);
-  await sb.from('delete_requests').delete().eq('application_id',selAppId);
-  await sb.from('applications').delete().eq('id',selAppId);
-  toast('Application deleted'); closeDetailModal(); await autoRefresh();
+  const btn=$('deleteAppBtn'); if(btn) btn.disabled=true;
+  try{
+    const {error}=await sb.rpc('admin_delete_application',{app_id:selAppId});
+    if(error){toast('Delete failed: '+error.message,'error');console.error(error);return;}
+    await logAct('delete',selAppId,`Admin deleted application #${sid(selAppId)}`);
+    toast('Application deleted'); closeDetailModal(); await autoRefresh();
+  } finally{ if(btn) btn.disabled=false; }
 }
 
 async function requestDeleteApplication(){
@@ -2346,11 +2358,8 @@ async function renderDeleteRequests(){
 
 async function approveDeleteRequest(reqId, appId){
   if(!confirm('Permanently delete this application? This cannot be undone.')) return;
-  const {data:docs}=await sb.from('application_documents').select('file_path').eq('application_id',appId);
-  for(const d of docs||[]) await sb.storage.from('documents').remove([d.file_path]);
-  await sb.from('stage_requests').delete().eq('application_id',appId);
-  await sb.from('delete_requests').delete().eq('id',reqId);
-  await sb.from('applications').delete().eq('id',appId);
+  const {error}=await sb.rpc('admin_delete_application',{app_id:appId});
+  if(error){toast('Delete failed: '+error.message,'error');console.error(error);return;}
   await logAct('delete',appId,`Admin approved deletion of #${sid(appId)}`);
   toast('Application deleted');
   await autoRefresh();
@@ -2397,10 +2406,20 @@ async function openCodeOwnerProfile(){
 function switchDocTab(tab){
   _currentDocTab=tab;
   const isApplicant=tab==='applicant';
-  $('docTabApplicant').className=isApplicant?'btn btn-primary':'btn btn-ghost';
-  $('docTabApplicant').style.cssText=isApplicant?'padding:5px 14px;font-size:.78rem;':'padding:5px 14px;font-size:.78rem;border:1.5px solid var(--border);';
-  $('docTabSupporting').className=isApplicant?'btn btn-ghost':'btn btn-primary';
-  $('docTabSupporting').style.cssText=isApplicant?'padding:5px 14px;font-size:.78rem;border:1.5px solid var(--border);':'padding:5px 14px;font-size:.78rem;';
+
+  // Tab button styles
+  $('docTabApplicant').className='btn '+(isApplicant?'btn-primary':'btn-ghost');
+  $('docTabApplicant').style.cssText='padding:6px 16px;font-size:.78rem;gap:6px;'+(isApplicant?'':'border:1.5px solid var(--border);');
+  $('docTabSupporting').className='btn '+(isApplicant?'btn-ghost':'btn-primary');
+  $('docTabSupporting').style.cssText='padding:6px 16px;font-size:.78rem;gap:6px;'+(isApplicant?'border:1.5px solid var(--border);':'');
+
+  // Show only the relevant upload button
+  const uploadBtnRow=$('uploadBtnRow');
+  if(uploadBtnRow&&!uploadBtnRow.classList.contains('hidden')){
+    $('uploadBtn').style.display=isApplicant?'block':'none';
+    $('uploadSupportingBtn').style.display=isApplicant?'none':'block';
+  }
+
   refreshDocs();
 }
 
@@ -2521,27 +2540,52 @@ function toggleOtherPkg(){
 
 function openNewAppModal(){
   tempFiles=[];
+  tempSupportingFiles=[];
   ['naFirstName','naMiddleName','naLastName','naEmail','naPhone','naOtherPkg'].forEach(id=>{if($(id))$(id).value='';});
   $('naPkg').value='';
   $('otherPkgWrap').classList.add('hidden');
   $('naFileList').innerHTML='';
+  if($('naFileListSupporting')) $('naFileListSupporting').innerHTML='';
   $('newAppErr').classList.add('hidden');
   renderDocChecklist();
   $('newAppModal').classList.remove('hidden');
 }
 function closeNewAppModal(){$('newAppModal').classList.add('hidden');}
-function handleNaDrop(e){e.preventDefault();$('naDropZone').classList.remove('drag-active');addNaFiles(Array.from(e.dataTransfer.files));}
-function handleNaFiles(e){addNaFiles(Array.from(e.target.files));}
-function addNaFiles(files){const valid=['pdf','jpg','jpeg','png','doc','docx'];files.forEach(f=>{const ext=f.name.split('.').pop().toLowerCase();if(valid.includes(ext)&&f.size<=10*1024*1024)tempFiles.push(f);});renderNaFileList();}
-function renderNaFileList(){
-  $('naFileList').innerHTML=tempFiles.map((f,i)=>`
+
+function handleNaDrop(e, category='applicant'){
+  e.preventDefault();
+  $(category==='applicant'?'naDropZone':'naDropZoneSupporting').classList.remove('drag-active');
+  addNaFiles(Array.from(e.dataTransfer.files), category);
+}
+function handleNaFiles(e, category='applicant'){addNaFiles(Array.from(e.target.files), category);}
+
+function addNaFiles(files, category='applicant'){
+  const valid=['pdf','jpg','jpeg','png','doc','docx'];
+  const arr=category==='supporting'?tempSupportingFiles:tempFiles;
+  files.forEach(f=>{
+    const ext=f.name.split('.').pop().toLowerCase();
+    if(valid.includes(ext)&&f.size<=10*1024*1024) arr.push(f);
+  });
+  renderNaFileList(category);
+}
+
+function renderNaFileList(category='applicant'){
+  const arr=category==='supporting'?tempSupportingFiles:tempFiles;
+  const listId=category==='supporting'?'naFileListSupporting':'naFileList';
+  const iconColor=category==='supporting'?'#7c3aed':'var(--brand-mid)';
+  $(listId).innerHTML=arr.map((f,i)=>`
     <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
-      <i class="fas fa-file" style="color:var(--brand-mid);flex-shrink:0;"></i>
+      <i class="fas fa-file" style="color:${iconColor};flex-shrink:0;"></i>
       <div style="flex:1;min-width:0;"><p style="font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${san(f.name)}</p><p style="font-size:.72rem;color:var(--muted);">${(f.size/1024/1024).toFixed(2)} MB</p></div>
-      <button onclick="removeNaFile(${i})" style="background:none;border:none;cursor:pointer;color:#ef4444;padding:4px;"><i class="fas fa-times"></i></button>
+      <button onclick="removeNaFile(${i},'${category}')" style="background:none;border:none;cursor:pointer;color:#ef4444;padding:4px;"><i class="fas fa-times"></i></button>
     </div>`).join('');
 }
-function removeNaFile(i){tempFiles.splice(i,1);renderNaFileList();}
+
+function removeNaFile(i, category='applicant'){
+  if(category==='supporting') tempSupportingFiles.splice(i,1);
+  else tempFiles.splice(i,1);
+  renderNaFileList(category);
+}
 
 async function createApplication(){
   const firstName=$('naFirstName').value.trim();
@@ -2567,11 +2611,21 @@ async function createApplication(){
   try {
     const {data:app,error}=await sb.from('applications').insert([{user_id:CU.id,applicant_name:fullName,email,phone,package:pkg,status:'pending',stage:1}]).select().single();
     if(error) throw error;
+
+    // Upload applicant documents
     for(const f of tempFiles){
-      const path=`${app.id}/${Date.now()}_${f.name}`;
+      const path=`${app.id}/applicant/${Date.now()}_${f.name}`;
       const {error:ue}=await sb.storage.from('documents').upload(path,f); if(ue) continue;
-      await sb.from('application_documents').insert([{application_id:app.id,document_type:f.name.split('.').pop().toLowerCase(),file_name:f.name,file_path:path,file_size:f.size,uploaded_by:CU.id}]);
+      await sb.from('application_documents').insert([{application_id:app.id,document_type:f.name.split('.').pop().toLowerCase(),file_name:f.name,file_path:path,file_size:f.size,uploaded_by:CU.id,doc_category:'applicant'}]);
     }
+
+    // Upload supporting documents
+    for(const f of tempSupportingFiles){
+      const path=`${app.id}/supporting/${Date.now()}_${f.name}`;
+      const {error:ue}=await sb.storage.from('documents').upload(path,f); if(ue) continue;
+      await sb.from('application_documents').insert([{application_id:app.id,document_type:f.name.split('.').pop().toLowerCase(),file_name:f.name,file_path:path,file_size:f.size,uploaded_by:CU.id,doc_category:'supporting'}]);
+    }
+
     await logAct('upload',app.id,`Submitted new application for ${fullName}`);
     toast('Application submitted!'); closeNewAppModal(); await autoRefresh();
   } catch(e){$('newAppErr').textContent=e.message;$('newAppErr').classList.remove('hidden');}
