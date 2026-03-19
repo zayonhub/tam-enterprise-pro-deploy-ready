@@ -989,6 +989,7 @@ let appPage=1, adminPage=1;
 const PER=12;
 let currentUserTab='applicants', referrerCode=null, detailRefCodeVal=null;
 let _currentDocTab='applicant';
+let _appNotesBaseCount=0; // total app notes seen — chime when new ones arrive
 
 // ── Notification state ──
 let _notifInterval=null;
@@ -1245,6 +1246,21 @@ async function bootApp(user){
       await refreshPerUserUnread();
     }
   } catch(e){ console.warn('Notif seed failed',e); }
+
+  // Seed app notes baseline (all roles) — don't chime for existing notes on login
+  try{
+    let q=sb.from('notes').select('id',{count:'exact',head:true}).neq('user_id',user.id);
+    if(profile.role==='applicant'||profile.role==='staff'){
+      const myAppIds=(allApps||[]).map(a=>a.id);
+      if(myAppIds.length) q=q.in('application_id',myAppIds);
+      else q=null;
+    }
+    if(q){
+      const {count}=await q;
+      _appNotesBaseCount=count||0;
+      _saveBaseline('appnotes_base_'+user.id, _appNotesBaseCount);
+    }
+  } catch(e){ console.warn('App notes seed failed',e); }
 
   updateAllBadges();
 
@@ -1547,6 +1563,39 @@ async function pollNotifications(){
       if(!$('staffSection').classList.contains('hidden')){
         CP.role==='admin'?renderAdminAppList():renderStaffAppList();
       }
+    }
+
+    // ── Application notes chime (all roles) ──
+    // Count notes NOT written by the current user on apps they're involved in
+    let appNotesQuery=sb.from('notes').select('id',{count:'exact',head:true}).neq('user_id',CU.id);
+    if(CP.role==='applicant'){
+      // Only notes on own applications
+      const myAppIds=allApps.map(a=>a.id);
+      if(myAppIds.length) appNotesQuery=appNotesQuery.in('application_id',myAppIds);
+      else appNotesQuery=null;
+    } else if(CP.role==='staff'){
+      // Notes on assigned applications
+      const myAppIds=allApps.map(a=>a.id);
+      if(myAppIds.length) appNotesQuery=appNotesQuery.in('application_id',myAppIds);
+      else appNotesQuery=null;
+    }
+    // admin sees all — no extra filter
+    if(appNotesQuery){
+      const {count:noteCount}=await appNotesQuery;
+      const total=noteCount||0;
+      const base=_loadBaseline('appnotes_base_'+CU.id);
+      const unread=Math.max(0,total-base);
+      if(unread>0&&total>_appNotesBaseCount){
+        startChimeLoop();
+        // If detail modal is open and notes tab visible, refresh it
+        if(!$('detailModal')?.classList.contains('hidden')){
+          const isOwner=CP.role==='applicant';
+          const isStaff=CP.role==='staff';
+          const isAdmin=CP.role==='admin';
+          await refreshNotes(isOwner,isStaff,isAdmin);
+        }
+      }
+      _appNotesBaseCount=total;
     }
 
   } catch(e){ console.warn('Poll failed',e); }
@@ -2507,6 +2556,9 @@ async function addNote(){
   $('noteInput').value=''; toast('Note added');
   const isOwner=CP.role==='applicant', isStaff=CP.role==='staff', isAdmin=CP.role==='admin';
   await refreshNotes(isOwner,isStaff,isAdmin);
+  // Advance our baseline so we don't chime on our own note
+  _appNotesBaseCount=(_appNotesBaseCount||0)+1;
+  _saveBaseline('appnotes_base_'+CU.id, _appNotesBaseCount);
 }
 
 // =========================================================
