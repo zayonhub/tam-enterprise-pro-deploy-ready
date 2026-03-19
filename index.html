@@ -336,7 +336,7 @@
     </div>
     <nav style="flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;">
       <div id="navDashboard"     class="nav-item active" onclick="showSection('dashboard')"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
-      <div id="navApplications"  class="nav-item"        onclick="showSection('applications')"><i class="fas fa-folder-open"></i><span>Applications</span></div>
+      <div id="navApplications"  class="nav-item"        onclick="showSection('applications')"><i class="fas fa-folder-open"></i><span>Applications</span><span id="appsBadge" class="nav-badge hidden">0</span></div>
       <div id="navStaff"         class="nav-item hidden"  onclick="showSection('staff')"><i class="fas fa-headset"></i><span>Staff Portal</span><span id="staffBadge" class="nav-badge hidden">0</span><span id="deleteReqsBadge" class="nav-badge hidden" style="right:32px;background:#dc2626;">0</span></div>
       <div id="navUsers"         class="nav-item hidden"  onclick="showSection('users')"><i class="fas fa-users-cog"></i><span>User Management</span><span id="usersBadge" class="nav-badge hidden">0</span></div>
     </nav>
@@ -999,6 +999,8 @@ let _staffUnreadMsgs=0;
 let _adminUnreadStaffMsgs=0;
 let _staffMsgBaseCount=0;
 let _adminMsgBaseCount=0;
+let _applicantUnreadNotes=0;      // applicant: unread app notes from staff/admin
+let _applicantNotesBaseCount=0;   // baseline for applicant note counting
 let _chimeActive=false;
 let _perUserUnread={};
 let _signingUp=false;  // blocks onAuthStateChange from calling bootApp during signup
@@ -1233,7 +1235,6 @@ async function bootApp(user){
     }
     if(profile.role==='admin'){
       _adminMsgBaseCount = _loadBaseline('admin_base_'+user.id);
-      // Count ALL non-admin authored notes (staff + applicants)
       const {data:nonAdminIds}=await sb.from('profiles').select('id').neq('role','admin');
       if(nonAdminIds?.length){
         const {count}=await sb.from('profile_notes')
@@ -1242,8 +1243,20 @@ async function bootApp(user){
         const total=count||0;
         _adminUnreadStaffMsgs=Math.max(0, total - _adminMsgBaseCount);
       }
-      // Seed per-user unread map
       await refreshPerUserUnread();
+    }
+    if(profile.role==='applicant'){
+      // Seed applicant note baseline — unread notes from staff/admin on own apps
+      _applicantNotesBaseCount = _loadBaseline('appnotes_base_'+user.id);
+      const myAppIds=(allApps||[]).map(a=>a.id);
+      if(myAppIds.length){
+        const {count}=await sb.from('notes')
+          .select('id',{count:'exact',head:true})
+          .in('application_id',myAppIds)
+          .neq('user_id',user.id);
+        const total=count||0;
+        _applicantUnreadNotes=Math.max(0, total - _applicantNotesBaseCount);
+      }
     }
   } catch(e){ console.warn('Notif seed failed',e); }
 
@@ -1428,24 +1441,24 @@ function updateAllBadges(){
   if(!CP) return;
 
   if(CP.role==='admin'){
-    // Sidebar Staff Portal badge = pending approval requests
     const pendingReqs=allRequests.filter(r=>r.status==='pending').length;
     setBadge('staffBadge', pendingReqs);
-    // Requests tab badge
     setTabBadge('stab-requests', pendingReqs);
-    // Users badge = unread staff messages
     setBadge('usersBadge', _adminUnreadStaffMsgs);
   }
 
   if(CP.role==='staff'){
-    // Sidebar Staff Portal badge = unread msgs + pending requests they sent
     const pendingMyReqs=allRequests.filter(r=>String(r.requested_by)===String(CU.id)&&r.status==='pending').length;
     _staffUnreadReqs=pendingMyReqs;
     const total=_staffUnreadMsgs+pendingMyReqs;
     setBadge('staffBadge', total);
-    // Tab badges
     setTabBadge('stab-messages', _staffUnreadMsgs);
     setTabBadge('stab-myapps', pendingMyReqs);
+  }
+
+  if(CP.role==='applicant'){
+    // Badge on Applications nav — unread notes from staff/admin
+    setBadge('appsBadge', _applicantUnreadNotes);
   }
 }
 
@@ -1488,7 +1501,7 @@ async function pollNotifications(){
       if(unread>prev) startChimeLoop();
       if(_staffMessagesOpen()) loadStaffMessages();
 
-      // Check for stage request decisions (approved/pended) since last poll
+      // Check for stage request decisions since last poll
       const {data:myReqs}=await sb.from('stage_requests')
         .select('*').eq('requested_by',CU.id)
         .order('updated_at',{ascending:false}).limit(20);
@@ -1496,19 +1509,48 @@ async function pollNotifications(){
       const newlyDecided=(myReqs||[]).filter(r=>{
         if(r.status==='pending') return false;
         const old=prevReqs.find(p=>String(p.id)===String(r.id));
-        return old&&old.status==='pending'; // was pending, now changed
+        return old&&old.status==='pending';
       });
       if(newlyDecided.length){
         newlyDecided.forEach(r=>{
-          if(r.status==='approved') toast(`✅ Stage ${r.requested_stage} approved for application #${sid(r.application_id)}`,'success');
-          else if(r.status==='pended') toast(`⏸ Stage request pended by admin for #${sid(r.application_id)}`,'info');
+          if(r.status==='approved'){
+            toast(`✅ Stage ${r.requested_stage} approved for #${sid(r.application_id)}`,'success');
+            startChimeLoop();
+          } else if(r.status==='pended'){
+            toast(`⏸ Stage request pended by admin for #${sid(r.application_id)}`,'info');
+            startChimeLoop();
+          } else if(r.status==='rejected'){
+            toast(`❌ Stage request rejected for #${sid(r.application_id)}`,'error');
+            startChimeLoop();
+          }
         });
-        startChimeLoop();
       }
-      // Refresh allRequests for staff
       const {data:reqs}=await sb.from('stage_requests').select('*').in('status',['pending','pended']).order('created_at',{ascending:false});
       allRequests=reqs||[];
       updateAllBadges();
+    }
+
+    if(CP.role==='applicant'){
+      // Count notes on own applications NOT written by self
+      const myAppIds=allApps.map(a=>a.id);
+      if(myAppIds.length){
+        const {count}=await sb.from('notes')
+          .select('id',{count:'exact',head:true})
+          .in('application_id',myAppIds)
+          .neq('user_id',CU.id);
+        const total=count||0;
+        const unread=Math.max(0, total - _applicantNotesBaseCount);
+        const prev=_applicantUnreadNotes;
+        _applicantUnreadNotes=unread;
+        updateAllBadges();
+        if(unread>prev){
+          startChimeLoop();
+          // Auto-refresh notes if detail modal is open
+          if(!$('detailModal')?.classList.contains('hidden')){
+            await refreshNotes(true,false,false);
+          }
+        }
+      }
     }
 
     if(CP.role==='admin'){
@@ -1673,7 +1715,23 @@ function showSection(name){
   if(nav) nav.classList.add('active');
   $('pageTitle').textContent={dashboard:'Dashboard',applications:'Applications',staff:'Staff Portal',users:'User Management'}[name]||name;
   if(name==='dashboard') renderDashboard();
-  if(name==='applications') renderAppList();
+  if(name==='applications'){
+    renderAppList();
+    // Clear applicant unread badge when they visit applications
+    if(CP?.role==='applicant'){
+      const myAppIds=(allApps||[]).map(a=>a.id);
+      if(myAppIds.length){
+        sb.from('notes').select('id',{count:'exact',head:true})
+          .in('application_id',myAppIds).neq('user_id',CU.id)
+          .then(({count})=>{
+            _applicantNotesBaseCount=count||0;
+            _saveBaseline('appnotes_base_'+CU.id, _applicantNotesBaseCount);
+            _applicantUnreadNotes=0;
+            updateAllBadges();
+          });
+      }
+    }
+  }
   if(name==='staff'){CP.role==='admin'?switchStaffTab('applications'):switchStaffTab('myapps');}
   if(name==='users'){
     switchUserTab('applicants'); renderUserList();
@@ -2546,6 +2604,25 @@ async function refreshNotes(isOwner,isStaff,isAdmin){
       <p style="font-size:.83rem;line-height:1.5;">${san(n.content)}</p>
     </div>`).join(''):'<p style="font-size:.83rem;color:var(--muted);text-align:center;padding:16px;">No notes yet</p>';
   $('noteInput').placeholder=isOwner?'Send a message to staff…':'Add a note or update…';
+
+  // Clear applicant unread badge when they read notes in this app
+  if(isOwner&&CP?.role==='applicant'){
+    const othersNotes=notes.filter(n=>String(n.user_id)!==String(CU.id)).length;
+    // Update baseline to at least current count so these notes don't re-trigger
+    const currentBase=_loadBaseline('appnotes_base_'+CU.id);
+    const myAppIds=(allApps||[]).map(a=>a.id);
+    if(myAppIds.length){
+      const {count}=await sb.from('notes')
+        .select('id',{count:'exact',head:true})
+        .in('application_id',myAppIds)
+        .neq('user_id',CU.id);
+      const total=count||0;
+      _applicantNotesBaseCount=total;
+      _saveBaseline('appnotes_base_'+CU.id, total);
+      _applicantUnreadNotes=0;
+      updateAllBadges();
+    }
+  }
 }
 
 async function addNote(){
@@ -2770,6 +2847,7 @@ window.addEventListener('load',async()=>{
       stopChimeLoop();
       clearInterval(_pollTimer); _pollTimer=null;
       _staffUnreadMsgs=0; _adminUnreadStaffMsgs=0; _staffUnreadReqs=0;
+      _applicantUnreadNotes=0; _applicantNotesBaseCount=0;
       $('mainApp').style.display='none'; $('authScreen').style.display='flex'; switchAuthMode('login');
       CU=null;CP=null;allApps=[];allUsers=[];allStaff=[];allLogs=[];allRequests=[];
     }
