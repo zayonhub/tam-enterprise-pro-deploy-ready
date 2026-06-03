@@ -25,11 +25,9 @@
     --staff-c:    #0369a1;
     --app-c:      #047857;
     --danger:     #dc2626;
-    --agent-brand:      #c2410c;
-    --agent-brand-mid:  #ea580c;
-    --agent-brand-lite: #f97316;
-    --agent-brand-glow: rgba(249,115,22,.18);
-    --agent-c:    #c2410c;
+    --agent-brand:      #7c2d12;
+    --agent-brand-mid:  #c2410c;
+    --agent-brand-lite: #fb923c;
   }
 
   * { font-family: 'Manrope', sans-serif; box-sizing: border-box; }
@@ -81,20 +79,26 @@
   .badge-pended   { background: #fef9c3; color: #854d0e; }
   .badge-awaiting { background: #fce7f3; color: #9d174d; }
   .badge-agent    { background: #ffedd5; color: #c2410c; }
-  .note-bubble.agent { border-left:3px solid var(--agent-brand-mid); background:#fff7ed; }
-  .sidebar.agent-theme {
+  .btn-agent { background: #fff7ed; color: #c2410c; border: 1.5px solid #fdba74; }
+  .btn-agent:hover { background: #ffedd5; transform: translateY(-1px); }
+
+  /* ===== AGENT ORANGE SIDEBAR THEME ===== */
+  .sidebar.agent-theme { 
     background: var(--agent-brand);
-    background-image: radial-gradient(ellipse at top left, rgba(249,115,22,.2) 0%, transparent 60%);
+    background-image: radial-gradient(ellipse at top left, rgba(251,146,60,.18) 0%, transparent 60%);
   }
-  .sidebar.agent-theme .nav-item:hover { background: rgba(255,255,255,.12); }
-  .sidebar.agent-theme .nav-item.active { background: rgba(255,255,255,.18); }
-  /* Agent section wrapper */
-  body.agent-mode header { border-bottom-color: #fed7aa; }
-  body.agent-mode header::after {
-    content: '';
-    position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, var(--agent-brand-mid), var(--agent-brand-lite));
+  .sidebar.agent-theme .nav-item.active {
+    background: rgba(255,255,255,.18);
+    box-shadow: inset 0 0 0 1px rgba(251,146,60,.3);
   }
+  .sidebar.agent-theme .tab-btn.active { color: var(--agent-brand-mid); }
+  /* Agent focus ring — inputs/tabs use orange instead of green */
+  .agent-focus .inp:focus {
+    border-color: var(--agent-brand-mid);
+    box-shadow: 0 0 0 3px rgba(234,88,12,.15);
+  }
+  /* Agent portal tab active state — override green brand color */
+  .agent-focus #staffSection .tab-btn.active { color: var(--agent-brand-mid); }
 
   /* ===== CARDS ===== */
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; }
@@ -357,9 +361,9 @@
     <nav style="flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;">
       <div id="navDashboard"     class="nav-item active" onclick="showSection('dashboard')"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
       <div id="navApplications"  class="nav-item"        onclick="showSection('applications')"><i class="fas fa-folder-open"></i><span>Applications</span><span id="appsBadge" class="nav-badge hidden">0</span></div>
-      <div id="navStaff"         class="nav-item hidden"  onclick="showSection('staff')"><i class="fas fa-headset"></i><span>Staff Portal</span><span id="staffBadge" class="nav-badge hidden">0</span><span id="deleteReqsBadge" class="nav-badge hidden" style="right:32px;background:#dc2626;">0</span></div>
+      <div id="navStaff"         class="nav-item hidden"  onclick="showSection('staff')"><i class="fas fa-headset"></i><span id="staffPortalLabel">Staff Portal</span><span id="staffBadge" class="nav-badge hidden">0</span><span id="deleteReqsBadge" class="nav-badge hidden" style="right:32px;background:#dc2626;">0</span></div>
       <div id="navUsers"         class="nav-item hidden"  onclick="showSection('users')"><i class="fas fa-users-cog"></i><span>User Management</span><span id="usersBadge" class="nav-badge hidden">0</span></div>
-      <div id="navAgents"        class="nav-item hidden"  onclick="showSection('agents')"><i class="fas fa-user-tie" style="color:#f97316;"></i><span>Agent Management</span><span id="agentsBadge" class="nav-badge hidden" style="background:#ea580c;">0</span></div>
+      <div id="navAgentMgmt"     class="nav-item hidden"  onclick="showSection('agentmgmt')"><i class="fas fa-user-tie"></i><span>Agent Management</span><span id="agentMgmtBadge" class="nav-badge hidden" style="background:#ea580c;">0</span></div>
     </nav>
     <div style="padding:14px 12px;border-top:1px solid rgba(255,255,255,.1);">
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.08);border-radius:12px;margin-bottom:8px;">
@@ -503,6 +507,31 @@
             </div>
           </div>
         </div>
+        <!-- Agent: messages with assigned staff -->
+        <div id="agentStaffMsgTab" class="hidden">
+          <div class="card" style="padding:24px;">
+            <div style="margin-bottom:16px;">
+              <h2 class="syne" style="font-size:1.1rem;font-weight:700;">Staff Messages</h2>
+              <p style="font-size:.8rem;color:var(--muted);margin-top:2px;">Select a staff member assigned to you to view their message thread.</p>
+            </div>
+            <div id="agentStaffMsgList" style="display:flex;flex-direction:column;gap:8px;"></div>
+          </div>
+        </div>
+        <!-- Staff: read-only view of their assigned agent's apps -->
+        <div id="agentAppsViewTab" class="hidden">
+          <div class="card" style="padding:24px;">
+            <div style="margin-bottom:20px;">
+              <h2 class="syne" style="font-size:1.1rem;font-weight:700;">Agent's Applications <span style="font-size:.75rem;font-weight:400;color:var(--muted);">(read-only)</span></h2>
+              <p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="agentAppsViewCount">0</span> total</p>
+            </div>
+            <div id="agentAppsViewList" style="display:flex;flex-direction:column;gap:8px;"></div>
+            <div id="agentAppsViewEmpty" class="hidden" style="text-align:center;padding:40px;color:var(--muted);">
+              <div style="font-size:3rem;margin-bottom:12px;">📂</div>
+              <p style="font-weight:600;">No agent assigned to you yet</p>
+              <p style="font-size:.83rem;margin-top:4px;">Ask admin to assign you to an agent</p>
+            </div>
+          </div>
+        </div>
         <div id="staffAppsTab" class="hidden">
           <div class="card" style="padding:24px;">
             <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
@@ -632,6 +661,7 @@
         <div class="tab-bar" style="margin-bottom:22px;width:fit-content;">
           <button class="tab-btn active" id="tabApplicants" onclick="switchUserTab('applicants')">Applicants</button>
           <button class="tab-btn" id="tabStaffList" onclick="switchUserTab('staff')">Staff Members</button>
+          <button class="tab-btn" id="tabAgentList" onclick="switchUserTab('agents')">Agents</button>
         </div>
         <div id="userApplicantsTab">
           <div class="card" style="padding:24px;">
@@ -651,65 +681,101 @@
             <div id="staffMemberList" style="display:flex;flex-direction:column;gap:8px;"></div>
           </div>
         </div>
-      </div>
-
-
-      <!-- ===== AGENT MANAGEMENT ===== -->
-      <div id="agentsSection" class="section-page hidden">
-        <div class="tab-bar" style="margin-bottom:22px;width:fit-content;">
-          <button class="tab-btn active" id="tabAgentList" onclick="switchAgentTab('list')">All Agents</button>
-          <button class="tab-btn" id="tabAgentAssign" onclick="switchAgentTab('assign')">Assign Applications</button>
-          <button class="tab-btn" id="tabAgentStaff" onclick="switchAgentTab('stafflink')">Assign Staff to Agent</button>
-        </div>
-        <!-- Agent List -->
-        <div id="agentListTab">
+        <div id="userAgentTab" class="hidden">
           <div class="card" style="padding:24px;">
             <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
-              <div><h2 class="syne" style="font-size:1.1rem;font-weight:700;">Independent Agents</h2><p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="agentCount">0</span> agents</p></div>
-              <div style="position:relative;"><input type="text" id="agentSearch" class="inp inp-sm" style="padding-left:32px;width:220px;" placeholder="Search agents…" oninput="renderAgentList()"><i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i></div>
+              <div><h2 class="syne" style="font-size:1.1rem;font-weight:700;">Independent Agents</h2><p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="agentListCount">0</span> agents</p></div>
+              <div style="position:relative;"><input type="text" id="agentListSearch" class="inp inp-sm" style="padding-left:32px;width:220px;" placeholder="Search agents…" oninput="renderAgentUserList()"><i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i></div>
             </div>
             <div id="agentMemberList" style="display:flex;flex-direction:column;gap:8px;"></div>
           </div>
         </div>
+      </div>
+
+      <!-- ===== AGENT MANAGEMENT (Admin) ===== -->
+      <div id="agentmgmtSection" class="section-page hidden">
+        <div style="margin-bottom:24px;">
+          <h2 class="syne" style="font-size:1.2rem;font-weight:800;">Agent Management</h2>
+          <p style="font-size:.85rem;color:var(--muted);margin-top:4px;">Assign applications to agents, link staff to agents, and promote or demote users.</p>
+        </div>
+        <div class="tab-bar" style="margin-bottom:22px;width:fit-content;">
+          <button class="tab-btn active" id="amtab-overview"  onclick="switchAgentMgmtTab('overview')">Overview</button>
+          <button class="tab-btn"        id="amtab-assign"    onclick="switchAgentMgmtTab('assign')">Assign Applications</button>
+          <button class="tab-btn"        id="amtab-staffmap"  onclick="switchAgentMgmtTab('staffmap')">Assign Staff</button>
+          <button class="tab-btn"        id="amtab-promote"   onclick="switchAgentMgmtTab('promote')">Promote / Demote</button>
+        </div>
+
+        <!-- Overview -->
+        <div id="amOverviewTab">
+          <div id="agentOverviewList" style="display:flex;flex-direction:column;gap:16px;"></div>
+          <div id="agentOverviewEmpty" class="hidden" style="text-align:center;padding:64px;color:var(--muted);">
+            <div style="font-size:3rem;margin-bottom:12px;">🤝</div>
+            <p style="font-weight:600;">No agents yet</p>
+            <p style="font-size:.83rem;margin-top:4px;">Promote a staff or applicant to Agent in the Promote/Demote tab</p>
+          </div>
+        </div>
+
         <!-- Assign Applications to Agent -->
-        <div id="agentAssignTab" class="hidden">
+        <div id="amAssignTab" class="hidden">
           <div class="card" style="padding:24px;">
-            <h2 class="syne" style="font-size:1.1rem;font-weight:700;margin-bottom:6px;">Assign / Reassign Applications to Agent</h2>
-            <p style="font-size:.8rem;color:var(--muted);margin-bottom:20px;">Select an agent, then assign or reassign applications.</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+            <h3 class="syne" style="font-size:1rem;font-weight:700;margin-bottom:6px;">Assign / Reassign Application to Agent</h3>
+            <p style="font-size:.83rem;color:var(--muted);margin-bottom:18px;">Select an application and choose which agent to assign it to. You can also reassign from one agent to another.</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px;" class="detail-grid">
               <div>
-                <label class="lbl">Select Agent</label>
-                <select id="agentAssignSelect" class="inp" onchange="renderAgentAppsAssignment()">
-                  <option value="">— Pick an agent —</option>
+                <label class="lbl">Select Application</label>
+                <select id="amAppSelect" class="inp" onchange="amUpdateAppAgent()">
+                  <option value="">— Choose application —</option>
                 </select>
               </div>
               <div>
-                <label class="lbl">Search Applications</label>
-                <input type="text" id="agentAppSearch" class="inp" placeholder="Search by name or package…" oninput="renderAgentAppsAssignment()">
+                <label class="lbl">Assign to Agent</label>
+                <select id="amAgentSelect" class="inp">
+                  <option value="">— Unassigned —</option>
+                </select>
               </div>
             </div>
-            <div id="agentAppsAssignList" style="display:flex;flex-direction:column;gap:8px;"></div>
+            <div id="amCurrentAssignment" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;font-size:.83rem;color:#9a3412;margin-bottom:14px;"></div>
+            <button onclick="amSaveAppAssignment()" class="btn" style="background:var(--agent-brand-mid);color:#fff;gap:8px;"><i class="fas fa-save"></i> Save Assignment</button>
           </div>
         </div>
+
         <!-- Assign Staff to Agent -->
-        <div id="agentStaffTab" class="hidden">
+        <div id="amStaffMapTab" class="hidden">
           <div class="card" style="padding:24px;">
-            <h2 class="syne" style="font-size:1.1rem;font-weight:700;margin-bottom:6px;">Assign Staff Members to Agent</h2>
-            <p style="font-size:.8rem;color:var(--muted);margin-bottom:20px;">Assigned staff can monitor the agent's applications.</p>
-            <div style="margin-bottom:16px;">
-              <label class="lbl">Select Agent</label>
-              <select id="agentStaffAgentSelect" class="inp" style="max-width:400px;" onchange="renderAgentStaffLinks()">
-                <option value="">— Pick an agent —</option>
-              </select>
+            <h3 class="syne" style="font-size:1rem;font-weight:700;margin-bottom:6px;">Assign Staff Member to Agent</h3>
+            <p style="font-size:.83rem;color:var(--muted);margin-bottom:18px;">Assigned staff can view the agent's applications (read-only) and exchange messages with them.</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px;" class="detail-grid">
+              <div>
+                <label class="lbl">Select Staff Member</label>
+                <select id="amStaffSelect" class="inp">
+                  <option value="">— Choose staff —</option>
+                </select>
+              </div>
+              <div>
+                <label class="lbl">Assign to Agent</label>
+                <select id="amStaffAgentSelect" class="inp">
+                  <option value="">— Unassigned —</option>
+                </select>
+              </div>
             </div>
-            <div id="agentStaffLinkList" style="display:flex;flex-direction:column;gap:8px;"></div>
+            <button onclick="amSaveStaffAssignment()" class="btn" style="background:var(--agent-brand-mid);color:#fff;gap:8px;"><i class="fas fa-link"></i> Save Staff Assignment</button>
+          </div>
+          <div style="margin-top:20px;" id="staffAgentMapList"></div>
+        </div>
+
+        <!-- Promote / Demote -->
+        <div id="amPromoteTab" class="hidden">
+          <div class="card" style="padding:24px;">
+            <h3 class="syne" style="font-size:1rem;font-weight:700;margin-bottom:6px;">Promote or Demote Users</h3>
+            <p style="font-size:.83rem;color:var(--muted);margin-bottom:18px;">Change any user's role. They must sign out and back in for changes to take effect.</p>
+            <div id="amPromoteList" style="display:flex;flex-direction:column;gap:8px;"></div>
           </div>
         </div>
       </div>
 
-    </div>
+    </div><!-- end page-pad -->
   </main>
-</div>
+</div><!-- end mainApp -->
 
 <!-- ===== NEW APP MODAL ===== -->
 <div id="newAppModal" class="modal-overlay hidden">
@@ -842,8 +908,10 @@
           </div>
 
           <div id="assignSection" class="hidden" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:20px;">
-            <h4 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:12px;color:#1e40af;">Assign to Staff</h4>
-            <select id="assignSelect" onchange="assignStaff()" class="inp"><option value="">— Unassigned —</option></select>
+            <h4 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:8px;color:#1e40af;">Assign to Staff</h4>
+            <select id="assignSelect" onchange="assignStaff()" class="inp" style="margin-bottom:14px;"><option value="">— Unassigned —</option></select>
+            <h4 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:8px;color:#c2410c;">Assign to Agent</h4>
+            <select id="assignAgentSelect" onchange="assignAgent()" class="inp"><option value="">— Unassigned —</option></select>
           </div>
 
           <!-- Stage control -->
@@ -954,6 +1022,28 @@
   </div>
 </div>
 
+<!-- ===== AGENT ↔ STAFF THREAD MODAL ===== -->
+<div id="agentThreadModal" class="modal-overlay hidden" style="z-index:65;">
+  <div class="modal-box" style="max-width:560px;">
+    <div class="modal-header" style="background:linear-gradient(135deg,#fff7ed,#ffedd5);border-radius:20px 20px 0 0;">
+      <div>
+        <h3 id="agentThreadTitle" class="syne" style="font-size:1.05rem;font-weight:700;color:#7c2d12;">Message Thread</h3>
+        <p style="font-size:.78rem;color:#9a3412;margin-top:2px;">Agent ↔ Staff direct messages</p>
+      </div>
+      <button onclick="$('agentThreadModal').classList.add('hidden')" class="btn btn-ghost" style="padding:8px;"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="agentThreadMessages" style="display:flex;flex-direction:column;gap:10px;max-height:360px;overflow-y:auto;margin-bottom:14px;padding-right:4px;"></div>
+      <div style="border-top:1px solid var(--border);padding-top:12px;">
+        <div style="display:flex;gap:8px;">
+          <textarea id="agentThreadInput" class="inp" rows="2" style="resize:none;flex:1;" placeholder="Type a message…"></textarea>
+          <button onclick="sendAgentThreadMsg()" class="btn" style="background:var(--agent-brand-mid);color:#fff;padding:10px 16px;align-self:flex-end;"><i class="fas fa-paper-plane"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="hidden"></div>
 
 <script>
@@ -1058,15 +1148,14 @@ function toggleExpand(appId) {
 //  STATE
 // =========================================================
 let CU=null, CP=null;
-let allApps=[], allUsers=[], allStaff=[], allLogs=[], allRequests=[], allDeleteRequests=[];
+let allApps=[], allUsers=[], allStaff=[], allAgents=[], allLogs=[], allRequests=[], allDeleteRequests=[];
 let tempFiles=[], tempSupportingFiles=[], selAppId=null, editMode=false;
-let appPage=1, adminPage=1, agentPage=1;
-let allAgents=[]; // profiles with role==='agent'
-let currentAgentTab='list';
+let appPage=1, adminPage=1;
 const PER=12;
 let currentUserTab='applicants', referrerCode=null, detailRefCodeVal=null;
 let _currentDocTab='applicant';
-let _appNotesBaseCount=0; // total app notes seen — chime when new ones arrive
+let _appNotesBaseCount=0;
+let _agentThreadProfileId=null; // target profile for open agent↔staff thread
 
 // ── Notification state ──
 let _notifInterval=null;
@@ -1097,6 +1186,10 @@ const greet=()=>{const h=new Date().getHours();return h<12?'Good morning':h<18?'
 const genCode=()=>{const c='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';return Array.from({length:8},()=>c[Math.floor(Math.random()*c.length)]).join('');};
 const sid=id=>String(id||'').slice(-4).toUpperCase();
 const sstr=s=>String(s||'');
+// ── Role helpers (global) ──────────────────────────────────────────────────
+function isAgent(){ return CP?.role==='agent'; }
+function isStaff(){ return CP?.role==='staff'; }
+function isAdmin(){ return CP?.role==='admin'; }
 function hl(text,q){if(!q||!text)return san(text);return san(text).replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`,'gi'),'<mark>$1</mark>');}
 
 function toast(msg,type='success'){
@@ -1246,8 +1339,10 @@ async function bootApp(user){
     CP=profile;
   }
 
-  const name=profile.full_name||user.email.split('@')[0];
-  const firstName=name.split(' ')[0];
+  const isAgentRole = profile.role==='agent';
+  const name=CP.full_name||user.email.split('@')[0];
+
+  // ── Sidebar avatar & name ──
   $('sidebarAvatar').textContent=name.charAt(0).toUpperCase();
   $('sidebarName').textContent=name;
   $('headerEmail').textContent=user.email;
@@ -1260,79 +1355,104 @@ async function bootApp(user){
   $('dashUserName').textContent=name;
   $('dashUserEmail').textContent=user.email;
 
+  // ── Role badge ──
   const roleBadgeClass=profile.role==='admin'?'badge-admin':profile.role==='staff'?'badge-staff':profile.role==='agent'?'badge-agent':'badge-applicant';
-  const roleLabel=profile.role==='agent'?'Independent Agent':profile.role.charAt(0).toUpperCase()+profile.role.slice(1);
-  $('sidebarRoleBadge').className=`badge ${roleBadgeClass}`;
-  $('sidebarRoleBadge').textContent=roleLabel;
-  $('headerRoleBadge').className=`badge ${roleBadgeClass}`;
-  $('headerRoleBadge').textContent=roleLabel;
-  $('dashUserRole').className=`badge ${roleBadgeClass}`;
-  $('dashUserRole').textContent=roleLabel;
+  const roleLabel=profile.role==='agent'?'Agent':profile.role.charAt(0).toUpperCase()+profile.role.slice(1);
+  ['sidebarRoleBadge','headerRoleBadge','dashUserRole'].forEach(id=>{
+    $(id).className=`badge ${roleBadgeClass}`;
+    $(id).textContent=roleLabel;
+  });
 
-  // Apply agent orange theme
+  // ── Agent orange theme ──
   const sidebar=$('sidebar');
-  if(profile.role==='agent'){
+  if(isAgentRole){
     sidebar.classList.add('agent-theme');
-    document.body.classList.add('agent-mode');
-    // Override hero gradient to orange
-    const hero=document.querySelector('#dashboardSection > div');
-    if(hero) hero.style.background='linear-gradient(135deg,var(--agent-brand),var(--agent-brand-mid))';
+    document.body.classList.add('agent-focus');
+    $('sidebarAvatar').style.background='var(--agent-brand-lite)';
+    // Orange hero banner
+    const heroBanner=document.querySelector('#dashboardSection > div');
+    if(heroBanner) heroBanner.style.background='linear-gradient(135deg,#7c2d12,var(--agent-brand-mid))';
+    // Orange dashboard avatar
+    $('dashUserAvatar').style.background='linear-gradient(135deg,var(--agent-brand-lite),var(--agent-brand))';
   } else {
     sidebar.classList.remove('agent-theme');
-    document.body.classList.remove('agent-mode');
-    const hero=document.querySelector('#dashboardSection > div');
-    if(hero) hero.style.background='';
+    document.body.classList.remove('agent-focus');
+    $('sidebarAvatar').style.background='';
+    const heroBanner=document.querySelector('#dashboardSection > div');
+    if(heroBanner) heroBanner.style.background='';
+    $('dashUserAvatar').style.background='';
   }
 
+  // ── Nav visibility — hide all optional navs first ──
+  ['navStaff','navUsers','navAgentMgmt'].forEach(id=>{
+    const el=$(id); if(el){ el.classList.add('hidden'); el.style.display=''; }
+  });
+
   if(profile.role==='admin'){
-    $('navStaff').classList.remove('hidden'); $('navStaff').style.display='flex';
-    $('navUsers').classList.remove('hidden'); $('navUsers').style.display='flex';
-    $('navAgents').classList.remove('hidden'); $('navAgents').style.display='flex';
+    ['navStaff','navUsers','navAgentMgmt'].forEach(id=>{
+      const el=$(id); if(el){ el.classList.remove('hidden'); el.style.display='flex'; }
+    });
     $('appNewBtn').classList.add('hidden'); $('newAppHeroBtn').classList.add('hidden');
     $('referralWidget').classList.add('hidden');
+    $('staffPortalLabel').textContent='Staff Portal';
+
   } else if(profile.role==='staff'){
     $('navStaff').classList.remove('hidden'); $('navStaff').style.display='flex';
     $('appNewBtn').classList.add('hidden'); $('newAppHeroBtn').classList.add('hidden');
     $('referralWidget').classList.add('hidden');
+    $('staffPortalLabel').textContent='Staff Portal';
+
+  } else if(isAgentRole){
+    $('navStaff').classList.remove('hidden'); $('navStaff').style.display='flex';
+    // Agents CAN create applications — show new app buttons in orange
+    $('appNewBtn').classList.remove('hidden');
+    $('appNewBtn').classList.remove('btn-primary');
+    $('appNewBtn').classList.add('btn-agent');
+    $('newAppHeroBtn').classList.remove('hidden');
+    $('newAppHeroBtn').style.background='rgba(234,88,12,.85)';
+    $('referralWidget').classList.add('hidden');
+    $('staffPortalLabel').textContent='Agent Portal';
+
   } else {
+    // applicant
+    $('appNewBtn').classList.remove('hidden');
+    $('newAppHeroBtn').classList.remove('hidden');
     $('referralWidget').classList.remove('hidden');
-    $('referralDisplay').textContent=profile.referral_code||'--------';
+    $('referralDisplay').textContent=CP.referral_code||'--------';
   }
 
+  // ── Load data ──
   await loadApps();
+
   if(profile.role==='admin'){
     await loadAllUsers();
+    await loadStaff();
+    await loadAgents();
     buildStaffTabs(['applications','requests','deletereqs','log']);
     await loadApprovalRequests();
     await loadDeleteRequests();
+
   } else if(profile.role==='staff'){
-    buildStaffTabs(['myapps','messages']);
-    // Load delete requests for staff (so they can see pending status in openDetail)
+    await loadStaff();
+    buildStaffTabs(['myapps','messages','agentapps']);
     const {data:delReqs}=await sb.from('delete_requests').select('*').eq('status','pending').eq('requested_by',user.id);
     allDeleteRequests=delReqs||[];
-  } else if(profile.role==='agent'){
-    $('navStaff').classList.remove('hidden'); $('navStaff').style.display='flex';
-    $('appNewBtn').classList.add('hidden'); $('newAppHeroBtn').classList.add('hidden');
-    $('referralWidget').classList.add('hidden');
-    buildStaffTabs(['myapps','messages']);
-    const {data:delReqs2}=await sb.from('delete_requests').select('*').eq('status','pending').eq('requested_by',user.id);
-    allDeleteRequests=delReqs2||[];
+
+  } else if(isAgentRole){
+    await loadStaff();
+    buildStaffTabs(['myapps','messages','agentstaffmsg']);
+    const {data:delReqs}=await sb.from('delete_requests').select('*').eq('status','pending').eq('requested_by',user.id);
+    allDeleteRequests=delReqs||[];
   }
-  if(profile.role==='admin'||profile.role==='staff'||profile.role==='agent') await loadStaff();
-  if(profile.role==='admin') await loadAgents();
 
   // ── Seed notification baselines on sign-in ──
   try {
-    if(profile.role==='staff'||profile.role==='agent'){
-      // Load persisted baseline for this user
+    if(profile.role==='staff'||isAgentRole){
       _staffMsgBaseCount = _loadBaseline('staff_base_'+user.id);
       const {count}=await sb.from('profile_notes')
         .select('id',{count:'exact',head:true})
-        .eq('profile_id',user.id)
-        .neq('author_id',user.id);
-      const total=count||0;
-      // Unread = anything above baseline
-      _staffUnreadMsgs=Math.max(0, total - _staffMsgBaseCount);
+        .eq('profile_id',user.id).neq('author_id',user.id);
+      _staffUnreadMsgs=Math.max(0, (count||0) - _staffMsgBaseCount);
     }
     if(profile.role==='admin'){
       _adminMsgBaseCount = _loadBaseline('admin_base_'+user.id);
@@ -1341,48 +1461,38 @@ async function bootApp(user){
         const {count}=await sb.from('profile_notes')
           .select('id',{count:'exact',head:true})
           .in('author_id',nonAdminIds.map(s=>s.id));
-        const total=count||0;
-        _adminUnreadStaffMsgs=Math.max(0, total - _adminMsgBaseCount);
+        _adminUnreadStaffMsgs=Math.max(0, (count||0) - _adminMsgBaseCount);
       }
       await refreshPerUserUnread();
     }
     if(profile.role==='applicant'){
-      // Seed applicant note baseline — unread notes from staff/admin on own apps
       _applicantNotesBaseCount = _loadBaseline('appnotes_base_'+user.id);
       const myAppIds=(allApps||[]).map(a=>a.id);
       if(myAppIds.length){
         const {count}=await sb.from('notes')
           .select('id',{count:'exact',head:true})
-          .in('application_id',myAppIds)
-          .neq('user_id',user.id);
-        const total=count||0;
-        _applicantUnreadNotes=Math.max(0, total - _applicantNotesBaseCount);
+          .in('application_id',myAppIds).neq('user_id',user.id);
+        _applicantUnreadNotes=Math.max(0, (count||0) - _applicantNotesBaseCount);
       }
     }
   } catch(e){ console.warn('Notif seed failed',e); }
 
-  // Seed app notes baseline (all roles) — don't chime for existing notes on login
+  // Seed app notes baseline (all roles)
   try{
     let q=sb.from('notes').select('id',{count:'exact',head:true}).neq('user_id',user.id);
-    if(profile.role==='applicant'||profile.role==='staff'){
+    if(profile.role==='applicant'||profile.role==='staff'||isAgentRole){
       const myAppIds=(allApps||[]).map(a=>a.id);
       if(myAppIds.length) q=q.in('application_id',myAppIds);
       else q=null;
     }
-    if(q){
-      const {count}=await q;
-      _appNotesBaseCount=count||0;
-      _saveBaseline('appnotes_base_'+user.id, _appNotesBaseCount);
-    }
+    if(q){ const {count}=await q; _appNotesBaseCount=count||0; _saveBaseline('appnotes_base_'+user.id,_appNotesBaseCount); }
   } catch(e){ console.warn('App notes seed failed',e); }
 
   updateAllBadges();
 
-  // Play chime on sign-in if there are pre-existing unread notifications
-  if(profile.role==='staff'&&_staffUnreadMsgs>0) startChimeLoop();
+  if((profile.role==='staff'||isAgentRole)&&_staffUnreadMsgs>0) startChimeLoop();
   if(profile.role==='admin'&&(_adminUnreadStaffMsgs>0||allRequests.filter(r=>r.status==='pending').length>0)) startChimeLoop();
 
-  // Start polling every 15s
   clearInterval(_pollTimer);
   _pollTimer=setInterval(pollNotifications, 15000);
 
@@ -1404,12 +1514,14 @@ async function bootApp(user){
 function buildStaffTabs(tabs){
   const bar=$('staffTabBar'); bar.innerHTML='';
   const defs={
-    myapps:{label:'My Applications',id:'stab-myapps'},
-    messages:{label:'Messages',id:'stab-messages'},
-    applications:{label:'All Applications',id:'stab-applications'},
-    requests:{label:'Approval Requests',id:'stab-requests'},
-    deletereqs:{label:'Delete Requests',id:'stab-deletereqs'},
-    log:{label:'Activity Log',id:'stab-log'},
+    myapps:      {label:'My Applications',       id:'stab-myapps'},
+    messages:    {label:'Messages',              id:'stab-messages'},
+    applications:{label:'All Applications',      id:'stab-applications'},
+    requests:    {label:'Approval Requests',     id:'stab-requests'},
+    deletereqs:  {label:'Delete Requests',       id:'stab-deletereqs'},
+    log:         {label:'Activity Log',          id:'stab-log'},
+    agentapps:   {label:"Agent's Applications",  id:'stab-agentapps'},
+    agentstaffmsg:{label:'Staff Messages',       id:'stab-agentstaffmsg'},
   };
   tabs.forEach((t,i)=>{
     const d=defs[t];
@@ -1418,25 +1530,23 @@ function buildStaffTabs(tabs){
 }
 
 function switchStaffTab(tab){
-  ['staffMessagesTab','staffAppsTab','allApplicantsTab','approvalRequestsTab','deleteRequestsTab','activityLogTab'].forEach(id=>$(id)?.classList.add('hidden'));
+  ['staffMessagesTab','staffAppsTab','allApplicantsTab','approvalRequestsTab','deleteRequestsTab','activityLogTab','agentAppsViewTab','agentStaffMsgTab'].forEach(id=>$(id)?.classList.add('hidden'));
   document.querySelectorAll('#staffTabBar .tab-btn').forEach(b=>b.classList.remove('active'));
-  const map={myapps:'staffAppsTab',messages:'staffMessagesTab',applications:'allApplicantsTab',requests:'approvalRequestsTab',deletereqs:'deleteRequestsTab',log:'activityLogTab'};
-  const tabId=`stab-${tab}`;
+  const map={
+    myapps:'staffAppsTab', messages:'staffMessagesTab', applications:'allApplicantsTab',
+    requests:'approvalRequestsTab', deletereqs:'deleteRequestsTab', log:'activityLogTab',
+    agentapps:'agentAppsViewTab', agentstaffmsg:'agentStaffMsgTab'
+  };
   $(map[tab])?.classList.remove('hidden');
-  $(tabId)?.classList.add('active');
+  $(`stab-${tab}`)?.classList.add('active');
 
-  // Clear relevant badges + chime when tab opened
-  if(tab==='messages'&&CP?.role==='staff'){
-    // Set baseline to current total — persist so re-login doesn't re-count
+  // Clear badges on open
+  if(tab==='messages'&&(CP?.role==='staff'||CP?.role==='agent')){
     _staffMsgBaseCount = _staffMsgBaseCount + _staffUnreadMsgs;
     _saveBaseline('staff_base_'+CU.id, _staffMsgBaseCount);
-    _staffUnreadMsgs=0;
-    stopChimeLoop();
-    updateAllBadges();
+    _staffUnreadMsgs=0; stopChimeLoop(); updateAllBadges();
   }
-  if(tab==='requests'&&CP?.role==='admin'){
-    stopChimeLoop();
-  }
+  if(tab==='requests'&&CP?.role==='admin') stopChimeLoop();
 
   if(tab==='myapps') renderStaffAppList();
   else if(tab==='messages') loadStaffMessages();
@@ -1444,15 +1554,21 @@ function switchStaffTab(tab){
   else if(tab==='requests') loadApprovalRequests();
   else if(tab==='deletereqs') loadDeleteRequests();
   else if(tab==='log') loadLogs();
+  else if(tab==='agentapps') renderAgentAppsView();
+  else if(tab==='agentstaffmsg') renderAgentStaffMsgList();
 }
 
 function switchUserTab(tab){
   currentUserTab=tab;
   $('userApplicantsTab').classList.toggle('hidden',tab!=='applicants');
   $('userStaffTab').classList.toggle('hidden',tab!=='staff');
+  $('userAgentTab').classList.toggle('hidden',tab!=='agents');
   $('tabApplicants').classList.toggle('active',tab==='applicants');
   $('tabStaffList').classList.toggle('active',tab==='staff');
-  if(tab==='applicants') renderUserList(); else renderStaffList();
+  $('tabAgentList')?.classList.toggle('active',tab==='agents');
+  if(tab==='applicants') renderUserList();
+  else if(tab==='staff') renderStaffList();
+  else renderAgentList();
 }
 
 // =========================================================
@@ -1461,16 +1577,7 @@ function switchUserTab(tab){
 async function loadApps(){
   let q=sb.from('applications').select('*').order('created_at',{ascending:false});
   if(CP.role==='applicant') q=q.eq('user_id',CU.id);
-  else if(CP.role==='staff'){
-    // Staff sees their own assigned apps + apps assigned to their linked agent
-    const myAgent=allUsers.find(u=>u.role==='agent'&&u.assigned_staff_ids&&u.assigned_staff_ids.includes(CU.id));
-    if(myAgent){
-      // Will be enriched after - for now load own + agent's apps by filter
-      q=q.or(`assigned_staff_id.eq.${CU.id},assigned_agent_id.eq.${myAgent.id}`);
-    } else {
-      q=q.eq('assigned_staff_id',CU.id);
-    }
-  }
+  else if(CP.role==='staff') q=q.eq('assigned_staff_id',CU.id);
   else if(CP.role==='agent') q=q.eq('assigned_agent_id',CU.id);
   const {data,error}=await q;
   if(error){toast('Failed to load applications: '+error.message,'error');return;}
@@ -1483,9 +1590,15 @@ async function loadApps(){
 }
 
 async function loadStaff(){
-  const {data,error}=await sb.from('profiles').select('id,full_name,email,role').in('role',['staff','admin','agent']);
+  const {data,error}=await sb.from('profiles').select('id,full_name,email,role,assigned_agent_id').in('role',['staff','admin','agent']);
   if(error) console.error('loadStaff error:',error);
-  allStaff=data||[];
+  allStaff=(data||[]).filter(u=>u.role==='staff'||u.role==='admin');
+}
+
+async function loadAgents(){
+  const {data,error}=await sb.from('profiles').select('*').eq('role','agent').order('created_at',{ascending:false});
+  if(error) console.error('loadAgents error:',error);
+  allAgents=data||[];
 }
 async function loadAllUsers(){
   const {data,error}=await sb.from('profiles').select('*').order('created_at',{ascending:false});
@@ -1558,7 +1671,7 @@ function updateAllBadges(){
     setBadge('usersBadge', _adminUnreadStaffMsgs);
   }
 
-  if(CP.role==='staff'||CP.role==='agent'){
+  if(CP.role==='staff'){
     const pendingMyReqs=allRequests.filter(r=>String(r.requested_by)===String(CU.id)&&r.status==='pending').length;
     _staffUnreadReqs=pendingMyReqs;
     const total=_staffUnreadMsgs+pendingMyReqs;
@@ -1599,7 +1712,7 @@ function setTabBadge(tabId, count){
 async function pollNotifications(){
   if(!CU||!CP) return;
   try{
-    if(CP.role==='staff'||CP.role==='agent'){
+    if(CP.role==='staff'){
       const {count}=await sb.from('profile_notes')
         .select('id',{count:'exact',head:true})
         .eq('profile_id',CU.id)
@@ -1799,7 +1912,6 @@ async function logAct(action,appId,detail){
 // Refresh all visible data after any mutation
 async function autoRefresh(){
   await loadApps();
-  // Reload delete requests for both roles
   const {data:delReqs}=await sb.from('delete_requests').select('*').eq('status','pending');
   allDeleteRequests=delReqs||[];
   renderDashboard();
@@ -1807,8 +1919,8 @@ async function autoRefresh(){
   if(!$('staffSection').classList.contains('hidden')){
     CP.role==='admin'?renderAdminAppList():renderStaffAppList();
   }
-  if(!$('agentsSection')?.classList.contains('hidden')&&CP.role==='admin'){
-    renderAgentList(); populateAgentSelects();
+  if(!$('agentmgmtSection')?.classList.contains('hidden')&&CP.role==='admin'){
+    await loadAllUsers(); await loadAgents();
   }
   if(!$('usersSection').classList.contains('hidden')&&CP.role==='admin'){
     await loadAllUsers(); renderUserList(); renderStaffList();
@@ -1819,19 +1931,23 @@ async function autoRefresh(){
 //  NAV
 // =========================================================
 function showSection(name){
-  ['dashboard','applications','staff','users','agents'].forEach(s=>{
+  ['dashboard','applications','staff','users','agentmgmt'].forEach(s=>{
     $(s+'Section')?.classList.add('hidden');
-    const nav=$('nav'+s.charAt(0).toUpperCase()+s.slice(1));
-    if(nav) nav.classList.remove('active');
+  });
+  // Clear active nav
+  ['navDashboard','navApplications','navStaff','navUsers','navAgentMgmt'].forEach(id=>{
+    $(id)?.classList.remove('active');
   });
   $(name+'Section')?.classList.remove('hidden');
-  const nav=$('nav'+name.charAt(0).toUpperCase()+name.slice(1));
-  if(nav) nav.classList.add('active');
-  $('pageTitle').textContent={dashboard:'Dashboard',applications:'Applications',staff:'Staff Portal',users:'User Management',agents:'Agent Management'}[name]||name;
+  const navMap={dashboard:'navDashboard',applications:'navApplications',staff:'navStaff',users:'navUsers',agentmgmt:'navAgentMgmt'};
+  $(navMap[name])?.classList.add('active');
+
+  const titles={dashboard:'Dashboard',applications:'Applications',staff:CP?.role==='agent'?'Agent Portal':'Staff Portal',users:'User Management',agentmgmt:'Agent Management'};
+  $('pageTitle').textContent=titles[name]||name;
+
   if(name==='dashboard') renderDashboard();
   if(name==='applications'){
     renderAppList();
-    // Clear applicant unread badge when they visit applications
     if(CP?.role==='applicant'){
       const myAppIds=(allApps||[]).map(a=>a.id);
       if(myAppIds.length){
@@ -1840,27 +1956,21 @@ function showSection(name){
           .then(({count})=>{
             _applicantNotesBaseCount=count||0;
             _saveBaseline('appnotes_base_'+CU.id, _applicantNotesBaseCount);
-            _applicantUnreadNotes=0;
-            updateAllBadges();
+            _applicantUnreadNotes=0; updateAllBadges();
           });
       }
     }
   }
   if(name==='staff'){CP.role==='admin'?switchStaffTab('applications'):switchStaffTab('myapps');}
-  if(name==='agents'){
-    loadAgents().then(()=>{ renderAgentList(); populateAgentSelects(); });
-  }
   if(name==='users'){
     switchUserTab('applicants'); renderUserList();
-    // Set baseline to current total so future polls only count truly new messages
     if(CP?.role==='admin'){
       _adminMsgBaseCount = _adminMsgBaseCount + _adminUnreadStaffMsgs;
       _saveBaseline('admin_base_'+CU.id, _adminMsgBaseCount);
-      _adminUnreadStaffMsgs=0;
-      stopChimeLoop();
-      updateAllBadges();
+      _adminUnreadStaffMsgs=0; stopChimeLoop(); updateAllBadges();
     }
   }
+  if(name==='agentmgmt') loadAgentMgmt();
   closeSidebar();
 }
 
@@ -1975,6 +2085,7 @@ function renderAdminAppList(){
   $('adminAppList').innerHTML=items.map(a=>{
     const p=a._profile||{};
     const assignedStaff=allStaff.find(s=>sstr(s.id)===sstr(a.assigned_staff_id));
+    const assignedAgent=allAgents.find(ag=>sstr(ag.id)===sstr(a.assigned_agent_id));
     return `<div class="app-row" onclick="openDetail('${a.id}')">
       <div style="font-size:.72rem;font-family:monospace;color:var(--muted);background:var(--surface);padding:4px 8px;border-radius:6px;">#${sid(a.id)}</div>
       <div class="app-avatar">${san(a.applicant_name).charAt(0).toUpperCase()}</div>
@@ -1983,7 +2094,8 @@ function renderAdminAppList(){
         <p style="font-size:.75rem;color:var(--muted);">${p.email||a.email||''} · ${hl(a.package,q)}</p>
         ${stageBarSmall(a.stage||1)}
       </div>
-      ${assignedStaff?`<span style="font-size:.72rem;background:#e0f2fe;color:#075985;padding:3px 8px;border-radius:99px;white-space:nowrap;hide-mobile">${san(assignedStaff.full_name)}</span>`:''}
+      ${assignedStaff?`<span style="font-size:.72rem;background:#e0f2fe;color:#075985;padding:3px 8px;border-radius:99px;white-space:nowrap;" class="hide-mobile">${san(assignedStaff.full_name)}</span>`:''}
+      ${assignedAgent?`<span style="font-size:.72rem;background:#ffedd5;color:#c2410c;padding:3px 8px;border-radius:99px;white-space:nowrap;border:1px solid #fdba74;" class="hide-mobile"><i class="fas fa-handshake" style="font-size:.62rem;"></i> ${san(assignedAgent.full_name||assignedAgent.email)}</span>`:''}
       <span style="font-size:.75rem;color:var(--muted);white-space:nowrap;">${fmt(a.created_at)}</span>
     </div>`;
   }).join('');
@@ -2065,18 +2177,27 @@ function renderUserList(){
 
 function renderStaffList(){
   const q=($('staffSearch')?.value||'').trim().toLowerCase();
-  const members=allUsers.filter(u=>(u.role==='staff'||u.role==='admin'||u.role==='agent')&&(!q||(u.full_name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)));
+  const members=allUsers.filter(u=>(u.role==='staff'||u.role==='admin')&&(!q||(u.full_name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)));
   $('staffCount').textContent=members.length;
   $('staffMemberList').innerHTML=members.map(u=>buildUserRow(u)).join('')||'<p style="color:var(--muted);text-align:center;padding:32px;">No staff members found</p>';
+}
+
+function renderAgentList(){
+  const q=($('agentListSearch')?.value||'').trim().toLowerCase();
+  const agents=allUsers.filter(u=>u.role==='agent'&&(!q||(u.full_name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)));
+  $('agentListCount').textContent=agents.length;
+  $('agentMemberList').innerHTML=agents.map(u=>buildUserRow(u)).join('')||'<p style="color:var(--muted);text-align:center;padding:32px;">No agents found</p>';
 }
 
 function buildUserRow(u){
   const assignedCount=allApps.filter(a=>sstr(a.user_id)===sstr(u.id)).length;
   const unread=_perUserUnread[u.id]||0;
   const unreadBadge=unread>0?`<span style="background:#ef4444;color:#fff;border-radius:99px;font-size:.62rem;font-weight:700;padding:2px 6px;min-width:16px;text-align:center;">${unread}</span>`:'';
+  const avatarBg=u.role==='admin'?'#ede9fe':u.role==='staff'?'#e0f2fe':u.role==='agent'?'#ffedd5':'#d1fae5';
+  const avatarClr=u.role==='admin'?'#7c3aed':u.role==='staff'?'#0369a1':u.role==='agent'?'#c2410c':'#047857';
   return `<div class="user-row" style="cursor:pointer;" onclick="openUserProfile('${u.id}')">
     <div style="position:relative;width:40px;height:40px;flex-shrink:0;">
-      <div style="width:40px;height:40px;border-radius:12px;background:${u.role==='admin'?'#ede9fe':u.role==='staff'?'#e0f2fe':'#d1fae5'};color:${u.role==='admin'?'#7c3aed':u.role==='staff'?'#0369a1':'#047857'};display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque',sans-serif;">
+      <div style="width:40px;height:40px;border-radius:12px;background:${avatarBg};color:${avatarClr};display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque',sans-serif;">
         ${san(u.full_name||'?').charAt(0).toUpperCase()}
       </div>
       ${unread>0?`<span style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:99px;font-size:.55rem;font-weight:700;padding:1px 4px;min-width:14px;text-align:center;border:1.5px solid #fff;">${unread}</span>`:''}
@@ -2109,9 +2230,11 @@ async function openUserProfile(userId){
   }
 
   $('upTitle').textContent=(u.full_name||u.email)+' — Profile';
+  const upAvatarBg=u.role==='admin'?'#ede9fe':u.role==='staff'?'#e0f2fe':u.role==='agent'?'#ffedd5':'#d1fae5';
+  const upAvatarClr=u.role==='admin'?'#7c3aed':u.role==='staff'?'#0369a1':u.role==='agent'?'#c2410c':'#047857';
   $('upBody').innerHTML=`
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:22px;padding:18px;background:var(--surface);border-radius:14px;flex-wrap:wrap;">
-      <div style="width:56px;height:56px;border-radius:16px;background:${u.role==='admin'?'#ede9fe':u.role==='staff'?'#e0f2fe':u.role==='agent'?'#ffedd5':'#d1fae5'};color:${u.role==='admin'?'#7c3aed':u.role==='staff'?'#0369a1':u.role==='agent'?'#c2410c':'#047857'};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.4rem;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">
+      <div style="width:56px;height:56px;border-radius:16px;background:${upAvatarBg};color:${upAvatarClr};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.4rem;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">
         ${san(u.full_name||'?').charAt(0).toUpperCase()}
       </div>
       <div>
@@ -2138,7 +2261,7 @@ async function openUserProfile(userId){
       <h5 class="syne" style="font-weight:700;font-size:.9rem;margin-bottom:12px;">Message Thread <span style="font-size:.72rem;font-weight:400;color:var(--muted);font-family:'Manrope';">${(pNotes||[]).length} msg${(pNotes||[]).length!==1?'s':''}</span></h5>
       <div id="pNotesContainer" style="display:flex;flex-direction:column;gap:10px;max-height:260px;overflow-y:auto;margin-bottom:14px;padding-right:4px;">
         ${(pNotes||[]).map(n=>{
-          const isStaffReply=String(n.author_id)===String(userId)||n.author?.role==='agent';
+          const isStaffReply=String(n.author_id)===String(userId);
           const role=n.author?.role||'admin'; const name=n.author?.full_name||'Admin';
           return `<div style="display:flex;flex-direction:column;align-items:${isStaffReply?'flex-end':'flex-start'};">
             <div style="max-width:85%;background:${isStaffReply?'#e0f2fe':'var(--surface)'};color:var(--text);border:1px solid ${isStaffReply?'#bae6fd':'var(--border)'};border-radius:${isStaffReply?'14px 14px 4px 14px':'14px 14px 14px 4px'};padding:10px 14px;">
@@ -2160,14 +2283,14 @@ async function openUserProfile(userId){
   $('upFooter').innerHTML=`
     <button onclick="closeUserModal()" class="btn btn-ghost">Close</button>
     ${u.role==='applicant'?`
-      <button onclick="promoteToStaff('${userId}')" class="btn btn-secondary" style="font-size:.83rem;"><i class="fas fa-user-shield"></i> Promote to Staff</button>
-      <button onclick="promoteToAgent('${userId}')" class="btn" style="font-size:.83rem;background:#fff7ed;color:#c2410c;border:1.5px solid #fed7aa;"><i class="fas fa-user-tie"></i> Promote to Agent</button>`:''}
+      <button onclick="promoteToStaff('${userId}')" class="btn btn-secondary" style="font-size:.83rem;"><i class="fas fa-user-shield"></i> → Staff</button>
+      <button onclick="promoteUser('${userId}','agent')" class="btn btn-agent" style="font-size:.83rem;"><i class="fas fa-handshake"></i> → Agent</button>`:''}
     ${u.role==='staff'?`
-      <button onclick="promoteToAgent('${userId}')" class="btn" style="font-size:.83rem;background:#fff7ed;color:#c2410c;border:1.5px solid #fed7aa;"><i class="fas fa-user-tie"></i> Make Agent</button>
-      <button onclick="demoteToApplicant('${userId}')" class="btn btn-ghost" style="font-size:.83rem;color:var(--muted);"><i class="fas fa-user-minus"></i> Demote to Applicant</button>`:''}
+      <button onclick="promoteUser('${userId}','agent')" class="btn btn-agent" style="font-size:.83rem;"><i class="fas fa-handshake"></i> → Agent</button>
+      <button onclick="demoteToApplicant('${userId}')" class="btn btn-ghost" style="font-size:.83rem;color:var(--muted);"><i class="fas fa-user-minus"></i> → Applicant</button>`:''}
     ${u.role==='agent'?`
-      <button onclick="demoteAgentToStaff('${userId}')" class="btn btn-secondary" style="font-size:.83rem;"><i class="fas fa-user-shield"></i> Demote to Staff</button>
-      <button onclick="demoteToApplicant('${userId}')" class="btn btn-ghost" style="font-size:.83rem;color:var(--muted);"><i class="fas fa-user-minus"></i> Demote to Applicant</button>`:''}
+      <button onclick="promoteUser('${userId}','staff')" class="btn btn-secondary" style="font-size:.83rem;"><i class="fas fa-user-tie"></i> → Staff</button>
+      <button onclick="demoteToApplicant('${userId}')" class="btn btn-ghost" style="font-size:.83rem;color:var(--muted);"><i class="fas fa-user-minus"></i> → Applicant</button>`:''}
     ${u.role!=='admin'?`<button onclick="deleteAccount('${userId}')" class="btn btn-danger" style="font-size:.83rem;"><i class="fas fa-trash-alt"></i> Delete Account</button>`:''}`;
   $('userProfileModal').classList.remove('hidden');
 }
@@ -2268,8 +2391,7 @@ async function openDetail(appId){
   const isAdmin=CP.role==='admin';
   const isStaff=CP.role==='staff';
   const isOwner=CP.role==='applicant'&&String(app.user_id)===String(CU.id);
-  const isAgent=CP.role==='agent';
-  const canEdit=isAdmin||(isStaff&&String(app.assigned_staff_id)===String(CU.id))||(isAgent&&String(app.assigned_agent_id)===String(CU.id))||isOwner;
+  const canEdit=isAdmin||(isStaff&&String(app.assigned_staff_id)===String(CU.id))||isOwner;
 
   // Check for pending request on this app
   const pendingReq=allRequests.find(r=>String(r.application_id)===selAppId&&r.status==='pending');
@@ -2333,18 +2455,18 @@ async function openDetail(appId){
 
   if(isAdmin){
     $('assignSection').classList.remove('hidden');
-    const staffOnly=allStaff.filter(s=>s.role==='staff');
-    $('assignSelect').innerHTML='<option value="">— Unassigned —</option>'+staffOnly.map(s=>`<option value="${s.id}" ${String(s.id)===String(app.assigned_staff_id)?'selected':''}>${san(s.full_name)} (staff)</option>`).join('');
+    $('assignSelect').innerHTML='<option value="">— Unassigned —</option>'+allStaff.map(s=>`<option value="${s.id}" ${String(s.id)===String(app.assigned_staff_id)?'selected':''}>${san(s.full_name)} (${s.role})</option>`).join('');
+    $('assignAgentSelect').innerHTML='<option value="">— Unassigned —</option>'+allAgents.map(ag=>`<option value="${ag.id}" ${sstr(ag.id)===sstr(app.assigned_agent_id)?'selected':''}>${san(ag.full_name||ag.email)}</option>`).join('');
   } else { $('assignSection').classList.add('hidden'); }
 
-  if(isAdmin||isStaff||isAgent){
+  if(isAdmin||isStaff){
     $('stageControlSection').classList.remove('hidden');
     renderStageControls(currentStage, pendingReq, pendedReq, isAdmin);
   } else { $('stageControlSection').classList.add('hidden'); }
 
   $('uploadInput').value='';
   if($('uploadSupportingInput')) $('uploadSupportingInput').value='';
-  const canUpload=isAdmin||isStaff||isAgent||isOwner;
+  const canUpload=isAdmin||isStaff||isOwner;
   $('uploadBtnRow')?.classList.toggle('hidden',!canUpload);
   if(canUpload) $('uploadBtnRow').style.display='flex';
   _currentDocTab='applicant';
@@ -2373,8 +2495,8 @@ async function openDetail(appId){
 
   // Delete buttons
   $('deleteAppBtn').classList.toggle('hidden',!isAdmin);
-  $('requestDeleteBtn').classList.toggle('hidden',!(isStaff||isAgent)||!!pendingDelReq);
-  $('deleteRequestedBanner').classList.toggle('hidden',!(isStaff||isAgent)||!pendingDelReq);
+  $('requestDeleteBtn').classList.toggle('hidden',!isStaff||!!pendingDelReq);
+  $('deleteRequestedBanner').classList.toggle('hidden',!isStaff||!pendingDelReq);
 
   $('detailModal').classList.remove('hidden');
 }
@@ -2509,6 +2631,17 @@ async function assignStaff(){
   const sname=sid2?allStaff.find(s=>sstr(s.id)===sstr(sid2))?.full_name||'Staff':'nobody';
   await logAct('assign',selAppId,`Assigned #${sid(selAppId)} to ${sname}`);
   toast(`Assigned to ${sname}`); await autoRefresh(); openDetail(selAppId);
+}
+
+async function assignAgent(){
+  const agentId=$('assignAgentSelect').value;
+  const {error}=await sb.from('applications').update({assigned_agent_id:agentId||null}).eq('id',selAppId);
+  if(error){toast('Error: '+error.message,'error');return;}
+  const ag=agentId?allAgents.find(a=>sstr(a.id)===sstr(agentId)):null;
+  const aname=ag?.full_name||ag?.email||'nobody';
+  await logAct('assign',selAppId,`Assigned #${sid(selAppId)} to agent ${aname}`);
+  toast(ag?`Agent assigned: ${aname}`:'Agent unassigned');
+  await autoRefresh(); openDetail(selAppId);
 }
 
 async function deleteApplication(){
@@ -2722,7 +2855,7 @@ async function refreshNotes(isOwner,isStaff,isAdmin){
   const {data}=await sb.from('notes').select('*,author:user_id(full_name,role)').eq('application_id',selAppId).order('created_at',{ascending:true});
   const notes=data||[];
   $('notesList').innerHTML=notes.length?notes.map(n=>`
-    <div class="note-bubble ${n.author?.role==='agent'?'agent':n.author?.role||'applicant'}">
+    <div class="note-bubble ${n.author?.role||'applicant'}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
         <span class="badge badge-${n.author?.role||'applicant'}" style="font-size:.7rem;">${san(n.author?.full_name||'Unknown')}</span>
         <span style="font-size:.72rem;color:var(--muted);">${fmt(n.created_at)}</span>
@@ -2757,7 +2890,7 @@ async function addNote(){
   if(error){toast('Error: '+error.message,'error');return;}
   await logAct('note',selAppId,`Note on #${sid(selAppId)}: ${content.substring(0,60)}`);
   $('noteInput').value=''; toast('Note added');
-  const isOwner=CP.role==='applicant', isStaff=CP.role==='staff'||CP.role==='agent', isAdmin=CP.role==='admin';
+  const isOwner=CP.role==='applicant', isStaff=CP.role==='staff', isAdmin=CP.role==='admin';
   await refreshNotes(isOwner,isStaff,isAdmin);
   // Advance our baseline so we don't chime on our own note
   _appNotesBaseCount=(_appNotesBaseCount||0)+1;
@@ -2864,7 +2997,10 @@ async function createApplication(){
   const fullName=[firstName,middleName,lastName].filter(Boolean).join(' ');
   const btn=$('naSubmitBtn'); setBtnLoading(btn,true);
   try {
-    const {data:app,error}=await sb.from('applications').insert([{user_id:CU.id,applicant_name:fullName,email,phone,package:pkg,status:'pending',stage:1}]).select().single();
+    const insData={user_id:CU.id,applicant_name:fullName,email,phone,package:pkg,status:'pending',stage:1};
+    // Agent auto-assigns themselves
+    if(CP.role==='agent') insData.assigned_agent_id=CU.id;
+    const {data:app,error}=await sb.from('applications').insert([insData]).select().single();
     if(error) throw error;
 
     // Upload applicant documents
@@ -2885,6 +3021,257 @@ async function createApplication(){
     toast('Application submitted!'); closeNewAppModal(); await autoRefresh();
   } catch(e){$('newAppErr').textContent=e.message;$('newAppErr').classList.remove('hidden');}
   finally{setBtnLoading(btn,false);}
+}
+
+// =========================================================
+//  AGENT MANAGEMENT (Admin) — Module 4
+// =========================================================
+
+async function loadAgentMgmt(){
+  await loadAllUsers();
+  await loadStaff();
+  await loadAgents();
+  switchAgentMgmtTab('overview');
+}
+
+function switchAgentMgmtTab(tab){
+  const tabs={overview:'amOverviewTab',assign:'amAssignTab',staffmap:'amStaffMapTab',promote:'amPromoteTab'};
+  Object.values(tabs).forEach(id=>$(id)?.classList.add('hidden'));
+  document.querySelectorAll('#agentmgmtSection .tab-btn').forEach(b=>b.classList.remove('active'));
+  $(tabs[tab])?.classList.remove('hidden');
+  $('amtab-'+tab)?.classList.add('active');
+
+  if(tab==='overview')  renderAgentOverview();
+  if(tab==='assign')    populateAmAssign();
+  if(tab==='staffmap')  populateAmStaffMap();
+  if(tab==='promote')   renderAmPromoteList();
+}
+
+function renderAgentOverview(){
+  const list=$('agentOverviewList');
+  const empty=$('agentOverviewEmpty');
+  if(!allAgents||!allAgents.length){
+    list.innerHTML=''; empty?.classList.remove('hidden'); return;
+  }
+  empty?.classList.add('hidden');
+
+  list.innerHTML=allAgents.map(agent=>{
+    // Apps assigned to this agent
+    const agentApps=allApps.filter(a=>sstr(a.assigned_agent_id)===sstr(agent.id));
+    // Staff assigned to this agent (from profiles)
+    const assignedStaff=(allUsers||[]).filter(u=>u.role==='staff'&&sstr(u.assigned_agent_id)===sstr(agent.id));
+
+    const appPreview=agentApps.slice(0,3).map(a=>`<span style="font-size:.75rem;background:#fff7ed;color:#9a3412;padding:2px 8px;border-radius:99px;border:1px solid #fed7aa;">${san(a.applicant_name)}</span>`).join(' ');
+    const appOverflow=agentApps.length>3?`<span style="font-size:.75rem;color:var(--muted);font-style:italic;">+${agentApps.length-3} more</span>`:'';
+    const staffNames=assignedStaff.length
+      ? assignedStaff.map(s=>`<span style="font-size:.75rem;background:#e0f2fe;color:#075985;padding:2px 8px;border-radius:99px;border:1px solid #bae6fd;">${san(s.full_name||s.email)}</span>`).join(' ')
+      : '<span style="font-size:.75rem;color:var(--muted);font-style:italic;">No staff assigned</span>';
+
+    return `<div class="card" style="padding:22px;border-left:4px solid #f97316;">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap;">
+        <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.3rem;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">${san(agent.full_name||'?').charAt(0).toUpperCase()}</div>
+        <div style="flex:1;">
+          <h4 class="syne" style="font-size:1rem;font-weight:700;">${san(agent.full_name||'—')}</h4>
+          <p style="font-size:.8rem;color:var(--muted);">${san(agent.email)}</p>
+        </div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;">
+          <div style="text-align:center;background:#fff7ed;border-radius:10px;padding:10px 18px;">
+            <p class="syne" style="font-size:1.5rem;font-weight:800;color:#ea580c;">${agentApps.length}</p>
+            <p style="font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Apps</p>
+          </div>
+          <div style="text-align:center;background:#e0f2fe;border-radius:10px;padding:10px 18px;">
+            <p class="syne" style="font-size:1.5rem;font-weight:800;color:#0369a1;">${assignedStaff.length}</p>
+            <p style="font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Staff</p>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" class="detail-grid">
+        <div>
+          <p style="font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Assigned Staff</p>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;">${staffNames}</div>
+        </div>
+        <div>
+          <p style="font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Applications ${agentApps.length>3?`(${agentApps.length} total)`:''}</p>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;">${appPreview||'<span style="font-size:.75rem;color:var(--muted);font-style:italic;">No applications yet</span>'} ${appOverflow}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function populateAmAssign(){
+  const appSel=$('amAppSelect');
+  const agentSel=$('amAgentSelect');
+  if(!appSel||!agentSel) return;
+
+  appSel.innerHTML='<option value="">— Choose application —</option>'+
+    allApps.map(a=>`<option value="${a.id}">${san(a.applicant_name)} (#${sid(a.id)})</option>`).join('');
+
+  agentSel.innerHTML='<option value="">— Unassigned —</option>'+
+    allAgents.map(ag=>`<option value="${ag.id}">${san(ag.full_name||ag.email)}</option>`).join('');
+
+  $('amCurrentAssignment').style.display='none';
+}
+
+function amUpdateAppAgent(){
+  const appId=$('amAppSelect').value;
+  if(!appId){$('amCurrentAssignment').style.display='none';return;}
+  const app=allApps.find(a=>sstr(a.id)===sstr(appId));
+  if(!app) return;
+  const agentSel=$('amAgentSelect');
+
+  if(app.assigned_agent_id){
+    const ag=allAgents.find(a=>sstr(a.id)===sstr(app.assigned_agent_id));
+    const box=$('amCurrentAssignment');
+    box.style.display='block';
+    box.innerHTML=`<i class="fas fa-info-circle"></i> Currently assigned to <strong>${san(ag?.full_name||ag?.email||'Unknown Agent')}</strong>`;
+    // Pre-select current agent in dropdown
+    agentSel.value=app.assigned_agent_id;
+  } else {
+    $('amCurrentAssignment').style.display='none';
+    agentSel.value='';
+  }
+}
+
+async function amSaveAppAssignment(){
+  const appId=$('amAppSelect').value;
+  const agentId=$('amAgentSelect').value;
+  if(!appId){toast('Please select an application','error');return;}
+
+  const {error}=await sb.from('applications').update({assigned_agent_id:agentId||null}).eq('id',appId);
+  if(error){toast('Error: '+error.message,'error');return;}
+
+  const app=allApps.find(a=>sstr(a.id)===sstr(appId));
+  const ag=agentId?allAgents.find(a=>sstr(a.id)===sstr(agentId)):null;
+  const detail=ag
+    ? `Assigned app #${sid(appId)} (${app?.applicant_name||''}) to agent ${ag.full_name||ag.email}`
+    : `Unassigned app #${sid(appId)} (${app?.applicant_name||''}) from agent`;
+
+  await logAct('assign',appId,detail);
+  toast(ag?`Assigned to ${ag.full_name||ag.email}`:'Unassigned from agent');
+  await autoRefresh();
+  populateAmAssign();
+}
+
+function populateAmStaffMap(){
+  const staffSel=$('amStaffSelect');
+  const agentSel=$('amStaffAgentSelect');
+  if(!staffSel||!agentSel) return;
+
+  const staffOnly=(allUsers||[]).filter(u=>u.role==='staff');
+  staffSel.innerHTML='<option value="">— Choose staff —</option>'+
+    staffOnly.map(s=>`<option value="${s.id}">${san(s.full_name||s.email)}</option>`).join('');
+
+  agentSel.innerHTML='<option value="">— Unassigned —</option>'+
+    allAgents.map(ag=>`<option value="${ag.id}">${san(ag.full_name||ag.email)}</option>`).join('');
+
+  renderStaffAgentMap();
+}
+
+function renderStaffAgentMap(){
+  const container=$('staffAgentMapList'); if(!container) return;
+  const staffOnly=(allUsers||[]).filter(u=>u.role==='staff');
+  if(!staffOnly.length){container.innerHTML='';return;}
+
+  const rows=staffOnly.map(s=>{
+    const ag=s.assigned_agent_id?allAgents.find(a=>sstr(a.id)===sstr(s.assigned_agent_id)):null;
+    return `<div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:12px;">
+      <div style="width:36px;height:36px;border-radius:10px;background:#e0f2fe;color:#0369a1;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">${san(s.full_name||'?').charAt(0).toUpperCase()}</div>
+      <div style="flex:1;">
+        <p style="font-weight:600;font-size:.875rem;">${san(s.full_name||s.email)}</p>
+        <p style="font-size:.75rem;color:var(--muted);">${san(s.email)}</p>
+      </div>
+      <i class="fas fa-arrow-right" style="color:var(--muted);font-size:.8rem;"></i>
+      ${ag
+        ? `<div style="display:flex;align-items:center;gap:8px;"><div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;font-family:'Bricolage Grotesque',sans-serif;">${san(ag.full_name||'?').charAt(0).toUpperCase()}</div><span style="font-size:.83rem;font-weight:600;color:#ea580c;">${san(ag.full_name||ag.email)}</span></div>`
+        : `<span style="font-size:.78rem;color:var(--muted);font-style:italic;">No agent</span>`}
+    </div>`;
+  }).join('');
+
+  container.innerHTML=`<div class="card" style="padding:20px;">
+    <h4 class="syne" style="font-size:.9rem;font-weight:700;margin-bottom:14px;color:var(--muted);">Current Staff → Agent Assignments</h4>
+    <div style="display:flex;flex-direction:column;gap:8px;">${rows}</div>
+  </div>`;
+}
+
+async function amSaveStaffAssignment(){
+  const staffId=$('amStaffSelect').value;
+  const agentId=$('amStaffAgentSelect').value;
+  if(!staffId){toast('Please select a staff member','error');return;}
+
+  const {error}=await sb.from('profiles').update({assigned_agent_id:agentId||null}).eq('id',staffId);
+  if(error){toast('Error: '+error.message,'error');return;}
+
+  const staff=(allUsers||[]).find(u=>sstr(u.id)===sstr(staffId));
+  const ag=agentId?allAgents.find(a=>sstr(a.id)===sstr(agentId)):null;
+  const detail=ag
+    ? `Assigned staff ${staff?.full_name||staff?.email||staffId} to agent ${ag.full_name||ag.email}`
+    : `Unassigned staff ${staff?.full_name||staff?.email||staffId} from agent`;
+
+  await logAct('assign',null,detail);
+  toast(ag?`Staff linked to ${ag.full_name||ag.email}`:'Staff unassigned from agent');
+  await loadAllUsers();
+  populateAmStaffMap();
+}
+
+async function promoteUser(userId, newRole){
+  const u=(allUsers||[]).find(u=>sstr(u.id)===sstr(userId));
+  const name=u?.full_name||u?.email||userId;
+  const labels={applicant:'Applicant',staff:'Staff',agent:'Agent'};
+  const label=labels[newRole]||newRole;
+  if(!confirm(`Change ${name}'s role to ${label}? They must sign out and back in.`)) return;
+
+  const {error}=await sb.rpc('update_user_role',{target_user_id:userId,new_role:newRole});
+  if(error){toast('Error: '+error.message,'error');return;}
+
+  await logAct('promote',null,`Changed ${name} role → ${label}`);
+  toast(`${name} is now ${label} — they must sign out and back in`);
+  await loadAllUsers(); await loadStaff(); await loadAgents();
+  // Refresh whichever list is currently visible
+  if(!$('usersSection')?.classList.contains('hidden')){
+    renderUserList(); renderStaffList(); renderAgentList();
+  }
+  if(!$('agentmgmtSection')?.classList.contains('hidden')) renderAmPromoteList();
+  closeUserModal();
+}
+
+function renderAmPromoteList(){
+  const container=$('amPromoteList'); if(!container) return;
+  const nonAdmins=(allUsers||[]).filter(u=>u.role!=='admin').sort((a,b)=>(a.full_name||'').localeCompare(b.full_name||''));
+
+  if(!nonAdmins.length){container.innerHTML='<p style="color:var(--muted);text-align:center;padding:32px;">No users found</p>';return;}
+
+  const roleBadgeStyle={
+    applicant:'background:#d1fae5;color:#065f46',
+    staff:    'background:#e0f2fe;color:#075985',
+    agent:    'background:#fff7ed;color:#9a3412'
+  };
+
+  container.innerHTML=nonAdmins.map(u=>{
+    const badge=`<span style="${roleBadgeStyle[u.role]||''};padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:600;">${u.role.charAt(0).toUpperCase()+u.role.slice(1)}</span>`;
+
+    let btns='';
+    if(u.role==='applicant'){
+      btns=`<button onclick="promoteUser('${u.id}','staff')" class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem;"><i class="fas fa-user-tie"></i> → Staff</button>
+            <button onclick="promoteUser('${u.id}','agent')" class="btn" style="padding:6px 14px;font-size:.78rem;background:#fff7ed;color:#9a3412;border:1.5px solid #fed7aa;"><i class="fas fa-handshake"></i> → Agent</button>`;
+    } else if(u.role==='staff'){
+      btns=`<button onclick="promoteUser('${u.id}','agent')" class="btn" style="padding:6px 14px;font-size:.78rem;background:#fff7ed;color:#9a3412;border:1.5px solid #fed7aa;"><i class="fas fa-handshake"></i> → Agent</button>
+            <button onclick="promoteUser('${u.id}','applicant')" class="btn btn-ghost" style="padding:6px 14px;font-size:.78rem;color:var(--muted);border:1.5px solid var(--border);"><i class="fas fa-user-minus"></i> → Applicant</button>`;
+    } else if(u.role==='agent'){
+      btns=`<button onclick="promoteUser('${u.id}','staff')" class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem;"><i class="fas fa-user-tie"></i> → Staff</button>
+            <button onclick="promoteUser('${u.id}','applicant')" class="btn btn-ghost" style="padding:6px 14px;font-size:.78rem;color:var(--muted);border:1.5px solid var(--border);"><i class="fas fa-user-minus"></i> → Applicant</button>`;
+    }
+
+    return `<div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:12px;flex-wrap:wrap;">
+      <div style="width:38px;height:38px;border-radius:11px;background:${u.role==='agent'?'linear-gradient(135deg,#fb923c,#ea580c)':u.role==='staff'?'#e0f2fe':'#d1fae5'};color:${u.role==='agent'?'#fff':u.role==='staff'?'#0369a1':'#047857'};display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">${san(u.full_name||'?').charAt(0).toUpperCase()}</div>
+      <div style="flex:1;min-width:0;">
+        <p style="font-weight:600;font-size:.875rem;">${san(u.full_name||'—')}</p>
+        <p style="font-size:.75rem;color:var(--muted);">${san(u.email)}</p>
+      </div>
+      ${badge}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">${btns}</div>
+    </div>`;
+  }).join('');
 }
 
 // =========================================================
@@ -2951,172 +3338,174 @@ function renderPagination(containerId,total,current,onPage){
   $(containerId).innerHTML=h;
 }
 
-
 // =========================================================
-//  AGENT MANAGEMENT
+//  AGENT PORTAL — MODULE 5
 // =========================================================
-async function loadAgents(){
-  const {data,error}=await sb.from('profiles').select('*').eq('role','agent').order('created_at',{ascending:false});
-  if(error) console.error('loadAgents:',error);
-  allAgents=data||[];
-}
 
-function switchAgentTab(tab){
-  currentAgentTab=tab;
-  ['agentListTab','agentAssignTab','agentStaffTab'].forEach(id=>$(id)?.classList.add('hidden'));
-  document.querySelectorAll('#agentsSection .tab-btn').forEach(b=>b.classList.remove('active'));
-  const map={list:'agentListTab',assign:'agentAssignTab',stafflink:'agentStaffTab'};
-  const tabMap={list:'tabAgentList',assign:'tabAgentAssign',stafflink:'tabAgentStaff'};
-  $(map[tab])?.classList.remove('hidden');
-  $(tabMap[tab])?.classList.add('active');
-  if(tab==='list') renderAgentList();
-  if(tab==='assign'){ populateAgentSelects(); renderAgentAppsAssignment(); }
-  if(tab==='stafflink'){ populateAgentSelects(); renderAgentStaffLinks(); }
-}
+async function renderAgentAppsView(){
+  const list=$('agentAppsViewList');
+  const empty=$('agentAppsViewEmpty');
+  const countEl=$('agentAppsViewCount');
+  if(!list) return;
 
-function renderAgentList(){
-  const q=($('agentSearch')?.value||'').trim().toLowerCase();
-  const agents=allAgents.filter(u=>!q||(u.full_name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q));
-  $('agentCount').textContent=agents.length;
-  if(!agents.length){
-    $('agentMemberList').innerHTML='<p style="color:var(--muted);text-align:center;padding:48px;font-size:.875rem;">No agents yet. Promote an applicant or staff member to agent from User Management.</p>';
+  // For a staff member: CP.assigned_agent_id is their linked agent
+  // For an agent viewing their own apps, assigned_agent_id is CU.id
+  const agentId = CP.role==='agent' ? CU.id : CP.assigned_agent_id;
+
+  if(!agentId){
+    list.innerHTML='';
+    empty?.classList.remove('hidden');
+    if(countEl) countEl.textContent='0';
     return;
   }
-  $('agentMemberList').innerHTML=agents.map(u=>{
-    const agentApps=allApps.filter(a=>sstr(a.assigned_agent_id)===sstr(u.id));
-    const assignedStaff=allUsers.filter(s=>s.role==='staff'&&(s.assigned_agent_id===u.id||sstr(s.assigned_agent_id)===sstr(u.id)));
-    const unread=_perUserUnread[u.id]||0;
-    return `<div class="user-row" style="cursor:pointer;border-left:3px solid #ea580c;" onclick="openUserProfile('${u.id}')">
-      <div style="position:relative;width:40px;height:40px;flex-shrink:0;">
-        <div style="width:40px;height:40px;border-radius:12px;background:#ffedd5;color:#c2410c;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque',sans-serif;">${san(u.full_name||'?').charAt(0).toUpperCase()}</div>
-        ${unread>0?`<span style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:99px;font-size:.55rem;font-weight:700;padding:1px 4px;min-width:14px;text-align:center;border:1.5px solid #fff;">${unread}</span>`:''}
+
+  // Load apps assigned to this agent fresh from DB (read-only, staff may not have them cached)
+  const {data:apps,error}=await sb.from('applications')
+    .select('*')
+    .eq('assigned_agent_id',agentId)
+    .order('created_at',{ascending:false});
+  if(error){list.innerHTML=`<p style="color:var(--danger);padding:12px;">Error loading apps: ${error.message}</p>`;return;}
+
+  // Get agent name for the banner
+  const {data:agentProfile}=await sb.from('profiles').select('full_name,email').eq('id',agentId).single();
+  const agentName=agentProfile?.full_name||agentProfile?.email||'Agent';
+
+  if(countEl) countEl.textContent=(apps||[]).length;
+
+  if(!(apps||[]).length){
+    list.innerHTML='';
+    empty?.classList.remove('hidden');
+    return;
+  }
+  empty?.classList.add('hidden');
+
+  list.innerHTML=`
+    <div style="background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid #fed7aa;border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">${san(agentName).charAt(0).toUpperCase()}</div>
+      <div>
+        <p style="font-weight:700;font-size:.875rem;color:#7c2d12;">Viewing ${san(agentName)}'s Applications</p>
+        <p style="font-size:.75rem;color:#9a3412;">${(apps||[]).length} application${(apps||[]).length!==1?'s':''} · Read-only</p>
       </div>
-      <div style="flex:1;min-width:0;">
-        <p style="font-weight:600;font-size:.875rem;">${san(u.full_name)}</p>
-        <p style="font-size:.75rem;color:var(--muted);">${san(u.email)}</p>
-        <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
-          <span style="font-size:.7rem;background:#ffedd5;color:#c2410c;padding:2px 8px;border-radius:99px;font-weight:600;"><i class="fas fa-folder"></i> ${agentApps.length} app${agentApps.length!==1?'s':''}</span>
-          <span style="font-size:.7rem;background:#e0f2fe;color:#075985;padding:2px 8px;border-radius:99px;font-weight:600;"><i class="fas fa-users"></i> ${assignedStaff.length} staff linked</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+    ${apps.map(a=>`
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:12px;opacity:.95;">
+        <div style="font-size:.72rem;font-family:monospace;color:var(--muted);background:var(--surface);padding:4px 8px;border-radius:6px;white-space:nowrap;">#${sid(a.id)}</div>
+        <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--brand-lite),var(--brand));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">${san(a.applicant_name).charAt(0).toUpperCase()}</div>
+        <div style="flex:1;min-width:0;">
+          <p style="font-weight:600;font-size:.875rem;">${san(a.applicant_name)}</p>
+          <p style="font-size:.75rem;color:var(--muted);">${san(a.package||'—')} · ${fmt(a.created_at)}</p>
+          ${stageBarSmall(a.stage||1)}
         </div>
-      </div>
-      <span class="badge badge-agent">Agent</span>
-      <div style="display:flex;gap:6px;">
-        <button onclick="event.stopPropagation();promoteAgentToAdmin('${u.id}')" class="btn btn-ghost" style="padding:5px 10px;font-size:.73rem;" title="Promote to Admin"><i class="fas fa-arrow-up" style="color:#7c3aed;"></i></button>
-        <button onclick="event.stopPropagation();demoteAgentToStaff('${u.id}')" class="btn btn-ghost" style="padding:5px 10px;font-size:.73rem;" title="Demote to Staff"><i class="fas fa-arrow-down"></i></button>
-      </div>
+        <span class="badge badge-${a.status||'pending'}">${(a.status||'pending').charAt(0).toUpperCase()+(a.status||'pending').slice(1)}</span>
+        <span style="font-size:.72rem;background:#fff7ed;color:#9a3412;padding:3px 8px;border-radius:99px;border:1px solid #fed7aa;white-space:nowrap;"><i class="fas fa-lock" style="font-size:.65rem;"></i> Read-only</span>
+      </div>`).join('')}
     </div>`;
-  }).join('');
 }
 
-function populateAgentSelects(){
-  const opts='<option value="">— Pick an agent —</option>'+allAgents.map(a=>`<option value="${a.id}">${san(a.full_name)}</option>`).join('');
-  const s1=$('agentAssignSelect'); if(s1) s1.innerHTML=opts;
-  const s2=$('agentStaffAgentSelect'); if(s2) s2.innerHTML=opts;
-}
+async function renderAgentStaffMsgList(){
+  const container=$('agentStaffMsgList'); if(!container) return;
 
-function renderAgentAppsAssignment(){
-  const agentId=$('agentAssignSelect')?.value;
-  const q=($('agentAppSearch')?.value||'').trim().toLowerCase();
-  const container=$('agentAppsAssignList'); if(!container) return;
-  if(!agentId){container.innerHTML='<p style="color:var(--muted);font-size:.83rem;padding:16px;">Select an agent above.</p>';return;}
+  // For agent: find all staff where assigned_agent_id = CU.id
+  const {data:staffList,error}=await sb.from('profiles')
+    .select('id,full_name,email,role')
+    .eq('assigned_agent_id',CU.id)
+    .eq('role','staff');
 
-  // All apps (admin sees all)
-  const allAdminApps=allApps; // admin already loaded all apps
-  const filtered=allAdminApps.filter(a=>!q||(a.applicant_name||'').toLowerCase().includes(q)||(a.package||'').toLowerCase().includes(q));
-  if(!filtered.length){container.innerHTML='<p style="color:var(--muted);font-size:.83rem;padding:16px;">No applications found.</p>';return;}
+  if(error){container.innerHTML=`<p style="color:var(--danger);padding:12px;">Error: ${error.message}</p>`;return;}
 
-  container.innerHTML=filtered.map(a=>{
-    const isAssigned=sstr(a.assigned_agent_id)===sstr(agentId);
-    return `<div class="app-row" style="${isAssigned?'border-color:#fb923c;background:#fff7ed;':''}">
-      <div style="font-size:.72rem;font-family:monospace;color:var(--muted);background:var(--surface);padding:4px 8px;border-radius:6px;">#${sid(a.id)}</div>
-      <div class="app-avatar" style="${isAssigned?'background:linear-gradient(135deg,#f97316,#c2410c);':'background:linear-gradient(135deg,var(--brand-lite),var(--brand));'}">${san(a.applicant_name).charAt(0).toUpperCase()}</div>
-      <div style="flex:1;min-width:0;">
-        <p style="font-weight:600;font-size:.875rem;">${san(a.applicant_name)}</p>
-        <p style="font-size:.75rem;color:var(--muted);">${san(a.package)} · ${fmt(a.created_at)}</p>
-        ${isAssigned?'<span style="font-size:.7rem;background:#ffedd5;color:#c2410c;padding:2px 8px;border-radius:99px;font-weight:600;margin-top:2px;display:inline-block;"><i class="fas fa-user-tie"></i> Assigned to this agent</span>':''}
-      </div>
-      <button onclick="toggleAgentAssignment('${a.id}','${agentId}',${isAssigned})" class="btn ${isAssigned?'btn-warn':'btn-secondary'}" style="font-size:.78rem;padding:6px 14px;white-space:nowrap;">
-        ${isAssigned?'<i class="fas fa-times"></i> Unassign':'<i class="fas fa-user-tie"></i> Assign to Agent'}
-      </button>
+  if(!(staffList||[]).length){
+    container.innerHTML=`<div style="text-align:center;padding:48px 24px;color:var(--muted);">
+      <div style="font-size:3rem;margin-bottom:12px;">👥</div>
+      <p style="font-weight:600;">No staff assigned to you yet</p>
+      <p style="font-size:.83rem;margin-top:4px;">Ask admin to assign staff members to your agent account</p>
     </div>`;
-  }).join('');
-}
+    return;
+  }
 
-async function toggleAgentAssignment(appId, agentId, isAssigned){
-  const newVal=isAssigned?null:agentId;
-  const {error}=await sb.from('applications').update({assigned_agent_id:newVal}).eq('id',appId);
-  if(error){toast('Error: '+error.message,'error');return;}
-  const agent=allAgents.find(a=>sstr(a.id)===sstr(agentId));
-  await logAct('assign',appId,isAssigned?`Unassigned app #${sid(appId)} from agent ${agent?.full_name||agentId}`:`Assigned app #${sid(appId)} to agent ${agent?.full_name||agentId}`);
-  toast(isAssigned?'Application unassigned from agent':'Application assigned to agent');
-  await loadApps();
-  renderAgentAppsAssignment();
-}
-
-function renderAgentStaffLinks(){
-  const agentId=$('agentStaffAgentSelect')?.value;
-  const container=$('agentStaffLinkList'); if(!container) return;
-  if(!agentId){container.innerHTML='<p style="color:var(--muted);font-size:.83rem;padding:16px;">Select an agent above.</p>';return;}
-  const staffOnly=allUsers.filter(u=>u.role==='staff');
-  if(!staffOnly.length){container.innerHTML='<p style="color:var(--muted);font-size:.83rem;padding:16px;">No staff members found.</p>';return;}
-  container.innerHTML=staffOnly.map(s=>{
-    const isLinked=sstr(s.assigned_agent_id)===sstr(agentId);
-    return `<div class="user-row" style="${isLinked?'border-color:#fb923c;background:#fff7ed;':''}">
-      <div style="width:40px;height:40px;border-radius:12px;background:#e0f2fe;color:#0369a1;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">${san(s.full_name||'?').charAt(0).toUpperCase()}</div>
+  // Get unread counts per staff profile (notes from staff that agent hasn't authored)
+  container.innerHTML=staffList.map(s=>`
+    <div onclick="openAgentThread('${s.id}','${san(s.full_name||s.email)}')"
+         style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:all .2s;"
+         onmouseover="this.style.borderColor='#fb923c';this.style.boxShadow='0 4px 16px rgba(251,146,60,.12)'"
+         onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+      <div style="width:44px;height:44px;border-radius:12px;background:#e0f2fe;color:#0369a1;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">${san(s.full_name||'?').charAt(0).toUpperCase()}</div>
       <div style="flex:1;min-width:0;">
-        <p style="font-weight:600;font-size:.875rem;">${san(s.full_name)}</p>
+        <p style="font-weight:600;font-size:.875rem;">${san(s.full_name||'—')}</p>
         <p style="font-size:.75rem;color:var(--muted);">${san(s.email)}</p>
-        ${isLinked?'<span style="font-size:.7rem;background:#ffedd5;color:#c2410c;padding:2px 8px;border-radius:99px;font-weight:600;margin-top:2px;display:inline-block;"><i class="fas fa-link"></i> Linked to this agent</span>':''}
       </div>
       <span class="badge badge-staff">Staff</span>
-      <button onclick="toggleStaffAgentLink('${s.id}','${agentId}',${isLinked})" class="btn ${isLinked?'btn-warn':'btn-secondary'}" style="font-size:.78rem;padding:6px 14px;white-space:nowrap;">
-        ${isLinked?'<i class="fas fa-unlink"></i> Unlink':'<i class="fas fa-link"></i> Link to Agent'}
-      </button>
+      <i class="fas fa-chevron-right" style="color:var(--muted);font-size:.75rem;"></i>
+    </div>`).join('');
+}
+
+function openAgentThread(profileId, name){
+  _agentThreadProfileId=profileId;
+  $('agentThreadTitle').textContent=`Thread — ${name}`;
+  $('agentThreadMessages').innerHTML='<p style="text-align:center;color:var(--muted);font-size:.83rem;padding:20px;">Loading…</p>';
+  $('agentThreadInput').value='';
+  $('agentThreadModal').classList.remove('hidden');
+  loadAgentThread();
+}
+
+async function loadAgentThread(){
+  if(!_agentThreadProfileId) return;
+  const container=$('agentThreadMessages'); if(!container) return;
+
+  const {data:notes,error}=await sb.from('profile_notes')
+    .select('*,author:author_id(full_name,role)')
+    .eq('profile_id',_agentThreadProfileId)
+    .order('created_at',{ascending:true});
+
+  if(error){container.innerHTML=`<p style="color:var(--danger);font-size:.83rem;padding:12px;">Error: ${error.message}</p>`;return;}
+
+  if(!(notes||[]).length){
+    container.innerHTML=`<div style="text-align:center;padding:32px 16px;color:var(--muted);">
+      <div style="font-size:2.5rem;margin-bottom:8px;">💬</div>
+      <p style="font-size:.83rem;font-weight:600;">No messages yet</p>
+      <p style="font-size:.75rem;margin-top:4px;">Start the conversation below</p>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML=notes.map(n=>{
+    const isMe=sstr(n.author_id)===sstr(CU.id);
+    const role=n.author?.role||'staff';
+    const name=n.author?.full_name||(isMe?'You':'Staff');
+    return `<div style="display:flex;flex-direction:column;align-items:${isMe?'flex-end':'flex-start'};">
+      <div style="max-width:82%;background:${isMe?'linear-gradient(135deg,#fb923c,#ea580c)':'var(--surface)'};color:${isMe?'#fff':'var(--text)'};border:1px solid ${isMe?'transparent':'var(--border)'};border-radius:${isMe?'14px 14px 4px 14px':'14px 14px 14px 4px'};padding:11px 14px;">
+        <p style="font-size:.83rem;line-height:1.55;">${san(n.content)}</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:0 4px;">
+        <span class="badge badge-${role}" style="font-size:.65rem;">${san(name)}</span>
+        <span style="font-size:.7rem;color:var(--muted);">${fmt(n.created_at)}</span>
+      </div>
     </div>`;
   }).join('');
+
+  container.scrollTop=container.scrollHeight;
 }
 
-async function toggleStaffAgentLink(staffId, agentId, isLinked){
-  const newVal=isLinked?null:agentId;
-  const {error}=await sb.from('profiles').update({assigned_agent_id:newVal}).eq('id',staffId);
-  if(error){toast('Error: '+error.message,'error');return;}
-  const agent=allAgents.find(a=>sstr(a.id)===sstr(agentId));
-  const staff=allUsers.find(u=>sstr(u.id)===sstr(staffId));
-  await logAct('assign',null,isLinked?`Unlinked staff ${staff?.full_name} from agent ${agent?.full_name}`:`Linked staff ${staff?.full_name} to agent ${agent?.full_name}`);
-  toast(isLinked?'Staff unlinked from agent':'Staff linked to agent');
-  await loadAllUsers();
-  renderAgentStaffLinks();
-  renderAgentList();
-}
+async function sendAgentThreadMsg(){
+  if(!_agentThreadProfileId) return;
+  const input=$('agentThreadInput');
+  const content=(input?.value||'').trim();
+  if(!content) return;
 
-async function promoteToAgent(userId){
-  if(!confirm('Promote to Independent Agent? They must sign out and back in.')) return;
-  const {error}=await sb.rpc('update_user_role',{target_user_id:userId,new_role:'agent'});
-  if(error){toast('Error: '+error.message,'error');return;}
-  toast('Promoted to Independent Agent — user must sign out and back in');
-  await logAct('promote',null,`Promoted user ${userId} to agent`);
-  await loadAllUsers(); await loadStaff(); await loadAgents();
-  closeUserModal(); renderAgentList(); renderStaffList();
-}
-
-async function demoteAgentToStaff(userId){
-  if(!confirm('Demote agent to Staff? They must sign out and back in.')) return;
-  const {error}=await sb.rpc('update_user_role',{target_user_id:userId,new_role:'staff'});
-  if(error){toast('Error: '+error.message,'error');return;}
-  toast('Agent demoted to Staff — user must sign out and back in');
-  await logAct('promote',null,`Demoted agent ${userId} to staff`);
-  await loadAllUsers(); await loadStaff(); await loadAgents();
-  closeUserModal(); renderAgentList(); renderStaffList();
-}
-
-async function promoteAgentToAdmin(userId){
-  if(!confirm('Promote this agent to Admin? This gives full system access.')) return;
-  const {error}=await sb.rpc('update_user_role',{target_user_id:userId,new_role:'admin'});
-  if(error){toast('Error: '+error.message,'error');return;}
-  toast('Promoted to Admin — user must sign out and back in');
-  await logAct('promote',null,`Promoted agent ${userId} to admin`);
-  await loadAllUsers(); await loadStaff(); await loadAgents();
-  renderAgentList();
+  const btn=$('agentThreadModal').querySelector('[onclick="sendAgentThreadMsg()"]');
+  if(btn) setBtnLoading(btn,true);
+  try {
+    const {error}=await sb.from('profile_notes').insert([{
+      profile_id:_agentThreadProfileId,
+      author_id:CU.id,
+      content
+    }]);
+    if(error){toast('Error: '+error.message,'error');return;}
+    input.value='';
+    await loadAgentThread();
+  } finally {
+    if(btn) setBtnLoading(btn,false);
+  }
 }
 
 // =========================================================
@@ -3124,8 +3513,8 @@ async function promoteAgentToAdmin(userId){
 // =========================================================
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    ['detailModal','newAppModal','userProfileModal','referrerModal','codeOwnerModal'].forEach(id=>$(id)?.classList.add('hidden'));
-    selAppId=null; editMode=false; closeSidebar();
+    ['detailModal','newAppModal','userProfileModal','referrerModal','codeOwnerModal','agentThreadModal'].forEach(id=>$(id)?.classList.add('hidden'));
+    selAppId=null; editMode=false; _agentThreadProfileId=null; closeSidebar();
   }
 });
 
