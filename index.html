@@ -1058,6 +1058,24 @@ const SUPABASE_URL = 'https://asupemsmwzrovucpvqyt.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_h3Kb-0pknHcYItkGeyEI-Q_urYDrPD9';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+/*
+  REQUIRED SUPABASE SETUP — run this SQL in your Supabase SQL Editor:
+
+  CREATE OR REPLACE FUNCTION update_user_role(target_user_id uuid, new_role text)
+  RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+  BEGIN
+    UPDATE profiles SET role = new_role WHERE id = target_user_id;
+  END;
+  $$;
+
+  Also add this RLS policy on profiles so admin can update directly:
+  CREATE POLICY "Admin can update any profile"
+  ON profiles FOR UPDATE
+  USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+*/
+
 // =========================================================
 //  STAGES
 // =========================================================
@@ -1383,9 +1401,10 @@ async function bootApp(user){
     sidebar.classList.remove('agent-theme');
     document.body.classList.remove('agent-focus');
     $('sidebarAvatar').style.background='';
+    // Restore green gradient explicitly — setting '' clears inline style and loses the background
     const heroBanner=document.querySelector('#dashboardSection > div');
-    if(heroBanner) heroBanner.style.background='';
-    $('dashUserAvatar').style.background='';
+    if(heroBanner) heroBanner.style.background='linear-gradient(135deg,var(--brand),var(--brand-mid))';
+    $('dashUserAvatar').style.background='linear-gradient(135deg,var(--brand-lite),var(--brand))';
   }
 
   // ── Nav visibility — hide all optional navs first ──
@@ -2367,10 +2386,10 @@ async function addProfileNote(userId){
 
 async function promoteToStaff(userId){
   if(!confirm('Promote to Staff? They must sign out and back in.')) return;
-  const {error}=await sb.from('profiles').update({role:'staff'}).eq('id',userId);
-  if(error){
-    const {error:rpcErr}=await sb.rpc('update_user_role',{target_user_id:userId,new_role:'staff'});
-    if(rpcErr){toast('Error: '+rpcErr.message,'error');return;}
+  const {error:rpcErr}=await sb.rpc('update_user_role',{target_user_id:userId,new_role:'staff'});
+  if(rpcErr){
+    const {error:dbErr}=await sb.from('profiles').update({role:'staff'}).eq('id',userId);
+    if(dbErr){toast('Error: '+rpcErr.message,'error');return;}
   }
   toast('Promoted to staff — user must sign out and back in');
   await logAct('promote',null,`Promoted user ${userId} to staff`);
@@ -2380,10 +2399,10 @@ async function promoteToStaff(userId){
 
 async function demoteToApplicant(userId){
   if(!confirm('Demote to Applicant? They must sign out and back in.')) return;
-  const {error}=await sb.from('profiles').update({role:'applicant'}).eq('id',userId);
-  if(error){
-    const {error:rpcErr}=await sb.rpc('update_user_role',{target_user_id:userId,new_role:'applicant'});
-    if(rpcErr){toast('Error: '+rpcErr.message,'error');return;}
+  const {error:rpcErr}=await sb.rpc('update_user_role',{target_user_id:userId,new_role:'applicant'});
+  if(rpcErr){
+    const {error:dbErr}=await sb.from('profiles').update({role:'applicant'}).eq('id',userId);
+    if(dbErr){toast('Error: '+rpcErr.message,'error');return;}
   }
   toast('Demoted — user must sign out and back in');
   await logAct('promote',null,`Demoted user ${userId} to applicant`);
@@ -3289,22 +3308,35 @@ async function promoteUser(userId, newRole){
   const label=labels[newRole]||newRole;
   if(!confirm(`Change ${name}'s role to ${label}? They must sign out and back in.`)) return;
 
-  // Try direct profiles update first (works with publishable key + RLS allow for admin)
-  const {error}=await sb.from('profiles').update({role:newRole}).eq('id',userId);
-  if(error){
-    console.warn('Direct update failed, trying RPC:', error.message);
-    const {error:rpcErr}=await sb.rpc('update_user_role',{target_user_id:userId,new_role:newRole});
-    if(rpcErr){toast('Error: '+rpcErr.message,'error');console.error('promoteUser failed:',rpcErr);return;}
+  let success=false;
+
+  // Attempt 1: RPC (update_user_role — needs to exist in Supabase as a SECURITY DEFINER function)
+  const {error:rpcErr}=await sb.rpc('update_user_role',{target_user_id:userId,new_role:newRole});
+  if(!rpcErr){
+    success=true;
+  } else {
+    console.warn('[AMS] RPC update_user_role failed:',rpcErr.message,'— trying direct update');
+    // Attempt 2: Direct profiles table update (works if RLS has admin update policy)
+    const {error:dbErr}=await sb.from('profiles').update({role:newRole}).eq('id',userId);
+    if(!dbErr){
+      success=true;
+    } else {
+      console.error('[AMS] Direct update also failed:',dbErr.message);
+      toast(`❌ Role update failed: ${rpcErr.message}. Ask your Supabase admin to create the update_user_role RPC or add an admin UPDATE policy on profiles.`,'error');
+      return;
+    }
   }
 
-  await logAct('promote',null,`Changed ${name} role → ${label}`);
-  toast(`${name} is now ${label} — they must sign out and back in`);
-  await loadAllUsers(); await loadStaff(); await loadAgents();
-  if(!$('usersSection')?.classList.contains('hidden')){
-    renderUserList(); renderStaffList(); renderAgentList();
+  if(success){
+    await logAct('promote',null,`Changed ${name} role → ${label}`);
+    toast(`✅ ${name} is now ${label} — they must sign out and back in`);
+    await loadAllUsers(); await loadStaff(); await loadAgents();
+    if(!$('usersSection')?.classList.contains('hidden')){
+      renderUserList(); renderStaffList(); renderAgentList();
+    }
+    if(!$('agentmgmtSection')?.classList.contains('hidden')) renderAmPromoteList();
+    closeUserModal();
   }
-  if(!$('agentmgmtSection')?.classList.contains('hidden')) renderAmPromoteList();
-  closeUserModal();
 }
 
 function renderAmPromoteList(){
