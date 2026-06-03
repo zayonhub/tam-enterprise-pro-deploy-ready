@@ -1572,7 +1572,7 @@ function switchUserTab(tab){
   $('tabAgentList')?.classList.toggle('active',tab==='agents');
   if(tab==='applicants') renderUserList();
   else if(tab==='staff') renderStaffList();
-  else { loadAgents().then(()=>renderAgentList()); }
+  else { loadAgents().then(()=>{ renderAgentList(); }); }
 }
 
 // =========================================================
@@ -1968,6 +1968,7 @@ function showSection(name){
   if(name==='staff'){CP.role==='admin'?switchStaffTab('applications'):switchStaffTab('myapps');}
   if(name==='users'){
     switchUserTab('applicants'); renderUserList();
+    loadAgents(); // pre-warm agents so the Agents tab is ready immediately
     if(CP?.role==='admin'){
       _adminMsgBaseCount = _adminMsgBaseCount + _adminUnreadStaffMsgs;
       _saveBaseline('admin_base_'+CU.id, _adminMsgBaseCount);
@@ -2230,12 +2231,16 @@ function renderStaffList(){
 
 function renderAgentList(){
   const q=($('agentListSearch')?.value||'').trim().toLowerCase();
-  const agents=allUsers.filter(u=>u.role==='agent'&&(!q||(u.full_name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)));
+  // Use allAgents (always fresh from loadAgents) instead of allUsers which may miss agents
+  const agents=(allAgents||[]).filter(u=>!q||(u.full_name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q));
   $('agentListCount').textContent=agents.length;
   $('agentMemberList').innerHTML=agents.map(u=>buildUserRow(u)).join('')||'<p style="color:var(--muted);text-align:center;padding:32px;">No agents found</p>';
 }
 
 function buildUserRow(u){
+  // Ensure we have the full profile (allUsers may not contain agents in all states)
+  const fullU=(allUsers.find(x=>sstr(x.id)===sstr(u.id))||allAgents.find(x=>sstr(x.id)===sstr(u.id))||u);
+  u=fullU;
   const assignedCount=allApps.filter(a=>sstr(a.user_id)===sstr(u.id)).length;
   const unread=_perUserUnread[u.id]||0;
   const unreadBadge=unread>0?`<span style="background:#ef4444;color:#fff;border-radius:99px;font-size:.62rem;font-weight:700;padding:2px 6px;min-width:16px;text-align:center;">${unread}</span>`:'';
@@ -2259,7 +2264,8 @@ function buildUserRow(u){
 }
 
 async function openUserProfile(userId){
-  const u=allUsers.find(u=>sstr(u.id)===sstr(userId)); if(!u) return;
+  // Look up in allUsers first, then fallback to allAgents (agents may not always be in allUsers)
+  const u=(allUsers.find(u=>sstr(u.id)===sstr(userId))||allAgents.find(u=>sstr(u.id)===sstr(userId))); if(!u) return;
   const userApps=allApps.filter(a=>sstr(a.user_id)===sstr(userId));
   const {data:pNotes}=await sb.from('profile_notes').select('*,author:author_id(full_name,role)').eq('profile_id',userId).order('created_at',{ascending:true});
 
@@ -2358,7 +2364,8 @@ async function promoteToStaff(userId){
   if(error){toast('Error: '+error.message,'error');return;}
   toast('Promoted to staff — user must sign out and back in');
   await logAct('promote',null,`Promoted user ${userId} to staff`);
-  await loadAllUsers(); await loadStaff(); closeUserModal(); renderStaffList();
+  await loadAllUsers(); await loadStaff(); await loadAgents();
+  closeUserModal(); renderStaffList(); renderAgentList(); renderUserList();
 }
 
 async function demoteToApplicant(userId){
@@ -2367,7 +2374,8 @@ async function demoteToApplicant(userId){
   if(error){toast('Error: '+error.message,'error');return;}
   toast('Demoted — user must sign out and back in');
   await logAct('promote',null,`Demoted user ${userId} to applicant`);
-  await loadAllUsers(); await loadStaff(); closeUserModal(); renderUserList();
+  await loadAllUsers(); await loadStaff(); await loadAgents();
+  closeUserModal(); renderUserList(); renderStaffList(); renderAgentList();
 }
 
 // =========================================================
