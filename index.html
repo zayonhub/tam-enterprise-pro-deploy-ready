@@ -239,6 +239,7 @@
     .modal-footer { padding:12px 16px; flex-wrap:wrap; }
     .detail-grid { grid-template-columns:1fr !important; }
     .stat-grid-4 { grid-template-columns:1fr 1fr !important; }
+    .stat-grid-5 { grid-template-columns:1fr 1fr !important; }
     .dash-grid { grid-template-columns:1fr !important; }
     .auth-body { padding:20px 24px 28px; }
     .auth-header { padding:28px 24px 22px; }
@@ -248,6 +249,7 @@
   }
   @media(max-width:480px) {
     .stat-grid-4 { grid-template-columns:1fr !important; }
+    .stat-grid-5 { grid-template-columns:1fr !important; }
     .tab-btn { padding:7px 12px; font-size:.75rem; }
     .btn { padding:8px 14px; font-size:.83rem; }
   }
@@ -425,6 +427,8 @@
 
           <!-- USER INFO CARD (replaces approval ring) -->
           <div style="display:flex;flex-direction:column;gap:18px;">
+            <!-- Agent quick-access panel (admin only, rendered by renderDashboard) -->
+            <div id="dashAgentPanel" class="hidden"></div>
             <div class="card" style="padding:22px;">
               <div style="display:flex;flex-direction:column;align-items:center;gap:14px;">
                 <div id="dashUserAvatar" style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--brand-lite),var(--brand));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.6rem;font-family:'Bricolage Grotesque',sans-serif;">U</div>
@@ -1986,14 +1990,56 @@ function renderDashboard(){
   const active=inProgress+notStarted;
   $('heroSub').textContent=`${active} active application${active!==1?'s':''}`;
 
+  // ── Admin agent quick-access panel ──────────────────────────────────
+  const agentPanel=$('dashAgentPanel');
+  if(agentPanel){
+    if(CP?.role==='admin'){
+      agentPanel.classList.remove('hidden');
+      const agentCount=allAgents.length;
+      const agentAppsCount=allApps.filter(a=>a.assigned_agent_id).length;
+      agentPanel.innerHTML=`
+        <div class="card" style="padding:22px;border-left:4px solid #f97316;background:linear-gradient(135deg,#fff7ed,#ffedd5);">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;"><i class="fas fa-handshake"></i></div>
+            <div><h3 class="syne" style="font-size:.95rem;font-weight:700;color:#7c2d12;">Agent Management</h3><p style="font-size:.75rem;color:#9a3412;">Manage independent agents</p></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+            <div style="background:#fff;border-radius:10px;padding:12px;text-align:center;border:1px solid #fed7aa;">
+              <p class="syne" style="font-size:1.5rem;font-weight:800;color:#ea580c;">${agentCount}</p>
+              <p style="font-size:.72rem;color:#9a3412;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Agents</p>
+            </div>
+            <div style="background:#fff;border-radius:10px;padding:12px;text-align:center;border:1px solid #fed7aa;">
+              <p class="syne" style="font-size:1.5rem;font-weight:800;color:#ea580c;">${agentAppsCount}</p>
+              <p style="font-size:.72rem;color:#9a3412;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Assigned Apps</p>
+            </div>
+          </div>
+          <button onclick="showSection('agentmgmt')" class="btn" style="width:100%;justify-content:center;background:#ea580c;color:#fff;font-size:.83rem;">
+            <i class="fas fa-arrow-right"></i> Open Agent Management
+          </button>
+          <button onclick="showSection('agentmgmt');setTimeout(()=>switchAgentMgmtTab('promote'),200)" class="btn btn-ghost" style="width:100%;justify-content:center;font-size:.8rem;margin-top:6px;color:#9a3412;border:1.5px solid #fdba74;background:#fff;">
+            <i class="fas fa-user-plus"></i> Promote a User → Agent
+          </button>
+        </div>`;
+    } else {
+      agentPanel.classList.add('hidden');
+    }
+  }
+
   const statsData=[
     {label:'Total',val:total,color:'#3b82f6',icon:'fa-folder',bg:'#eff6ff'},
     {label:'Approved',val:approved,color:'#22c55e',icon:'fa-check-circle',bg:'#f0fdf4'},
     {label:'In Progress',val:inProgress,color:'#f59e0b',icon:'fa-clock',bg:'#fffbeb'},
     {label:'Rejected',val:rejected,color:'#ef4444',icon:'fa-times-circle',bg:'#fef2f2'},
   ];
+  // Admin sees agents count as 5th card
+  if(CP?.role==='admin'){
+    statsData.push({label:'Agents',val:allAgents.length,color:'#ea580c',icon:'fa-handshake',bg:'#fff7ed',click:"showSection('agentmgmt')"});
+    $('statsGrid').style.gridTemplateColumns='repeat(5,1fr)';
+  } else {
+    $('statsGrid').style.gridTemplateColumns='';
+  }
   $('statsGrid').innerHTML=statsData.map((s,i)=>`
-    <div class="card stat-card fade-up" style="animation-delay:${i*.06}s;">
+    <div class="card stat-card fade-up" style="animation-delay:${i*.06}s;${s.click?'cursor:pointer;border:1.5px solid #fed7aa;':''}" ${s.click?`onclick="${s.click}"`:''}>`+`
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="stat-icon" style="background:${s.bg};color:${s.color};"><i class="fas ${s.icon}"></i></div>
         <span class="syne" style="font-size:1.75rem;font-weight:800;color:${s.color};">${s.val}</span>
@@ -2280,18 +2326,19 @@ async function openUserProfile(userId){
       </div>
     </div>`;
 
+  const _isAdminViewer = CP?.role==='admin';
   $('upFooter').innerHTML=`
     <button onclick="closeUserModal()" class="btn btn-ghost">Close</button>
-    ${u.role==='applicant'?`
+    ${_isAdminViewer && u.role==='applicant' ? `
       <button onclick="promoteToStaff('${userId}')" class="btn btn-secondary" style="font-size:.83rem;"><i class="fas fa-user-shield"></i> → Staff</button>
-      <button onclick="promoteUser('${userId}','agent')" class="btn btn-agent" style="font-size:.83rem;"><i class="fas fa-handshake"></i> → Agent</button>`:''}
-    ${u.role==='staff'?`
+      <button onclick="promoteUser('${userId}','agent')" class="btn btn-agent" style="font-size:.83rem;"><i class="fas fa-handshake"></i> → Agent</button>` : ''}
+    ${_isAdminViewer && u.role==='staff' ? `
       <button onclick="promoteUser('${userId}','agent')" class="btn btn-agent" style="font-size:.83rem;"><i class="fas fa-handshake"></i> → Agent</button>
-      <button onclick="demoteToApplicant('${userId}')" class="btn btn-ghost" style="font-size:.83rem;color:var(--muted);"><i class="fas fa-user-minus"></i> → Applicant</button>`:''}
-    ${u.role==='agent'?`
+      <button onclick="demoteToApplicant('${userId}')" class="btn btn-ghost" style="font-size:.83rem;color:var(--muted);"><i class="fas fa-user-minus"></i> → Applicant</button>` : ''}
+    ${_isAdminViewer && u.role==='agent' ? `
       <button onclick="promoteUser('${userId}','staff')" class="btn btn-secondary" style="font-size:.83rem;"><i class="fas fa-user-tie"></i> → Staff</button>
-      <button onclick="demoteToApplicant('${userId}')" class="btn btn-ghost" style="font-size:.83rem;color:var(--muted);"><i class="fas fa-user-minus"></i> → Applicant</button>`:''}
-    ${u.role!=='admin'?`<button onclick="deleteAccount('${userId}')" class="btn btn-danger" style="font-size:.83rem;"><i class="fas fa-trash-alt"></i> Delete Account</button>`:''}`;
+      <button onclick="demoteToApplicant('${userId}')" class="btn btn-ghost" style="font-size:.83rem;color:var(--muted);"><i class="fas fa-user-minus"></i> → Applicant</button>` : ''}
+    ${_isAdminViewer && u.role!=='admin' ? `<button onclick="deleteAccount('${userId}')" class="btn btn-danger" style="font-size:.83rem;"><i class="fas fa-trash-alt"></i> Delete Account</button>` : ''}`;
   $('userProfileModal').classList.remove('hidden');
 }
 function closeUserModal(){$('userProfileModal').classList.add('hidden');}
