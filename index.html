@@ -685,7 +685,7 @@
           <div class="card" style="padding:24px;">
             <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;">
               <div><h2 class="syne" style="font-size:1.1rem;font-weight:700;">Independent Agents</h2><p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="agentListCount">0</span> agents</p></div>
-              <div style="position:relative;"><input type="text" id="agentListSearch" class="inp inp-sm" style="padding-left:32px;width:220px;" placeholder="Search agents…" oninput="renderAgentUserList()"><i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i></div>
+              <div style="position:relative;"><input type="text" id="agentListSearch" class="inp inp-sm" style="padding-left:32px;width:220px;" placeholder="Search agents…" oninput="renderAgentList()"><i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;"></i></div>
             </div>
             <div id="agentMemberList" style="display:flex;flex-direction:column;gap:8px;"></div>
           </div>
@@ -1568,7 +1568,7 @@ function switchUserTab(tab){
   $('tabAgentList')?.classList.toggle('active',tab==='agents');
   if(tab==='applicants') renderUserList();
   else if(tab==='staff') renderStaffList();
-  else renderAgentList();
+  else { loadAgents().then(()=>renderAgentList()); }
 }
 
 // =========================================================
@@ -1923,7 +1923,7 @@ async function autoRefresh(){
     await loadAllUsers(); await loadAgents();
   }
   if(!$('usersSection').classList.contains('hidden')&&CP.role==='admin'){
-    await loadAllUsers(); renderUserList(); renderStaffList();
+    await loadAllUsers(); await loadAgents(); renderUserList(); renderStaffList(); renderAgentList();
   }
 }
 
