@@ -1710,6 +1710,15 @@ function updateAllBadges(){
     setTabBadge('stab-myapps', pendingMyReqs);
   }
 
+  if(CP.role==='agent'){
+    const pendingMyReqs=allRequests.filter(r=>String(r.requested_by)===String(CU.id)&&r.status==='pending').length;
+    _staffUnreadReqs=pendingMyReqs;
+    const total=_staffUnreadMsgs+pendingMyReqs;
+    setBadge('staffBadge', total);
+    setTabBadge('stab-messages', _staffUnreadMsgs);
+    setTabBadge('stab-myapps', pendingMyReqs);
+  }
+
   if(CP.role==='applicant'){
     // Badge on Applications nav — unread notes from staff/admin
     setBadge('appsBadge', _applicantUnreadNotes);
@@ -1781,6 +1790,49 @@ async function pollNotifications(){
       }
       const {data:reqs}=await sb.from('stage_requests').select('*').in('status',['pending','pended']).order('created_at',{ascending:false});
       allRequests=reqs||[];
+      updateAllBadges();
+    }
+
+    if(CP.role==='agent'){
+      // Poll messages (same as staff)
+      const {count}=await sb.from('profile_notes')
+        .select('id',{count:'exact',head:true})
+        .eq('profile_id',CU.id)
+        .neq('author_id',CU.id);
+      const total=count||0;
+      const unread=Math.max(0, total - _staffMsgBaseCount);
+      const prev=_staffUnreadMsgs;
+      _staffUnreadMsgs=unread;
+      updateAllBadges();
+      if(unread>prev) startChimeLoop();
+      if(_staffMessagesOpen()) loadStaffMessages();
+
+      // Check for stage request decisions since last poll
+      const {data:myReqs}=await sb.from('stage_requests')
+        .select('*').eq('requested_by',CU.id)
+        .order('updated_at',{ascending:false}).limit(20);
+      const prevReqs=allRequests.filter(r=>String(r.requested_by)===String(CU.id));
+      const newlyDecided=(myReqs||[]).filter(r=>{
+        if(r.status==='pending') return false;
+        const old=prevReqs.find(p=>String(p.id)===String(r.id));
+        return old&&old.status==='pending';
+      });
+      if(newlyDecided.length){
+        newlyDecided.forEach(r=>{
+          if(r.status==='approved'){
+            toast(`✅ Stage ${r.requested_stage} approved for #${sid(r.application_id)}`,'success');
+            startChimeLoop();
+          } else if(r.status==='pended'){
+            toast(`⏸ Stage request pended by admin for #${sid(r.application_id)}`,'info');
+            startChimeLoop();
+          } else if(r.status==='rejected'){
+            toast(`❌ Stage request rejected for #${sid(r.application_id)}`,'error');
+            startChimeLoop();
+          }
+        });
+      }
+      const {data:agentReqs}=await sb.from('stage_requests').select('*').in('status',['pending','pended']).order('created_at',{ascending:false});
+      allRequests=agentReqs||[];
       updateAllBadges();
     }
 
@@ -2477,8 +2529,9 @@ async function openDetail(appId){
 
   const isAdmin=CP.role==='admin';
   const isStaff=CP.role==='staff';
+  const isAgent=CP.role==='agent';
   const isOwner=CP.role==='applicant'&&String(app.user_id)===String(CU.id);
-  const canEdit=isAdmin||(isStaff&&String(app.assigned_staff_id)===String(CU.id))||isOwner;
+  const canEdit=isAdmin||(isStaff&&String(app.assigned_staff_id)===String(CU.id))||(isAgent&&String(app.assigned_agent_id)===String(CU.id))||isOwner;
 
   // Check for pending request on this app
   const pendingReq=allRequests.find(r=>String(r.application_id)===selAppId&&r.status==='pending');
@@ -2546,20 +2599,20 @@ async function openDetail(appId){
     $('assignAgentSelect').innerHTML='<option value="">— Unassigned —</option>'+allAgents.map(ag=>`<option value="${ag.id}" ${sstr(ag.id)===sstr(app.assigned_agent_id)?'selected':''}>${san(ag.full_name||ag.email)}</option>`).join('');
   } else { $('assignSection').classList.add('hidden'); }
 
-  if(isAdmin||isStaff){
+  if(isAdmin||isStaff||isAgent){
     $('stageControlSection').classList.remove('hidden');
     renderStageControls(currentStage, pendingReq, pendedReq, isAdmin);
   } else { $('stageControlSection').classList.add('hidden'); }
 
   $('uploadInput').value='';
   if($('uploadSupportingInput')) $('uploadSupportingInput').value='';
-  const canUpload=isAdmin||isStaff||isOwner;
+  const canUpload=isAdmin||isStaff||isAgent||isOwner;
   $('uploadBtnRow')?.classList.toggle('hidden',!canUpload);
   if(canUpload) $('uploadBtnRow').style.display='flex';
   _currentDocTab='applicant';
   switchDocTab('applicant');
   await refreshDocs();
-  await refreshNotes(isOwner,isStaff,isAdmin);
+  await refreshNotes(isOwner,isStaff,isAdmin,isAgent);
 
   // Referral info
   const rp=app._profile||CP;
@@ -2568,7 +2621,7 @@ async function openDetail(appId){
   const refCode=$('detailRefCode');
   refCode.textContent=refCodeVal;
   // Make clickable for staff/admin
-  if((isAdmin||isStaff)&&refCodeVal!=='—'){
+  if((isAdmin||isStaff||isAgent)&&refCodeVal!=='—'){
     refCode.style.cursor='pointer'; refCode.title='Click to view profile';
     refCode.style.textDecoration='underline dotted';
   } else { refCode.style.cursor='default'; refCode.title=''; refCode.style.textDecoration=''; }
@@ -2582,16 +2635,17 @@ async function openDetail(appId){
 
   // Delete buttons
   $('deleteAppBtn').classList.toggle('hidden',!isAdmin);
-  $('requestDeleteBtn').classList.toggle('hidden',!isStaff||!!pendingDelReq);
-  $('deleteRequestedBanner').classList.toggle('hidden',!isStaff||!pendingDelReq);
+  $('requestDeleteBtn').classList.toggle('hidden',!(isStaff||isAgent)||!!pendingDelReq);
+  $('deleteRequestedBanner').classList.toggle('hidden',!(isStaff||isAgent)||!pendingDelReq);
 
   $('detailModal').classList.remove('hidden');
 }
 
 function renderStageControls(currentStage, pendingReq, pendedReq, isAdmin){
   let html='';
+  const isStaffOrAgent=CP.role==='staff'||CP.role==='agent';
   if(pendingReq&&!isAdmin){
-    // Staff sees pending state
+    // Staff/agent sees pending state
     $('stagePendingNote').classList.remove('hidden');
     html+=`<button class="stage-btn" onclick="cancelStageRequest('${pendingReq.id}')" style="border-color:#fca5a5;color:#dc2626;">
       <i class="fas fa-times"></i> Cancel Request
@@ -2755,7 +2809,7 @@ async function requestDeleteApplication(){
     if(error.code==='23505'){toast('Delete already requested','info');return;}
     toast('Error: '+error.message,'error');return;
   }
-  await logAct('delete',selAppId,`Staff requested deletion of #${sid(selAppId)}`);
+  await logAct('delete',selAppId,`${CP.role==='agent'?'Agent':'Staff'} requested deletion of #${sid(selAppId)}`);
   toast('Deletion request sent to admin','info');
   // Reload delete requests
   const {data}=await sb.from('delete_requests').select('*').eq('status','pending');
@@ -2831,7 +2885,7 @@ function closeDetailModal(){$('detailModal').classList.add('hidden');selAppId=nu
 // =========================================================
 async function openCodeOwnerProfile(){
   if(!detailRefCodeVal||detailRefCodeVal==='—') return;
-  if(CP.role!=='admin'&&CP.role!=='staff') return;
+  if(CP.role!=='admin'&&CP.role!=='staff'&&CP.role!=='agent') return;
   const {data:owner}=await sb.from('profiles').select('*').eq('referral_code',detailRefCodeVal).single();
   if(!owner){toast('Profile not found','error');return;}
   const {count}=await sb.from('profiles').select('id',{count:'exact',head:true}).eq('referred_by_code',detailRefCodeVal);
@@ -2883,7 +2937,7 @@ async function refreshDocs(){
   const supportingDocs=docs.filter(d=>d.doc_category==='supporting');
   const showDocs=_currentDocTab==='applicant'?applicantDocs:supportingDocs;
   $('docCountBadge').textContent=`(${applicantDocs.length} applicant · ${supportingDocs.length} supporting)`;
-  const canDelete=CP.role==='admin'||CP.role==='staff';
+  const canDelete=CP.role==='admin'||CP.role==='staff'||CP.role==='agent';
   $('docList').innerHTML=showDocs.length?showDocs.map(d=>`
     <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface);border-radius:10px;border:1px solid var(--border);">
       <i class="fas fa-file-${getFileIcon(d.document_type)}" style="color:${_currentDocTab==='supporting'?'#7c3aed':'var(--brand-mid)'};font-size:1.1rem;flex-shrink:0;"></i>
@@ -2938,7 +2992,7 @@ function getFileIcon(ext){if(ext==='pdf')return 'pdf';if(['jpg','jpeg','png','gi
 // =========================================================
 //  NOTES
 // =========================================================
-async function refreshNotes(isOwner,isStaff,isAdmin){
+async function refreshNotes(isOwner,isStaff,isAdmin,isAgent=false){
   const {data}=await sb.from('notes').select('*,author:user_id(full_name,role)').eq('application_id',selAppId).order('created_at',{ascending:true});
   const notes=data||[];
   $('notesList').innerHTML=notes.length?notes.map(n=>`
@@ -2977,8 +3031,8 @@ async function addNote(){
   if(error){toast('Error: '+error.message,'error');return;}
   await logAct('note',selAppId,`Note on #${sid(selAppId)}: ${content.substring(0,60)}`);
   $('noteInput').value=''; toast('Note added');
-  const isOwner=CP.role==='applicant', isStaff=CP.role==='staff', isAdmin=CP.role==='admin';
-  await refreshNotes(isOwner,isStaff,isAdmin);
+  const isOwner=CP.role==='applicant', isStaff=CP.role==='staff', isAdmin=CP.role==='admin', isAgent=CP.role==='agent';
+  await refreshNotes(isOwner,isStaff,isAdmin,isAgent);
   // Advance our baseline so we don't chime on our own note
   _appNotesBaseCount=(_appNotesBaseCount||0)+1;
   _saveBaseline('appnotes_base_'+CU.id, _appNotesBaseCount);
@@ -3121,7 +3175,7 @@ async function loadAgentMgmt(){
   switchAgentMgmtTab('overview');
 }
 
-function switchAgentMgmtTab(tab){
+async function switchAgentMgmtTab(tab){
   const tabs={overview:'amOverviewTab',assign:'amAssignTab',staffmap:'amStaffMapTab',promote:'amPromoteTab'};
   Object.values(tabs).forEach(id=>$(id)?.classList.add('hidden'));
   document.querySelectorAll('#agentmgmtSection .tab-btn').forEach(b=>b.classList.remove('active'));
@@ -3130,7 +3184,7 @@ function switchAgentMgmtTab(tab){
 
   if(tab==='overview')  renderAgentOverview();
   if(tab==='assign')    populateAmAssign();
-  if(tab==='staffmap')  populateAmStaffMap();
+  if(tab==='staffmap')  await populateAmStaffMap();
   if(tab==='promote')   renderAmPromoteList();
 }
 
@@ -3240,7 +3294,11 @@ async function amSaveAppAssignment(){
   populateAmAssign();
 }
 
-function populateAmStaffMap(){
+async function populateAmStaffMap(){
+  // Ensure agents and users are fresh
+  if(!allAgents||!allAgents.length) await loadAgents();
+  if(!allUsers||!allUsers.length) await loadAllUsers();
+
   const staffSel=$('amStaffSelect');
   const agentSel=$('amStaffAgentSelect');
   if(!staffSel||!agentSel) return;
@@ -3290,7 +3348,7 @@ async function amSaveStaffAssignment(){
   if(error){toast('Error: '+error.message,'error');return;}
 
   const staff=(allUsers||[]).find(u=>sstr(u.id)===sstr(staffId));
-  const ag=agentId?allAgents.find(a=>sstr(a.id)===sstr(agentId)):null;
+  const ag=agentId?(allAgents||[]).find(a=>sstr(a.id)===sstr(agentId)):null;
   const detail=ag
     ? `Assigned staff ${staff?.full_name||staff?.email||staffId} to agent ${ag.full_name||ag.email}`
     : `Unassigned staff ${staff?.full_name||staff?.email||staffId} from agent`;
@@ -3298,6 +3356,7 @@ async function amSaveStaffAssignment(){
   await logAct('assign',null,detail);
   toast(ag?`Staff linked to ${ag.full_name||ag.email}`:'Staff unassigned from agent');
   await loadAllUsers();
+  await loadAgents();
   populateAmStaffMap();
 }
 
