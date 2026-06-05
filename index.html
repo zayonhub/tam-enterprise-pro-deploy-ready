@@ -1166,7 +1166,8 @@ function toggleExpand(appId) {
 }
 
 // =========================================================
-//  STATE
+//  // RTE — Rich Text Editor
+function buildRTE(hostId, placeholder='Type a message…') {
 // =========================================================
 let CU=null, CP=null;
 let allApps=[], allUsers=[], allStaff=[], allAgents=[], allLogs=[], allRequests=[], allDeleteRequests=[];
@@ -1852,7 +1853,8 @@ async function pollNotifications(){
           startChimeLoop();
           // Auto-refresh notes if detail modal is open
           if(!$('detailModal')?.classList.contains('hidden')){
-            await refreshNotes(true,false,false);
+            await refreshNotes
+buildRTE('noteRteHost', isOwner ? 'Send a message to staff…' : 'Add a note or update…');(true,false,false);
           }
         }
       }
