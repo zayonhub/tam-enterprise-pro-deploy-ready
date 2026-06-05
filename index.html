@@ -953,13 +953,12 @@
           <div style="border:1px solid var(--border);border-radius:14px;padding:20px;">
             <h4 class="syne" style="font-weight:700;font-size:.95rem;margin-bottom:14px;">Notes & Messages</h4>
             <div id="notesList" style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;margin-bottom:14px;"></div>
-            <div style="display:flex;gap:8px;">
-              <textarea id="noteInput" class="inp" rows="2" style="resize:none;flex:1;" placeholder="Write a note…"></textarea>
-              <button onclick="addNote()" class="btn btn-primary" style="padding:10px 14px;align-self:flex-end;"><i class="fas fa-paper-plane"></i></button>
+            <div class="rte-send-row">
+              <div id="noteRteHost"></div>
+              <button data-send onclick="addNote()" class="btn btn-primary" style="align-self:flex-end;padding:9px 18px;font-size:.83rem;"><i class="fas fa-paper-plane"></i> Send</button>
             </div>
           </div>
         </div>
-
         <!-- RIGHT -->
         <div style="display:flex;flex-direction:column;gap:16px;">
           <div style="background:linear-gradient(135deg,#faf5ff,#ede9fe);border:1px solid #ddd6fe;border-radius:14px;padding:18px;">
