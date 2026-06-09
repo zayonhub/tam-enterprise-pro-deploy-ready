@@ -196,6 +196,37 @@
   .ring-text { position:absolute; font-family:'Bricolage Grotesque',sans-serif; font-weight:700; }
 
   mark { background:#a7f3d0; padding:0 2px; border-radius:3px; }
+
+  /* ===== RICH TEXT EDITOR ===== */
+  .rte-wrap { border:1.5px solid var(--border); border-radius:10px; overflow:hidden; background:var(--card); transition:border-color .2s,box-shadow .2s; }
+  .rte-wrap:focus-within { border-color:var(--brand-mid); box-shadow:0 0 0 3px var(--brand-glow); }
+  .rte-toolbar { display:flex; gap:2px; padding:6px 8px; background:var(--surface); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .rte-btn { width:28px; height:28px; border:none; background:transparent; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.8rem; color:var(--muted); transition:all .15s; }
+  .rte-btn:hover { background:var(--border); color:var(--text); }
+  .rte-btn.active { background:var(--brand-glow); color:var(--brand); }
+  .rte-btn-sep { width:1px; background:var(--border); margin:4px 3px; }
+  .rte-body { min-height:64px; max-height:160px; overflow-y:auto; padding:10px 12px; font-size:.875rem; line-height:1.6; color:var(--text); outline:none; font-family:'Manrope',sans-serif; }
+  .rte-body:empty:before { content:attr(data-placeholder); color:#aaa; pointer-events:none; }
+  .rte-body ul { padding-left:18px; margin:4px 0; }
+  .rte-body ol { padding-left:18px; margin:4px 0; }
+  .rte-body b, .rte-body strong { font-weight:700; }
+  .rte-body i, .rte-body em { font-style:italic; }
+  .rte-body u { text-decoration:underline; }
+  .rte-body a { color:var(--brand-mid); text-decoration:underline; }
+  .rte-send-row { display:flex; gap:8px; align-items:flex-end; }
+  .rte-send-row .rte-wrap { flex:1; }
+
+  /* Agent thread RTE — orange accent */
+  .agent-rte .rte-wrap:focus-within { border-color:var(--agent-brand-mid); box-shadow:0 0 0 3px rgba(234,88,12,.15); }
+
+  /* Rendered rich message content */
+  .msg-rich b,.msg-rich strong { font-weight:700; }
+  .msg-rich i,.msg-rich em { font-style:italic; }
+  .msg-rich u { text-decoration:underline; }
+  .msg-rich a { text-decoration:underline; opacity:.85; }
+  .msg-rich ul { padding-left:16px; margin:3px 0; list-style:disc; }
+  .msg-rich ol { padding-left:16px; margin:3px 0; list-style:decimal; }
+  .msg-rich p { margin:0 0 2px; }
   .divider { height:1px; background:var(--border); margin:20px 0; }
   .note-bubble { padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:var(--surface); }
   .note-bubble.admin  { border-left:3px solid var(--admin-c); background:#faf5ff; }
@@ -504,8 +535,8 @@
             <div id="staffMsgList" style="display:flex;flex-direction:column;gap:10px;max-height:480px;overflow-y:auto;margin-bottom:20px;padding-right:4px;"></div>
             <div style="border-top:1px solid var(--border);padding-top:16px;">
               <label class="lbl" style="margin-bottom:8px;">Reply to Admin</label>
-              <div style="display:flex;gap:8px;">
-                <textarea id="staffReplyInput" class="inp" rows="2" style="resize:none;flex:1;" placeholder="Type your reply…"></textarea>
+              <div style="display:flex;gap:8px;" class="rte-send-row">
+                <div id="staffReplyRteHost" style="flex:1;"></div>
                 <button onclick="sendStaffReply()" class="btn btn-primary" style="padding:10px 16px;align-self:flex-end;"><i class="fas fa-paper-plane"></i></button>
               </div>
             </div>
@@ -1038,8 +1069,8 @@
     <div class="modal-body">
       <div id="agentThreadMessages" style="display:flex;flex-direction:column;gap:10px;max-height:360px;overflow-y:auto;margin-bottom:14px;padding-right:4px;"></div>
       <div style="border-top:1px solid var(--border);padding-top:12px;">
-        <div style="display:flex;gap:8px;">
-          <textarea id="agentThreadInput" class="inp" rows="2" style="resize:none;flex:1;" placeholder="Type a message…"></textarea>
+        <div style="display:flex;gap:8px;" class="rte-send-row agent-rte">
+          <div id="agentThreadRteHost" style="flex:1;"></div>
           <button onclick="sendAgentThreadMsg()" class="btn" style="background:var(--agent-brand-mid);color:#fff;padding:10px 16px;align-self:flex-end;"><i class="fas fa-paper-plane"></i></button>
         </div>
       </div>
@@ -1054,7 +1085,7 @@
 //  CONFIG
 // =========================================================
 const SUPABASE_URL = 'https://asupemsmwzrovucpvqyt.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_h3Kb-0pknHcYItkGeyEI-Q_urYDrPD9';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzdXBlbXNtd3pyb3Z1Y3B2cXl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NzcxNDUsImV4cCI6MjA4NzU1MzE0NX0.kCZ63BD-lt6RgXwkW46-aZBMSe4NFPQHbB7IBYUJyJs'; 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /*
@@ -1166,8 +1197,181 @@ function toggleExpand(appId) {
 }
 
 // =========================================================
-//  // RTE — Rich Text Editor
-function buildRTE(hostId, placeholder='Type a message…') {
+//  RICH TEXT EDITOR
+// =========================================================
+
+// Sanitize HTML for safe rendering (allow only basic formatting tags)
+function sanitizeRich(html) {
+  const allowed = {
+    B:[], STRONG:[], I:[], EM:[], U:[], BR:[], P:[],
+    UL:[], OL:[], LI:[],
+    A:['href']
+  };
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  function clean(node) {
+    const toRemove = [];
+    node.childNodes.forEach(child => {
+      if (child.nodeType === 3) return; // text node — keep
+      const tag = child.tagName;
+      if (!tag || !allowed[tag]) { toRemove.push(child); return; }
+      // Strip disallowed attributes
+      Array.from(child.attributes).forEach(attr => {
+        if (!(allowed[tag]||[]).includes(attr.name.toLowerCase())) child.removeAttribute(attr.name);
+      });
+      // Force safe links
+      if (tag === 'A') {
+        const href = child.getAttribute('href') || '';
+        if (!href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('mailto:')) {
+          child.removeAttribute('href');
+        }
+        child.setAttribute('target','_blank');
+        child.setAttribute('rel','noopener noreferrer');
+      }
+      clean(child);
+    });
+    toRemove.forEach(n => {
+      // Preserve text content of removed nodes
+      while (n.firstChild) node.insertBefore(n.firstChild, n);
+      node.removeChild(n);
+    });
+  }
+  clean(tmp);
+  return tmp.innerHTML;
+}
+
+function rteExec(cmd, val=null) {
+  document.execCommand(cmd, false, val);
+}
+
+function buildRTE(hostId, placeholder='Type a message…', editorId='noteInput') {
+  const host = document.getElementById(hostId);
+  if (!host) return;
+  host.innerHTML = '';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'rte-wrap';
+
+  wrap.innerHTML = `
+    <div class="rte-toolbar">
+      <button type="button" class="rte-btn" title="Bold" data-cmd="bold"><b>B</b></button>
+      <button type="button" class="rte-btn" title="Italic" data-cmd="italic"><i>I</i></button>
+      <button type="button" class="rte-btn" title="Underline" data-cmd="underline"><u>U</u></button>
+      <div class="rte-btn-sep"></div>
+      <button type="button" class="rte-btn" title="Bullet list" data-cmd="insertUnorderedList"><i class="fas fa-list-ul"></i></button>
+      <button type="button" class="rte-btn" title="Numbered list" data-cmd="insertOrderedList"><i class="fas fa-list-ol"></i></button>
+      <div class="rte-btn-sep"></div>
+      <button type="button" class="rte-btn" title="Link" data-cmd="link"><i class="fas fa-link"></i></button>
+      <button type="button" class="rte-btn" title="Clear formatting" data-cmd="removeFormat"><i class="fas fa-remove-format"></i></button>
+    </div>
+    <div class="rte-body" id="${editorId}" contenteditable="true" data-placeholder="${placeholder}"></div>`;
+
+  host.appendChild(wrap);
+
+  const editor = wrap.querySelector('.rte-body');
+  const toolbar = wrap.querySelector('.rte-toolbar');
+
+  // Toolbar button actions
+  toolbar.addEventListener('mousedown', e => {
+    const btn = e.target.closest('[data-cmd]');
+    if (!btn) return;
+    e.preventDefault();
+    const cmd = btn.dataset.cmd;
+    if (cmd === 'link') {
+      const url = prompt('Enter URL (https://…)');
+      if (url && (url.startsWith('http://') || url.startsWith('https://'))) rteExec('createLink', url);
+    } else {
+      rteExec(cmd);
+    }
+    updateToolbarState(toolbar, editor);
+  });
+
+  // Update active state on selection change
+  editor.addEventListener('keyup', () => updateToolbarState(toolbar, editor));
+  editor.addEventListener('mouseup', () => updateToolbarState(toolbar, editor));
+
+  // Enter key: insert <br> instead of <div> for cleaner markup
+  editor.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      // Let browser default for lists; override only in plain text
+      const inList = !!window.getSelection()?.anchorNode?.closest?.('li');
+      if (inList) return;
+      e.preventDefault();
+      rteExec('insertLineBreak');
+    }
+  });
+}
+
+function updateToolbarState(toolbar, editor) {
+  toolbar.querySelectorAll('[data-cmd]').forEach(btn => {
+    const cmd = btn.dataset.cmd;
+    try { btn.classList.toggle('active', document.queryCommandState(cmd)); } catch(e) {}
+  });
+}
+
+function getRteContent(editorId) {
+  const el = document.getElementById(editorId);
+  if (!el) return '';
+  return (el.innerHTML || '').replace(/<br\s*\/?>\s*$/i,'').trim();
+}
+
+function clearRte(editorId) {
+  const el = document.getElementById(editorId);
+  if (el) el.innerHTML = '';
+}
+
+// Build a standalone mini-RTE (for staff reply / agent thread) and return { wrap, getContent, clear }
+function buildInlineRTE(placeholder='Type a message…', accentClass='') {
+  const wrap = document.createElement('div');
+  wrap.className = 'rte-wrap' + (accentClass ? ' ' + accentClass : '');
+  const uid = 'rte_' + Math.random().toString(36).slice(2);
+  wrap.innerHTML = `
+    <div class="rte-toolbar">
+      <button type="button" class="rte-btn" title="Bold" data-cmd="bold"><b>B</b></button>
+      <button type="button" class="rte-btn" title="Italic" data-cmd="italic"><i>I</i></button>
+      <button type="button" class="rte-btn" title="Underline" data-cmd="underline"><u>U</u></button>
+      <div class="rte-btn-sep"></div>
+      <button type="button" class="rte-btn" title="Bullet list" data-cmd="insertUnorderedList"><i class="fas fa-list-ul"></i></button>
+      <button type="button" class="rte-btn" title="Numbered list" data-cmd="insertOrderedList"><i class="fas fa-list-ol"></i></button>
+      <div class="rte-btn-sep"></div>
+      <button type="button" class="rte-btn" title="Link" data-cmd="link"><i class="fas fa-link"></i></button>
+    </div>
+    <div class="rte-body" id="${uid}" contenteditable="true" data-placeholder="${placeholder}"></div>`;
+
+  const editor = wrap.querySelector('.rte-body');
+  const toolbar = wrap.querySelector('.rte-toolbar');
+
+  toolbar.addEventListener('mousedown', e => {
+    const btn = e.target.closest('[data-cmd]');
+    if (!btn) return;
+    e.preventDefault();
+    const cmd = btn.dataset.cmd;
+    if (cmd === 'link') {
+      const url = prompt('Enter URL (https://…)');
+      if (url && (url.startsWith('http://') || url.startsWith('https://'))) rteExec('createLink', url);
+    } else {
+      rteExec(cmd);
+    }
+    updateToolbarState(toolbar, editor);
+  });
+  editor.addEventListener('keyup', () => updateToolbarState(toolbar, editor));
+  editor.addEventListener('mouseup', () => updateToolbarState(toolbar, editor));
+  editor.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      const inList = !!window.getSelection()?.anchorNode?.closest?.('li');
+      if (inList) return;
+      e.preventDefault();
+      rteExec('insertLineBreak');
+    }
+  });
+
+  return {
+    wrap,
+    getContent: () => (editor.innerHTML || '').replace(/<br\s*\/?>\s*$/i,'').trim(),
+    clear: () => { editor.innerHTML = ''; },
+    focus: () => editor.focus()
+  };
+}
 // =========================================================
 let CU=null, CP=null;
 let allApps=[], allUsers=[], allStaff=[], allAgents=[], allLogs=[], allRequests=[], allDeleteRequests=[];
@@ -1341,6 +1545,8 @@ async function handleLogout(){
   clearInterval(_pollTimer);
   _pollTimer=null;
   _staffUnreadMsgs=0; _adminUnreadStaffMsgs=0; _staffUnreadReqs=0;
+  window._staffReplyRte=null;
+  window._agentThreadRte=null;
   await sb.auth.signOut();
 }
 
@@ -1362,7 +1568,7 @@ async function bootApp(user){
     CP=profile;
   }
 
-  const isAgentRole = profile.role==='agent';
+  const isAgentRole = CP.role==='agent';
   const name=CP.full_name||user.email.split('@')[0];
 
   // ── Sidebar avatar & name ──
@@ -1379,8 +1585,8 @@ async function bootApp(user){
   $('dashUserEmail').textContent=user.email;
 
   // ── Role badge ──
-  const roleBadgeClass=profile.role==='admin'?'badge-admin':profile.role==='staff'?'badge-staff':profile.role==='agent'?'badge-agent':'badge-applicant';
-  const roleLabel=profile.role==='agent'?'Agent':profile.role.charAt(0).toUpperCase()+profile.role.slice(1);
+  const roleBadgeClass=CP.role==='admin'?'badge-admin':CP.role==='staff'?'badge-staff':CP.role==='agent'?'badge-agent':'badge-applicant';
+  const roleLabel=CP.role==='agent'?'Agent':CP.role.charAt(0).toUpperCase()+CP.role.slice(1);
   ['sidebarRoleBadge','headerRoleBadge','dashUserRole'].forEach(id=>{
     $(id).className=`badge ${roleBadgeClass}`;
     $(id).textContent=roleLabel;
@@ -1412,7 +1618,7 @@ async function bootApp(user){
     const el=$(id); if(el){ el.classList.add('hidden'); el.style.display=''; }
   });
 
-  if(profile.role==='admin'){
+  if(CP.role==='admin'){
     ['navStaff','navUsers','navAgentMgmt'].forEach(id=>{
       const el=$(id);
       if(el){
@@ -1426,7 +1632,7 @@ async function bootApp(user){
     $('staffPortalLabel').textContent='Staff Portal';
     console.log('[AMS] Admin logged in — nav items shown, allAgents will load');
 
-  } else if(profile.role==='staff'){
+  } else if(CP.role==='staff'){
     $('navStaff').classList.remove('hidden'); $('navStaff').style.display='flex';
     $('appNewBtn').classList.add('hidden'); $('newAppHeroBtn').classList.add('hidden');
     $('referralWidget').classList.add('hidden');
@@ -1454,15 +1660,19 @@ async function bootApp(user){
   // ── Load data ──
   await loadApps();
 
-  if(profile.role==='admin'){
+  if(CP.role==='admin'){
     await loadAllUsers();
     await loadStaff();
     await loadAgents();
+  } else if(CP.role==='staff'||CP.role==='agent'){
+    await loadAgents(); // staff and agents need agent list for dropdowns
+  }
+  if(CP.role==='admin'){
     buildStaffTabs(['applications','requests','deletereqs','log']);
     await loadApprovalRequests();
     await loadDeleteRequests();
 
-  } else if(profile.role==='staff'){
+  } else if(CP.role==='staff'){
     await loadStaff();
     buildStaffTabs(['myapps','messages','agentapps']);
     const {data:delReqs}=await sb.from('delete_requests').select('*').eq('status','pending').eq('requested_by',user.id);
@@ -1477,14 +1687,14 @@ async function bootApp(user){
 
   // ── Seed notification baselines on sign-in ──
   try {
-    if(profile.role==='staff'||isAgentRole){
+    if(CP.role==='staff'||isAgentRole){
       _staffMsgBaseCount = _loadBaseline('staff_base_'+user.id);
       const {count}=await sb.from('profile_notes')
         .select('id',{count:'exact',head:true})
         .eq('profile_id',user.id).neq('author_id',user.id);
       _staffUnreadMsgs=Math.max(0, (count||0) - _staffMsgBaseCount);
     }
-    if(profile.role==='admin'){
+    if(CP.role==='admin'){
       _adminMsgBaseCount = _loadBaseline('admin_base_'+user.id);
       const {data:nonAdminIds}=await sb.from('profiles').select('id').neq('role','admin');
       if(nonAdminIds?.length){
@@ -1495,7 +1705,7 @@ async function bootApp(user){
       }
       await refreshPerUserUnread();
     }
-    if(profile.role==='applicant'){
+    if(CP.role==='applicant'){
       _applicantNotesBaseCount = _loadBaseline('appnotes_base_'+user.id);
       const myAppIds=(allApps||[]).map(a=>a.id);
       if(myAppIds.length){
@@ -1510,7 +1720,7 @@ async function bootApp(user){
   // Seed app notes baseline (all roles)
   try{
     let q=sb.from('notes').select('id',{count:'exact',head:true}).neq('user_id',user.id);
-    if(profile.role==='applicant'||profile.role==='staff'||isAgentRole){
+    if(CP.role==='applicant'||CP.role==='staff'||isAgentRole){
       const myAppIds=(allApps||[]).map(a=>a.id);
       if(myAppIds.length) q=q.in('application_id',myAppIds);
       else q=null;
@@ -1520,10 +1730,10 @@ async function bootApp(user){
 
   updateAllBadges();
 
-  if((profile.role==='staff'||isAgentRole)&&_staffUnreadMsgs>0) startChimeLoop();
-  if(profile.role==='admin'&&(_adminUnreadStaffMsgs>0||allRequests.filter(r=>r.status==='pending').length>0)) startChimeLoop();
+  if((CP.role==='staff'||isAgentRole)&&_staffUnreadMsgs>0) startChimeLoop();
+  if(CP.role==='admin'&&(_adminUnreadStaffMsgs>0||allRequests.filter(r=>r.status==='pending').length>0)) startChimeLoop();
 
-  clearInterval(_pollTimer);
+  if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; }
   _pollTimer=setInterval(pollNotifications, 15000);
 
   renderDashboard();
@@ -1535,6 +1745,7 @@ async function bootApp(user){
     console.error('bootApp error:', err?.message||err, err?.stack||'');
     CU=null; CP=null;
     $('authScreen').style.display='flex';
+    switchAuthMode('login');
     showAuthErr('Something went wrong loading your account: '+(err?.message||'Unknown error'));
   } finally {
     showLoading(false);
@@ -1559,7 +1770,7 @@ function buildStaffTabs(tabs){
   });
 }
 
-function switchStaffTab(tab){
+async function switchStaffTab(tab){
   ['staffMessagesTab','staffAppsTab','allApplicantsTab','approvalRequestsTab','deleteRequestsTab','activityLogTab','agentAppsViewTab','agentStaffMsgTab'].forEach(id=>$(id)?.classList.add('hidden'));
   document.querySelectorAll('#staffTabBar .tab-btn').forEach(b=>b.classList.remove('active'));
   const map={
@@ -1579,9 +1790,9 @@ function switchStaffTab(tab){
   if(tab==='requests'&&CP?.role==='admin') stopChimeLoop();
 
   if(tab==='myapps') renderStaffAppList();
-  else if(tab==='messages') loadStaffMessages();
+  else if(tab==='messages') { _initStaffReplyRte(); loadStaffMessages(); }
   else if(tab==='applications') renderAdminAppList();
-  else if(tab==='requests') loadApprovalRequests();
+  else if(tab==='requests') await loadApprovalRequests();
   else if(tab==='deletereqs') loadDeleteRequests();
   else if(tab==='log') loadLogs();
   else if(tab==='agentapps') renderAgentAppsView();
@@ -1853,8 +2064,8 @@ async function pollNotifications(){
           startChimeLoop();
           // Auto-refresh notes if detail modal is open
           if(!$('detailModal')?.classList.contains('hidden')){
-            await refreshNotes
-buildRTE('noteRteHost', isOwner ? 'Send a message to staff…' : 'Add a note or update…');(true,false,false);
+            await refreshNotes(true, false, false, false);
+            if(!document.getElementById('noteInput')) buildRTE('noteRteHost', 'Send a message to staff…');
           }
         }
       }
@@ -1900,7 +2111,7 @@ buildRTE('noteRteHost', isOwner ? 'Send a message to staff…' : 'Add a note or 
       if(allDeleteRequests.length>prevDelCount) startChimeLoop();
       setBadge('deleteReqsBadge', allDeleteRequests.length);
       setTabBadge('stab-deletereqs', allDeleteRequests.length);
-      if(!$('deleteRequestsTab')?.classList.contains('hidden')) renderDeleteRequests();
+      if(!$('deleteRequestsTab')?.classList.contains('hidden')) await renderDeleteRequests();
     }
 
     // Auto-refresh apps for all roles when any section is visible
@@ -1941,7 +2152,7 @@ buildRTE('noteRteHost', isOwner ? 'Send a message to staff…' : 'Add a note or 
           const isOwner=CP.role==='applicant';
           const isStaff=CP.role==='staff';
           const isAdmin=CP.role==='admin';
-          await refreshNotes(isOwner,isStaff,isAdmin);
+          await refreshNotes(isOwner,isStaff,isAdmin, CP.role==='agent');
         }
       }
       _appNotesBaseCount=total;
@@ -2396,7 +2607,7 @@ async function openUserProfile(userId){
           const role=n.author?.role||'admin'; const name=n.author?.full_name||'Admin';
           return `<div style="display:flex;flex-direction:column;align-items:${isStaffReply?'flex-end':'flex-start'};">
             <div style="max-width:85%;background:${isStaffReply?'#e0f2fe':'var(--surface)'};color:var(--text);border:1px solid ${isStaffReply?'#bae6fd':'var(--border)'};border-radius:${isStaffReply?'14px 14px 4px 14px':'14px 14px 14px 4px'};padding:10px 14px;">
-              <p style="font-size:.83rem;line-height:1.55;">${san(n.content)}</p>
+              <div class="msg-rich" style="font-size:.83rem;line-height:1.55;">${sanitizeRich(n.content)}</div>
             </div>
             <div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:0 4px;">
               <span class="badge badge-${role}" style="font-size:.65rem;">${san(name)}</span>
@@ -2466,6 +2677,15 @@ async function demoteToApplicant(userId){
 // =========================================================
 //  STAFF MESSAGES
 // =========================================================
+function _initStaffReplyRte(){
+  const host=$('staffReplyRteHost');
+  if(!host) return;
+  if(window._staffReplyRte) return; // already built for this session
+  host.innerHTML=''; // clear any leftover DOM from previous session
+  window._staffReplyRte=buildInlineRTE('Type your reply…');
+  host.appendChild(window._staffReplyRte.wrap);
+}
+
 async function loadStaffMessages(){
   const {data}=await sb.from('profile_notes').select('*,author:author_id(full_name,role)').eq('profile_id',CU.id).order('created_at',{ascending:true});
   const notes=data||[]; const container=$('staffMsgList');
@@ -2488,7 +2708,7 @@ async function loadStaffMessages(){
     const role=n.author?.role||'staff'; const name=n.author?.full_name||(isMe?'You':'Admin');
     return `<div style="display:flex;flex-direction:column;align-items:${isMe?'flex-end':'flex-start'};">
       <div style="max-width:80%;background:${isMe?'var(--brand-mid)':'var(--surface)'};color:${isMe?'#fff':'var(--text)'};border:1px solid ${isMe?'transparent':'var(--border)'};border-radius:${isMe?'14px 14px 4px 14px':'14px 14px 14px 4px'};padding:12px 14px;">
-        <p style="font-size:.83rem;line-height:1.55;">${san(n.content)}</p>
+        <div class="msg-rich" style="font-size:.83rem;line-height:1.55;">${sanitizeRich(n.content)}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:0 4px;">
         <span class="badge badge-${role}" style="font-size:.65rem;">${san(name)}</span>
@@ -2500,12 +2720,13 @@ async function loadStaffMessages(){
 }
 
 async function sendStaffReply(){
-  const content=$('staffReplyInput').value.trim(); if(!content) return;
+  const content=window._staffReplyRte?window._staffReplyRte.getContent():'';
+  if(!content) return;
   const btn=document.querySelector('[onclick="sendStaffReply()"]'); setBtnLoading(btn,true);
   try {
     const {error}=await sb.from('profile_notes').insert([{profile_id:CU.id,author_id:CU.id,content}]);
     if(error){toast('Error: '+error.message,'error');return;}
-    $('staffReplyInput').value=''; toast('Reply sent'); await loadStaffMessages();
+    if(window._staffReplyRte) window._staffReplyRte.clear(); toast('Reply sent'); await loadStaffMessages();
   } finally{setBtnLoading(btn,false);}
 }
 
@@ -2639,12 +2860,14 @@ async function openDetail(appId){
   $('requestDeleteBtn').classList.toggle('hidden',!(isStaff||isAgent)||!!pendingDelReq);
   $('deleteRequestedBanner').classList.toggle('hidden',!(isStaff||isAgent)||!pendingDelReq);
 
+  // Build the notes RTE (always rebuild so it's clean for each app)
+  buildRTE('noteRteHost', isOwner ? 'Send a message to staff…' : 'Add a note or update…');
+
   $('detailModal').classList.remove('hidden');
 }
 
 function renderStageControls(currentStage, pendingReq, pendedReq, isAdmin){
   let html='';
-  const isStaffOrAgent=CP.role==='staff'||CP.role==='agent';
   if(pendingReq&&!isAdmin){
     // Staff/agent sees pending state
     $('stagePendingNote').classList.remove('hidden');
@@ -2822,7 +3045,7 @@ async function loadDeleteRequests(){
   const {data,error}=await sb.from('delete_requests').select('*').eq('status','pending').order('created_at',{ascending:false});
   if(error){console.error('loadDeleteRequests:',error);return;}
   allDeleteRequests=data||[];
-  renderDeleteRequests();
+  await renderDeleteRequests();
   // Update badge
   setBadge('deleteReqsBadge', allDeleteRequests.length);
   setTabBadge('stab-deletereqs', allDeleteRequests.length);
@@ -2956,7 +3179,8 @@ async function handleDocUpload(e, category='applicant'){
   const uploaded=[];
   for(const f of files){
     const path=`${selAppId}/${category}/${Date.now()}_${f.name}`;
-    const {error}=await sb.storage.from('documents').upload(path,f); if(error) continue;
+    const {error}=await sb.storage.from('documents').upload(path,f);
+    if(error){ toast('Upload failed: '+f.name,'error'); console.error(error); continue; }
     await sb.from('application_documents').insert([{
       application_id:selAppId,
       document_type:f.name.split('.').pop().toLowerCase(),
@@ -3002,13 +3226,13 @@ async function refreshNotes(isOwner,isStaff,isAdmin,isAgent=false){
         <span class="badge badge-${n.author?.role||'applicant'}" style="font-size:.7rem;">${san(n.author?.full_name||'Unknown')}</span>
         <span style="font-size:.72rem;color:var(--muted);">${fmt(n.created_at)}</span>
       </div>
-      <p style="font-size:.83rem;line-height:1.5;">${san(n.content)}</p>
+      <div class="msg-rich" style="font-size:.83rem;line-height:1.5;">${sanitizeRich(n.content)}</div>
     </div>`).join(''):'<p style="font-size:.83rem;color:var(--muted);text-align:center;padding:16px;">No notes yet</p>';
-  $('noteInput').placeholder=isOwner?'Send a message to staff…':'Add a note or update…';
+  const noteEditor=document.getElementById('noteInput');
+  if(noteEditor) noteEditor.dataset.placeholder=isOwner?'Send a message to staff…':'Add a note or update…';
 
   // Clear applicant unread badge when they read notes in this app
   if(isOwner&&CP?.role==='applicant'){
-    const othersNotes=notes.filter(n=>String(n.user_id)!==String(CU.id)).length;
     // Update baseline to at least current count so these notes don't re-trigger
     const currentBase=_loadBaseline('appnotes_base_'+CU.id);
     const myAppIds=(allApps||[]).map(a=>a.id);
@@ -3027,11 +3251,11 @@ async function refreshNotes(isOwner,isStaff,isAdmin,isAgent=false){
 }
 
 async function addNote(){
-  const content=$('noteInput').value.trim(); if(!content||!selAppId) return;
+  const content=getRteContent('noteInput'); if(!content||!selAppId) return;
   const {error}=await sb.from('notes').insert([{application_id:selAppId,user_id:CU.id,content}]);
   if(error){toast('Error: '+error.message,'error');return;}
-  await logAct('note',selAppId,`Note on #${sid(selAppId)}: ${content.substring(0,60)}`);
-  $('noteInput').value=''; toast('Note added');
+  await logAct('note',selAppId,`Note on #${sid(selAppId)}: ${content.replace(/<[^>]+>/g,'').substring(0,60)}`);
+  clearRte('noteInput'); toast('Note added');
   const isOwner=CP.role==='applicant', isStaff=CP.role==='staff', isAdmin=CP.role==='admin', isAgent=CP.role==='agent';
   await refreshNotes(isOwner,isStaff,isAdmin,isAgent);
   // Advance our baseline so we don't chime on our own note
@@ -3148,14 +3372,16 @@ async function createApplication(){
     // Upload applicant documents
     for(const f of tempFiles){
       const path=`${app.id}/applicant/${Date.now()}_${f.name}`;
-      const {error:ue}=await sb.storage.from('documents').upload(path,f); if(ue) continue;
+      const {error:ue}=await sb.storage.from('documents').upload(path,f);
+      if(ue){ toast('Upload failed: '+f.name,'error'); console.error(ue); continue; }
       await sb.from('application_documents').insert([{application_id:app.id,document_type:f.name.split('.').pop().toLowerCase(),file_name:f.name,file_path:path,file_size:f.size,uploaded_by:CU.id,doc_category:'applicant'}]);
     }
 
     // Upload supporting documents
     for(const f of tempSupportingFiles){
       const path=`${app.id}/supporting/${Date.now()}_${f.name}`;
-      const {error:ue}=await sb.storage.from('documents').upload(path,f); if(ue) continue;
+      const {error:ue}=await sb.storage.from('documents').upload(path,f);
+      if(ue){ toast('Upload failed: '+f.name,'error'); console.error(ue); continue; }
       await sb.from('application_documents').insert([{application_id:app.id,document_type:f.name.split('.').pop().toLowerCase(),file_name:f.name,file_path:path,file_size:f.size,uploaded_by:CU.id,doc_category:'supporting'}]);
     }
 
@@ -3493,12 +3719,15 @@ function renderLogList(){
 // =========================================================
 function renderPagination(containerId,total,current,onPage){
   if(total<=1){$(containerId).innerHTML='';return;}
-  let h=`<button onclick="(${onPage})(${current-1})" ${current===1?'disabled':''} style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:.8rem;cursor:pointer;background:${current===1?'#f9fafb':'var(--card)'};${current===1?'opacity:.4;':''}"><i class="fas fa-chevron-left"></i></button>`;
+  window._pgHandlers=window._pgHandlers||{};
+  const key='pg_'+containerId;
+  window._pgHandlers[key]=onPage;
+  let h=`<button onclick="window._pgHandlers['${key}'](${current-1})" ${current===1?'disabled':''} style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:.8rem;cursor:pointer;background:${current===1?'#f9fafb':'var(--card)'};${current===1?'opacity:.4;':''}"><i class="fas fa-chevron-left"></i></button>`;
   for(let i=1;i<=total;i++){
-    if(i===1||i===total||(i>=current-1&&i<=current+1)) h+=`<button onclick="(${onPage})(${i})" style="padding:6px 12px;border:1px solid ${i===current?'var(--brand-mid)':'var(--border)'};border-radius:8px;font-size:.8rem;cursor:pointer;background:${i===current?'var(--brand-mid)':'var(--card)'};color:${i===current?'#fff':'var(--text)'};">${i}</button>`;
+    if(i===1||i===total||(i>=current-1&&i<=current+1)) h+=`<button onclick="window._pgHandlers['${key}'](${i})" style="padding:6px 12px;border:1px solid ${i===current?'var(--brand-mid)':'var(--border)'};border-radius:8px;font-size:.8rem;cursor:pointer;background:${i===current?'var(--brand-mid)':'var(--card)'};color:${i===current?'#fff':'var(--text)'}">${i}</button>`;
     else if((i===current-2&&i>2)||(i===current+2&&i<total-1)) h+=`<span style="padding:6px 4px;font-size:.8rem;color:var(--muted);">…</span>`;
   }
-  h+=`<button onclick="(${onPage})(${current+1})" ${current===total?'disabled':''} style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:.8rem;cursor:pointer;background:${current===total?'#f9fafb':'var(--card)'};${current===total?'opacity:.4;':''}"><i class="fas fa-chevron-right"></i></button>`;
+  h+=`<button onclick="window._pgHandlers['${key}'](${current+1})" ${current===total?'disabled':''} style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:.8rem;cursor:pointer;background:${current===total?'#f9fafb':'var(--card)'};${current===total?'opacity:.4;':''}"><i class="fas fa-chevron-right"></i></button>`;
   $(containerId).innerHTML=h;
 }
 
@@ -3607,7 +3836,13 @@ function openAgentThread(profileId, name){
   _agentThreadProfileId=profileId;
   $('agentThreadTitle').textContent=`Thread — ${name}`;
   $('agentThreadMessages').innerHTML='<p style="text-align:center;color:var(--muted);font-size:.83rem;padding:20px;">Loading…</p>';
-  $('agentThreadInput').value='';
+  // Build agent thread RTE (rebuild each open so it's fresh)
+  const host=$('agentThreadRteHost');
+  if(host){
+    host.innerHTML='';
+    window._agentThreadRte=buildInlineRTE('Type a message…');
+    host.appendChild(window._agentThreadRte.wrap);
+  }
   $('agentThreadModal').classList.remove('hidden');
   loadAgentThread();
 }
@@ -3638,7 +3873,7 @@ async function loadAgentThread(){
     const name=n.author?.full_name||(isMe?'You':'Staff');
     return `<div style="display:flex;flex-direction:column;align-items:${isMe?'flex-end':'flex-start'};">
       <div style="max-width:82%;background:${isMe?'linear-gradient(135deg,#fb923c,#ea580c)':'var(--surface)'};color:${isMe?'#fff':'var(--text)'};border:1px solid ${isMe?'transparent':'var(--border)'};border-radius:${isMe?'14px 14px 4px 14px':'14px 14px 14px 4px'};padding:11px 14px;">
-        <p style="font-size:.83rem;line-height:1.55;">${san(n.content)}</p>
+        <div class="msg-rich" style="font-size:.83rem;line-height:1.55;">${sanitizeRich(n.content)}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:0 4px;">
         <span class="badge badge-${role}" style="font-size:.65rem;">${san(name)}</span>
@@ -3652,8 +3887,7 @@ async function loadAgentThread(){
 
 async function sendAgentThreadMsg(){
   if(!_agentThreadProfileId) return;
-  const input=$('agentThreadInput');
-  const content=(input?.value||'').trim();
+  const content=window._agentThreadRte?window._agentThreadRte.getContent():'';
   if(!content) return;
 
   const btn=$('agentThreadModal').querySelector('[onclick="sendAgentThreadMsg()"]');
@@ -3665,7 +3899,7 @@ async function sendAgentThreadMsg(){
       content
     }]);
     if(error){toast('Error: '+error.message,'error');return;}
-    input.value='';
+    if(window._agentThreadRte) window._agentThreadRte.clear();
     await loadAgentThread();
   } finally {
     if(btn) setBtnLoading(btn,false);
@@ -3695,6 +3929,9 @@ window.addEventListener('load',async()=>{
       clearInterval(_pollTimer); _pollTimer=null;
       _staffUnreadMsgs=0; _adminUnreadStaffMsgs=0; _staffUnreadReqs=0;
       _applicantUnreadNotes=0; _applicantNotesBaseCount=0;
+      // Reset inline RTE state so they rebuild fresh on next login
+      window._staffReplyRte=null;
+      window._agentThreadRte=null;
       $('mainApp').style.display='none'; $('authScreen').style.display='flex'; switchAuthMode('login');
       CU=null;CP=null;allApps=[];allUsers=[];allStaff=[];allLogs=[];allRequests=[];
     }
