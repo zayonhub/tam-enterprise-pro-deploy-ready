@@ -3307,21 +3307,6 @@ async function refreshDocs(){
       <button data-docid="${d.id}" data-action="download"class="btn btn-ghost doc-action-btn" title="Download" style="padding:6px 10px;font-size:.75rem;"><i class="fas fa-download"></i></button>
       ${canDelete?`<button data-docid="${d.id}" data-action="delete" class="btn btn-ghost doc-action-btn" title="Delete" style="padding:6px 10px;font-size:.75rem;color:#ef4444;"><i class="fas fa-trash"></i></button>`:''}
     </div>`).join(''):`<p style="font-size:.83rem;color:var(--muted);padding:12px;text-align:center;">No ${_currentDocTab==='supporting'?'spouse/children':'applicant'} documents uploaded</p>`;
-
-  // Single delegated event listener on docList — no inline onclick strings needed
-  $('docList').onclick=null;
-  $('docList').addEventListener('click', function(e){
-    const btn=e.target.closest('[data-action][data-docid]');
-    if(!btn) return;
-    e.stopPropagation();
-    const d=window._docMap[btn.dataset.docid];
-    if(!d) return;
-    const action=btn.dataset.action;
-    if(action==='preview')  previewDoc(d.id, d.file_path, d.file_name, d.document_type);
-    if(action==='rename')   renameDoc(d.id, d.file_name);
-    if(action==='download') downloadDoc(d.file_path, d.file_name);
-    if(action==='delete')   deleteDoc(d.id, d.file_path);
-  }, {once:true});
 }
 
 async function handleDocUpload(e, category='applicant'){
@@ -4137,6 +4122,24 @@ document.addEventListener('keydown',e=>{
     ['detailModal','newAppModal','userProfileModal','referrerModal','codeOwnerModal','agentThreadModal','docPreviewModal'].forEach(id=>$(id)?.classList.add('hidden'));
     selAppId=null; editMode=false; _agentThreadProfileId=null; closeSidebar();
   }
+});
+
+// =========================================================
+//  DOCUMENT ACTION HANDLER — permanent, never reassigned
+//  Handles preview / rename / download / delete on doc rows
+//  regardless of how many times refreshDocs re-renders innerHTML
+// =========================================================
+document.addEventListener('click', function(e){
+  const btn=e.target.closest('#docList [data-action][data-docid]');
+  if(!btn) return;
+  e.stopPropagation();
+  const d=(window._docMap||{})[btn.dataset.docid];
+  if(!d) return;
+  const action=btn.dataset.action;
+  if(action==='preview')  previewDoc(d.id, d.file_path, d.file_name, d.document_type);
+  if(action==='rename')   renameDoc(d.id, d.file_name);
+  if(action==='download') downloadDoc(d.file_path, d.file_name);
+  if(action==='delete')   deleteDoc(d.id, d.file_path);
 });
 
 // =========================================================
