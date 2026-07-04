@@ -317,7 +317,10 @@
           <input type="email" id="loginEmail" class="inp" placeholder="you@example.com" required autocomplete="email">
         </div>
         <div class="fade-up fade-up-2">
-          <label class="lbl">Password</label>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px;">
+            <label class="lbl" style="margin-bottom:0;">Password</label>
+            <button type="button" onclick="switchAuthMode('forgot')" style="font-size:.78rem;color:var(--brand-mid);font-weight:600;background:none;border:none;cursor:pointer;">Forgot password?</button>
+          </div>
           <div style="position:relative;">
             <input type="password" id="loginPassword" class="inp" style="padding-right:44px;" placeholder="••••••••" required autocomplete="current-password">
             <button type="button" onclick="togglePw('loginPassword','pwi1')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);background:none;border:none;cursor:pointer;font-size:.9rem;"><i id="pwi1" class="fas fa-eye"></i></button>
@@ -369,6 +372,37 @@
         </div>
         <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" id="signupBtn"><span>Create Account</span><i class="fas fa-user-plus"></i></button>
         <div style="text-align:center;"><button type="button" onclick="switchAuthMode('login')" style="font-size:.83rem;color:var(--brand-mid);font-weight:600;background:none;border:none;cursor:pointer;">Already have an account? Sign in →</button></div>
+      </form>
+
+      <!-- FORGOT PASSWORD -->
+      <form id="forgotForm" class="hidden space-y-4">
+        <p style="font-size:.83rem;color:var(--muted);margin-bottom:6px;">Enter the email address on your account and we'll send you a link to reset your password.</p>
+        <div>
+          <label class="lbl">Email Address</label>
+          <input type="email" id="forgotEmail" class="inp" placeholder="you@example.com" required autocomplete="email">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" id="forgotBtn"><span>Send Reset Link</span><i class="fas fa-paper-plane"></i></button>
+        <div style="text-align:center;"><button type="button" onclick="switchAuthMode('login')" style="font-size:.83rem;color:var(--brand-mid);font-weight:600;background:none;border:none;cursor:pointer;">← Back to sign in</button></div>
+      </form>
+
+      <!-- RESET PASSWORD (shown after clicking the emailed link) -->
+      <form id="resetForm" class="hidden space-y-4">
+        <p style="font-size:.83rem;color:var(--muted);margin-bottom:6px;">Choose a new password for your account.</p>
+        <div>
+          <label class="lbl">New Password</label>
+          <div style="position:relative;">
+            <input type="password" id="resetPassword" class="inp" style="padding-right:40px;" placeholder="Min 6 chars" required minlength="6" autocomplete="new-password">
+            <button type="button" onclick="togglePw('resetPassword','pwi4')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);background:none;border:none;cursor:pointer;font-size:.9rem;"><i id="pwi4" class="fas fa-eye"></i></button>
+          </div>
+        </div>
+        <div>
+          <label class="lbl">Confirm New Password</label>
+          <div style="position:relative;">
+            <input type="password" id="resetConfirm" class="inp" style="padding-right:40px;" placeholder="Repeat new password" required autocomplete="new-password">
+            <button type="button" onclick="togglePw('resetConfirm','pwi5')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);background:none;border:none;cursor:pointer;font-size:.9rem;"><i id="pwi5" class="fas fa-eye"></i></button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" id="resetBtn"><span>Update Password</span><i class="fas fa-check"></i></button>
       </form>
     </div>
   </div>
@@ -542,28 +576,28 @@
             </div>
           </div>
         </div>
-        <!-- Agent: messages with assigned staff -->
+        <!-- Staff: messages with assigned agents -->
         <div id="agentStaffMsgTab" class="hidden">
           <div class="card" style="padding:24px;">
             <div style="margin-bottom:16px;">
-              <h2 class="syne" style="font-size:1.1rem;font-weight:700;">Staff Messages</h2>
-              <p style="font-size:.8rem;color:var(--muted);margin-top:2px;">Select a staff member assigned to you to view their message thread.</p>
+              <h2 class="syne" style="font-size:1.1rem;font-weight:700;">Agent Messages</h2>
+              <p style="font-size:.8rem;color:var(--muted);margin-top:2px;">Select an agent assigned to you to view their message thread.</p>
             </div>
             <div id="agentStaffMsgList" style="display:flex;flex-direction:column;gap:8px;"></div>
           </div>
         </div>
-        <!-- Staff: read-only view of their assigned agent's apps -->
+        <!-- Staff: read-only view of their assigned agents' apps -->
         <div id="agentAppsViewTab" class="hidden">
           <div class="card" style="padding:24px;">
             <div style="margin-bottom:20px;">
-              <h2 class="syne" style="font-size:1.1rem;font-weight:700;">Agent's Applications <span style="font-size:.75rem;font-weight:400;color:var(--muted);">(read-only)</span></h2>
+              <h2 class="syne" style="font-size:1.1rem;font-weight:700;">My Agents' Applications <span style="font-size:.75rem;font-weight:400;color:var(--muted);">(read-only)</span></h2>
               <p style="font-size:.8rem;color:var(--muted);margin-top:2px;"><span id="agentAppsViewCount">0</span> total</p>
             </div>
             <div id="agentAppsViewList" style="display:flex;flex-direction:column;gap:8px;"></div>
             <div id="agentAppsViewEmpty" class="hidden" style="text-align:center;padding:40px;color:var(--muted);">
               <div style="font-size:3rem;margin-bottom:12px;">📂</div>
-              <p style="font-weight:600;">No agent assigned to you yet</p>
-              <p style="font-size:.83rem;margin-top:4px;">Ask admin to assign you to an agent</p>
+              <p style="font-weight:600;">No agents assigned to you yet</p>
+              <p style="font-size:.83rem;margin-top:4px;">Ask admin to assign agents to you</p>
             </div>
           </div>
         </div>
@@ -731,12 +765,12 @@
       <div id="agentmgmtSection" class="section-page hidden">
         <div style="margin-bottom:24px;">
           <h2 class="syne" style="font-size:1.2rem;font-weight:800;">Agent Management</h2>
-          <p style="font-size:.85rem;color:var(--muted);margin-top:4px;">Assign applications to agents, link staff to agents, and promote or demote users.</p>
+          <p style="font-size:.85rem;color:var(--muted);margin-top:4px;">Assign applications to agents, link agents to a supervising staff member, and promote or demote users.</p>
         </div>
         <div class="tab-bar" style="margin-bottom:22px;width:fit-content;">
           <button class="tab-btn active" id="amtab-overview"  onclick="switchAgentMgmtTab('overview')">Overview</button>
           <button class="tab-btn"        id="amtab-assign"    onclick="switchAgentMgmtTab('assign')">Assign Applications</button>
-          <button class="tab-btn"        id="amtab-staffmap"  onclick="switchAgentMgmtTab('staffmap')">Assign Staff</button>
+          <button class="tab-btn"        id="amtab-staffmap"  onclick="switchAgentMgmtTab('staffmap')">Assign to Staff</button>
           <button class="tab-btn"        id="amtab-promote"   onclick="switchAgentMgmtTab('promote')">Promote / Demote</button>
         </div>
 
@@ -774,26 +808,26 @@
           </div>
         </div>
 
-        <!-- Assign Staff to Agent -->
+        <!-- Assign Agent to Staff -->
         <div id="amStaffMapTab" class="hidden">
           <div class="card" style="padding:24px;">
-            <h3 class="syne" style="font-size:1rem;font-weight:700;margin-bottom:6px;">Assign Staff Member to Agent</h3>
-            <p style="font-size:.83rem;color:var(--muted);margin-bottom:18px;">Assigned staff can view the agent's applications (read-only) and exchange messages with them.</p>
+            <h3 class="syne" style="font-size:1rem;font-weight:700;margin-bottom:6px;">Assign Agent to a Staff Member</h3>
+            <p style="font-size:.83rem;color:var(--muted);margin-bottom:18px;">The assigned staff member can view the agent's applications (read-only) and exchange messages with them.</p>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px;" class="detail-grid">
               <div>
-                <label class="lbl">Select Staff Member</label>
-                <select id="amStaffSelect" class="inp">
-                  <option value="">— Choose staff —</option>
+                <label class="lbl">Select Agent</label>
+                <select id="amLinkAgentSelect" class="inp">
+                  <option value="">— Choose agent —</option>
                 </select>
               </div>
               <div>
-                <label class="lbl">Assign to Agent</label>
-                <select id="amStaffAgentSelect" class="inp">
+                <label class="lbl">Assign to Staff Member</label>
+                <select id="amLinkStaffSelect" class="inp">
                   <option value="">— Unassigned —</option>
                 </select>
               </div>
             </div>
-            <button onclick="amSaveStaffAssignment()" class="btn" style="background:var(--agent-brand-mid);color:#fff;gap:8px;"><i class="fas fa-link"></i> Save Staff Assignment</button>
+            <button onclick="amSaveStaffAssignment()" class="btn" style="background:var(--agent-brand-mid);color:#fff;gap:8px;"><i class="fas fa-link"></i> Save Assignment</button>
           </div>
           <div style="margin-top:20px;" id="staffAgentMapList"></div>
         </div>
@@ -1078,6 +1112,25 @@
   </div>
 </div>
 
+<!-- ===== DOCUMENT PREVIEW MODAL ===== -->
+<div id="docPreviewModal" class="modal-overlay hidden" style="z-index:75;">
+  <div class="modal-box" style="max-width:760px;">
+    <div class="modal-header">
+      <div style="min-width:0;flex:1;">
+        <h3 id="docPreviewTitle" class="syne" style="font-size:1.05rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Document</h3>
+        <p id="docPreviewMeta" style="font-size:.78rem;color:var(--muted);margin-top:2px;"></p>
+      </div>
+      <button onclick="$('docPreviewModal').classList.add('hidden')" class="btn btn-ghost" style="padding:8px;flex-shrink:0;"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="docPreviewBody" style="display:flex;align-items:center;justify-content:center;min-height:320px;"></div>
+    <div class="modal-footer">
+      <button onclick="renameDocFromPreview()" class="btn btn-ghost" id="docPreviewRenameBtn"><i class="fas fa-pen"></i> Rename</button>
+      <button class="btn btn-primary" id="docPreviewDownloadBtn"><i class="fas fa-download"></i> Download</button>
+    </div>
+  </div>
+</div>
+
+
 <div id="toast" class="hidden"></div>
 
 <script>
@@ -1087,6 +1140,33 @@
 const SUPABASE_URL = 'https://asupemsmwzrovucpvqyt.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzdXBlbXNtd3pyb3Z1Y3B2cXl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NzcxNDUsImV4cCI6MjA4NzU1MzE0NX0.kCZ63BD-lt6RgXwkW46-aZBMSe4NFPQHbB7IBYUJyJs'; 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Registered immediately (not deferred to window 'load') so this never misses the
+// PASSWORD_RECOVERY event that Supabase fires very early when the user lands here
+// from a "reset password" email link.
+sb.auth.onAuthStateChange((event,session)=>{
+  if(event==='PASSWORD_RECOVERY'){
+    _inPasswordRecovery=true;
+    showLoading(false);
+    $('mainApp').style.display='none';
+    $('authScreen').style.display='flex';
+    switchAuthMode('reset');
+    return;
+  }
+  if(event==='SIGNED_OUT'){
+    _inPasswordRecovery=false;
+    stopChimeLoop();
+    clearInterval(_pollTimer); _pollTimer=null;
+    _staffUnreadMsgs=0; _adminUnreadStaffMsgs=0; _staffUnreadReqs=0;
+    _applicantUnreadNotes=0; _applicantNotesBaseCount=0;
+    // Reset inline RTE state so they rebuild fresh on next login
+    window._staffReplyRte=null;
+    window._agentThreadRte=null;
+    $('mainApp').style.display='none'; $('authScreen').style.display='flex'; switchAuthMode('login');
+    CU=null;CP=null;allApps=[];allUsers=[];allStaff=[];allLogs=[];allRequests=[];
+  }
+  if(event==='SIGNED_IN'&&session&&!CP&&!_signingUp&&!_inPasswordRecovery) bootApp(session.user);
+});
 
 /*
   REQUIRED SUPABASE SETUP — run this SQL in your Supabase SQL Editor:
@@ -1397,6 +1477,7 @@ let _applicantNotesBaseCount=0;   // baseline for applicant note counting
 let _chimeActive=false;
 let _perUserUnread={};
 let _signingUp=false;  // blocks onAuthStateChange from calling bootApp during signup
+let _inPasswordRecovery=false;  // true while user is on the "set new password" screen from a reset-email link
 
 // Persist baselines in localStorage so re-login doesn't re-count already-read messages
 function _saveBaseline(key, val){ try{ localStorage.setItem('nst_'+key, String(val)); }catch(e){} }
@@ -1446,7 +1527,10 @@ function togglePw(id,iconId){const el=$(id);el.type=el.type==='password'?'text':
 function switchAuthMode(mode){
   $('loginForm').classList.toggle('hidden',mode!=='login');
   $('signupForm').classList.toggle('hidden',mode!=='signup');
-  $('authSubtitle').textContent=mode==='login'?'Sign in to your account':'Create a new account';
+  $('forgotForm').classList.toggle('hidden',mode!=='forgot');
+  $('resetForm').classList.toggle('hidden',mode!=='reset');
+  const subtitles={login:'Sign in to your account',signup:'Create a new account',forgot:'Reset your password',reset:'Choose a new password'};
+  $('authSubtitle').textContent=subtitles[mode]||'';
   $('authError').classList.add('hidden'); $('authError').style.display='none';
 }
 function showAuthErr(msg){const el=$('authError');$('authErrorText').textContent=msg;el.style.display='flex';el.classList.remove('hidden');}
@@ -1474,6 +1558,9 @@ $('signupForm').addEventListener('submit',async e=>{
     const answer=$('signupAnswer').value.trim();
     const refCode=$('signupReferral').value.trim().toUpperCase();
 
+    const emailRegex=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if(!email){showAuthErr('Please enter your email address');return;}
+    if(!emailRegex.test(email)){showAuthErr('Please enter a valid email address');return;}
     if(password!==confirm){showAuthErr('Passwords do not match');return;}
     if(!question){showAuthErr('Please select a security question');return;}
     if(!answer){showAuthErr('Please enter your security answer');return;}
@@ -1482,16 +1569,13 @@ $('signupForm').addEventListener('submit',async e=>{
     // Attempt sign up
     const {data:authData,error:authErr}=await sb.auth.signUp({email,password});
 
-    let user=null;
-
     if(authErr||(authData.user&&authData.user.identities?.length===0)){
-      // Email already exists — sign in with the given password
-      const {data:si,error:siErr}=await sb.auth.signInWithPassword({email,password});
-      if(siErr){showAuthErr('This email is already registered. Please sign in.');return;}
-      user=si.user;
-    } else {
-      user=authData.user;
+      // Email already exists — do NOT silently sign them in; tell them explicitly
+      showAuthErr('An account with this email already exists. Please sign in instead.');
+      return;
     }
+
+    const user=authData.user;
 
     if(!user){showAuthErr('Could not create account. Please try again.');return;}
 
@@ -1524,6 +1608,50 @@ $('signupForm').addEventListener('submit',async e=>{
     await bootApp(user);
 
   } finally{_signingUp=false;setBtnLoading(btn,false);}
+});
+
+$('forgotForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  $('authError').style.display='none';
+  const btn=$('forgotBtn'); setBtnLoading(btn,true);
+  try {
+    const email=$('forgotEmail').value.trim();
+    const emailRegex=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if(!email){showAuthErr('Please enter your email address');return;}
+    if(!emailRegex.test(email)){showAuthErr('Please enter a valid email address');return;}
+
+    const redirectTo=window.location.origin+window.location.pathname;
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo});
+    if(error){showAuthErr(error.message);return;}
+
+    // Always show a generic success message (don't reveal whether the email exists)
+    $('forgotForm').reset();
+    toast('If an account exists for that email, a reset link has been sent.');
+    switchAuthMode('login');
+  } finally{setBtnLoading(btn,false);}
+});
+
+$('resetForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  $('authError').style.display='none';
+  const btn=$('resetBtn'); setBtnLoading(btn,true);
+  try {
+    const pw=$('resetPassword').value;
+    const confirmPw=$('resetConfirm').value;
+    if(pw.length<6){showAuthErr('Password must be at least 6 characters');return;}
+    if(pw!==confirmPw){showAuthErr('Passwords do not match');return;}
+
+    const {error}=await sb.auth.updateUser({password:pw});
+    if(error){showAuthErr(error.message);return;}
+
+    _inPasswordRecovery=false;
+    $('resetForm').reset();
+    await sb.auth.signOut();
+    toast('Password updated! Please sign in with your new password.');
+    showLoading(false);
+    $('mainApp').style.display='none'; $('authScreen').style.display='flex';
+    switchAuthMode('login');
+  } finally{setBtnLoading(btn,false);}
 });
 
 // Ensure profile exists for a user (used as safety net in bootApp)
@@ -1674,13 +1802,13 @@ async function bootApp(user){
 
   } else if(CP.role==='staff'){
     await loadStaff();
-    buildStaffTabs(['myapps','messages','agentapps']);
+    buildStaffTabs(['myapps','messages','agentapps','agentstaffmsg']);
     const {data:delReqs}=await sb.from('delete_requests').select('*').eq('status','pending').eq('requested_by',user.id);
     allDeleteRequests=delReqs||[];
 
   } else if(isAgentRole){
     await loadStaff();
-    buildStaffTabs(['myapps','messages','agentstaffmsg']);
+    buildStaffTabs(['myapps','messages']);
     const {data:delReqs}=await sb.from('delete_requests').select('*').eq('status','pending').eq('requested_by',user.id);
     allDeleteRequests=delReqs||[];
   }
@@ -1761,8 +1889,8 @@ function buildStaffTabs(tabs){
     requests:    {label:'Approval Requests',     id:'stab-requests'},
     deletereqs:  {label:'Delete Requests',       id:'stab-deletereqs'},
     log:         {label:'Activity Log',          id:'stab-log'},
-    agentapps:   {label:"Agent's Applications",  id:'stab-agentapps'},
-    agentstaffmsg:{label:'Staff Messages',       id:'stab-agentstaffmsg'},
+    agentapps:   {label:"My Agents' Apps",       id:'stab-agentapps'},
+    agentstaffmsg:{label:'Agent Messages',       id:'stab-agentstaffmsg'},
   };
   tabs.forEach((t,i)=>{
     const d=defs[t];
@@ -3162,6 +3290,11 @@ async function refreshDocs(){
   const showDocs=_currentDocTab==='applicant'?applicantDocs:supportingDocs;
   $('docCountBadge').textContent=`(${applicantDocs.length} applicant · ${supportingDocs.length} supporting)`;
   const canDelete=CP.role==='admin'||CP.role==='staff'||CP.role==='agent';
+
+  // Store docs in a lookup map so onclick handlers never pass raw data through HTML attribute strings
+  window._docMap={};
+  docs.forEach(d=>{ window._docMap[d.id]=d; });
+
   $('docList').innerHTML=showDocs.length?showDocs.map(d=>`
     <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface);border-radius:10px;border:1px solid var(--border);">
       <i class="fas fa-file-${getFileIcon(d.document_type)}" style="color:${_currentDocTab==='supporting'?'#7c3aed':'var(--brand-mid)'};font-size:1.1rem;flex-shrink:0;"></i>
@@ -3169,9 +3302,26 @@ async function refreshDocs(){
         <p style="font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${san(d.file_name)}</p>
         <p style="font-size:.72rem;color:var(--muted);">${(d.file_size/1024).toFixed(1)} KB · ${fmt(d.created_at)}</p>
       </div>
-      <button onclick="downloadDoc('${d.file_path}','${san(d.file_name)}')" class="btn btn-ghost" style="padding:6px 10px;font-size:.75rem;"><i class="fas fa-download"></i></button>
-      ${canDelete?`<button onclick="deleteDoc('${d.id}','${d.file_path}')" class="btn btn-ghost" style="padding:6px 10px;font-size:.75rem;color:#ef4444;"><i class="fas fa-trash"></i></button>`:''}
+      <button data-docid="${d.id}" data-action="preview" class="btn btn-ghost doc-action-btn" title="Preview"  style="padding:6px 10px;font-size:.75rem;"><i class="fas fa-eye"></i></button>
+      <button data-docid="${d.id}" data-action="rename"  class="btn btn-ghost doc-action-btn" title="Rename"   style="padding:6px 10px;font-size:.75rem;"><i class="fas fa-pen"></i></button>
+      <button data-docid="${d.id}" data-action="download"class="btn btn-ghost doc-action-btn" title="Download" style="padding:6px 10px;font-size:.75rem;"><i class="fas fa-download"></i></button>
+      ${canDelete?`<button data-docid="${d.id}" data-action="delete" class="btn btn-ghost doc-action-btn" title="Delete" style="padding:6px 10px;font-size:.75rem;color:#ef4444;"><i class="fas fa-trash"></i></button>`:''}
     </div>`).join(''):`<p style="font-size:.83rem;color:var(--muted);padding:12px;text-align:center;">No ${_currentDocTab==='supporting'?'spouse/children':'applicant'} documents uploaded</p>`;
+
+  // Single delegated event listener on docList — no inline onclick strings needed
+  $('docList').onclick=null;
+  $('docList').addEventListener('click', function(e){
+    const btn=e.target.closest('[data-action][data-docid]');
+    if(!btn) return;
+    e.stopPropagation();
+    const d=window._docMap[btn.dataset.docid];
+    if(!d) return;
+    const action=btn.dataset.action;
+    if(action==='preview')  previewDoc(d.id, d.file_path, d.file_name, d.document_type);
+    if(action==='rename')   renameDoc(d.id, d.file_name);
+    if(action==='download') downloadDoc(d.file_path, d.file_name);
+    if(action==='delete')   deleteDoc(d.id, d.file_path);
+  }, {once:true});
 }
 
 async function handleDocUpload(e, category='applicant'){
@@ -3203,6 +3353,76 @@ async function downloadDoc(path,name){
   if(error){toast('Download failed','error');return;}
   const url=URL.createObjectURL(data); const a=document.createElement('a'); a.href=url; a.download=name;
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+async function previewDoc(id, path, name, docType){
+  _previewDocId=id; _previewDocName=name; _previewDocPath=path;
+
+  const body=$('docPreviewBody');
+  $('docPreviewTitle').textContent=name;
+  $('docPreviewMeta').textContent='Loading preview…';
+  body.innerHTML='<div class="spinner" style="width:28px;height:28px;border-color:rgba(0,0,0,.12);border-top-color:var(--brand-mid);"></div>';
+  $('docPreviewDownloadBtn').onclick=()=>downloadDoc(_previewDocPath,_previewDocName);
+  $('docPreviewModal').classList.remove('hidden');
+
+  const ext=(docType||name.split('.').pop()||'').toLowerCase();
+  const isImage=['jpg','jpeg','png','gif','webp'].includes(ext);
+  const isPdf=ext==='pdf';
+
+  const {data,error}=await sb.storage.from('documents').createSignedUrl(path,120);
+  $('docPreviewMeta').textContent='';
+
+  if(error||!data?.signedUrl){
+    body.innerHTML=`<p style="color:var(--danger);padding:20px;text-align:center;">Could not load preview: ${san(error?.message||'Unknown error')}</p>`;
+    return;
+  }
+  const url=data.signedUrl;
+
+  if(isImage){
+    body.innerHTML=`<img src="${url}" alt="${san(name)}" style="max-width:100%;max-height:65vh;border-radius:10px;object-fit:contain;">`;
+  } else if(isPdf){
+    body.innerHTML=`<iframe src="${url}" style="width:100%;height:65vh;border:none;border-radius:10px;"></iframe>`;
+  } else {
+    body.innerHTML=`
+      <div style="text-align:center;padding:30px;color:var(--muted);">
+        <i class="fas fa-file-${getFileIcon(ext)}" style="font-size:3rem;margin-bottom:14px;display:block;color:var(--brand-mid);"></i>
+        <p style="font-weight:600;margin-bottom:4px;">Preview not available for this file type</p>
+        <p style="font-size:.83rem;">Download the file to view it.</p>
+      </div>`;
+  }
+}
+
+async function renameDoc(id, currentName){
+  const newName=prompt('Rename document', currentName);
+  if(newName===null) return;
+  const trimmed=newName.trim();
+  if(!trimmed||trimmed===currentName) return;
+
+  const {error}=await sb.from('application_documents').update({file_name:trimmed}).eq('id',id);
+  if(error){toast('Rename failed: '+error.message,'error');return;}
+
+  await logAct('rename',selAppId,`Renamed document "${currentName}" to "${trimmed}"`);
+  toast('Document renamed');
+  await refreshDocs();
+}
+
+async function renameDocFromPreview(){
+  if(!_previewDocId) return;
+  const newName=prompt('Rename document', _previewDocName);
+  if(newName===null) return;
+  const trimmed=newName.trim();
+  if(!trimmed||trimmed===_previewDocName) return;
+
+  const {error}=await sb.from('application_documents').update({file_name:trimmed}).eq('id',_previewDocId);
+  if(error){toast('Rename failed: '+error.message,'error');return;}
+
+  await logAct('rename',selAppId,`Renamed document "${_previewDocName}" to "${trimmed}"`);
+  const old=_previewDocName;
+  _previewDocName=trimmed;
+  $('docPreviewTitle').textContent=trimmed;
+  $('docPreviewDownloadBtn').onclick=()=>downloadDoc(_previewDocPath,trimmed);
+  toast('Document renamed');
+  await refreshDocs();
 }
 
 async function deleteDoc(id,path){
@@ -3426,14 +3646,14 @@ function renderAgentOverview(){
   list.innerHTML=allAgents.map(agent=>{
     // Apps assigned to this agent
     const agentApps=allApps.filter(a=>sstr(a.assigned_agent_id)===sstr(agent.id));
-    // Staff assigned to this agent (from profiles)
-    const assignedStaff=(allUsers||[]).filter(u=>u.role==='staff'&&sstr(u.assigned_agent_id)===sstr(agent.id));
+    // Staff member supervising this agent
+    const supervisor=agent.assigned_staff_id?(allUsers||[]).find(u=>u.role==='staff'&&sstr(u.id)===sstr(agent.assigned_staff_id)):null;
 
     const appPreview=agentApps.slice(0,3).map(a=>`<span style="font-size:.75rem;background:#fff7ed;color:#9a3412;padding:2px 8px;border-radius:99px;border:1px solid #fed7aa;">${san(a.applicant_name)}</span>`).join(' ');
     const appOverflow=agentApps.length>3?`<span style="font-size:.75rem;color:var(--muted);font-style:italic;">+${agentApps.length-3} more</span>`:'';
-    const staffNames=assignedStaff.length
-      ? assignedStaff.map(s=>`<span style="font-size:.75rem;background:#e0f2fe;color:#075985;padding:2px 8px;border-radius:99px;border:1px solid #bae6fd;">${san(s.full_name||s.email)}</span>`).join(' ')
-      : '<span style="font-size:.75rem;color:var(--muted);font-style:italic;">No staff assigned</span>';
+    const staffNames=supervisor
+      ? `<span style="font-size:.75rem;background:#e0f2fe;color:#075985;padding:2px 8px;border-radius:99px;border:1px solid #bae6fd;">${san(supervisor.full_name||supervisor.email)}</span>`
+      : '<span style="font-size:.75rem;color:var(--muted);font-style:italic;">No supervisor assigned</span>';
 
     return `<div class="card" style="padding:22px;border-left:4px solid #f97316;">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap;">
@@ -3448,14 +3668,14 @@ function renderAgentOverview(){
             <p style="font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Apps</p>
           </div>
           <div style="text-align:center;background:#e0f2fe;border-radius:10px;padding:10px 18px;">
-            <p class="syne" style="font-size:1.5rem;font-weight:800;color:#0369a1;">${assignedStaff.length}</p>
-            <p style="font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Staff</p>
+            <p class="syne" style="font-size:1.5rem;font-weight:800;color:#0369a1;">${supervisor?1:0}</p>
+            <p style="font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Manager</p>
           </div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" class="detail-grid">
         <div>
-          <p style="font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Assigned Staff</p>
+          <p style="font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Supervising Staff</p>
           <div style="display:flex;flex-wrap:wrap;gap:4px;">${staffNames}</div>
         </div>
         <div>
@@ -3526,62 +3746,62 @@ async function populateAmStaffMap(){
   if(!allAgents||!allAgents.length) await loadAgents();
   if(!allUsers||!allUsers.length) await loadAllUsers();
 
-  const staffSel=$('amStaffSelect');
-  const agentSel=$('amStaffAgentSelect');
-  if(!staffSel||!agentSel) return;
+  const agentSel=$('amLinkAgentSelect');
+  const staffSel=$('amLinkStaffSelect');
+  if(!agentSel||!staffSel) return;
 
   const staffOnly=(allUsers||[]).filter(u=>u.role==='staff');
-  staffSel.innerHTML='<option value="">— Choose staff —</option>'+
-    staffOnly.map(s=>`<option value="${s.id}">${san(s.full_name||s.email)}</option>`).join('');
 
-  agentSel.innerHTML='<option value="">— Unassigned —</option>'+
+  agentSel.innerHTML='<option value="">— Choose agent —</option>'+
     allAgents.map(ag=>`<option value="${ag.id}">${san(ag.full_name||ag.email)}</option>`).join('');
 
-  renderStaffAgentMap();
+  staffSel.innerHTML='<option value="">— Unassigned —</option>'+
+    staffOnly.map(s=>`<option value="${s.id}">${san(s.full_name||s.email)}</option>`).join('');
+
+  renderAgentStaffMap();
 }
 
-function renderStaffAgentMap(){
+function renderAgentStaffMap(){
   const container=$('staffAgentMapList'); if(!container) return;
-  const staffOnly=(allUsers||[]).filter(u=>u.role==='staff');
-  if(!staffOnly.length){container.innerHTML='';return;}
+  if(!allAgents||!allAgents.length){container.innerHTML='';return;}
 
-  const rows=staffOnly.map(s=>{
-    const ag=s.assigned_agent_id?allAgents.find(a=>sstr(a.id)===sstr(s.assigned_agent_id)):null;
+  const rows=allAgents.map(agent=>{
+    const staffMember=agent.assigned_staff_id?(allUsers||[]).find(u=>sstr(u.id)===sstr(agent.assigned_staff_id)):null;
     return `<div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:12px;">
-      <div style="width:36px;height:36px;border-radius:10px;background:#e0f2fe;color:#0369a1;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">${san(s.full_name||'?').charAt(0).toUpperCase()}</div>
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">${san(agent.full_name||'?').charAt(0).toUpperCase()}</div>
       <div style="flex:1;">
-        <p style="font-weight:600;font-size:.875rem;">${san(s.full_name||s.email)}</p>
-        <p style="font-size:.75rem;color:var(--muted);">${san(s.email)}</p>
+        <p style="font-weight:600;font-size:.875rem;">${san(agent.full_name||agent.email)}</p>
+        <p style="font-size:.75rem;color:var(--muted);">${san(agent.email)}</p>
       </div>
       <i class="fas fa-arrow-right" style="color:var(--muted);font-size:.8rem;"></i>
-      ${ag
-        ? `<div style="display:flex;align-items:center;gap:8px;"><div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;font-family:'Bricolage Grotesque',sans-serif;">${san(ag.full_name||'?').charAt(0).toUpperCase()}</div><span style="font-size:.83rem;font-weight:600;color:#ea580c;">${san(ag.full_name||ag.email)}</span></div>`
-        : `<span style="font-size:.78rem;color:var(--muted);font-style:italic;">No agent</span>`}
+      ${staffMember
+        ? `<div style="display:flex;align-items:center;gap:8px;"><div style="width:32px;height:32px;border-radius:9px;background:#e0f2fe;color:#0369a1;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;font-family:'Bricolage Grotesque',sans-serif;">${san(staffMember.full_name||'?').charAt(0).toUpperCase()}</div><span style="font-size:.83rem;font-weight:600;color:#0369a1;">${san(staffMember.full_name||staffMember.email)}</span></div>`
+        : `<span style="font-size:.78rem;color:var(--muted);font-style:italic;">No staff</span>`}
     </div>`;
   }).join('');
 
   container.innerHTML=`<div class="card" style="padding:20px;">
-    <h4 class="syne" style="font-size:.9rem;font-weight:700;margin-bottom:14px;color:var(--muted);">Current Staff → Agent Assignments</h4>
+    <h4 class="syne" style="font-size:.9rem;font-weight:700;margin-bottom:14px;color:var(--muted);">Current Agent → Staff Assignments</h4>
     <div style="display:flex;flex-direction:column;gap:8px;">${rows}</div>
   </div>`;
 }
 
 async function amSaveStaffAssignment(){
-  const staffId=$('amStaffSelect').value;
-  const agentId=$('amStaffAgentSelect').value;
-  if(!staffId){toast('Please select a staff member','error');return;}
+  const agentId=$('amLinkAgentSelect').value;
+  const staffId=$('amLinkStaffSelect').value;
+  if(!agentId){toast('Please select an agent','error');return;}
 
-  const {error}=await sb.from('profiles').update({assigned_agent_id:agentId||null}).eq('id',staffId);
+  const {error}=await sb.from('profiles').update({assigned_staff_id:staffId||null}).eq('id',agentId);
   if(error){toast('Error: '+error.message,'error');return;}
 
-  const staff=(allUsers||[]).find(u=>sstr(u.id)===sstr(staffId));
-  const ag=agentId?(allAgents||[]).find(a=>sstr(a.id)===sstr(agentId)):null;
-  const detail=ag
-    ? `Assigned staff ${staff?.full_name||staff?.email||staffId} to agent ${ag.full_name||ag.email}`
-    : `Unassigned staff ${staff?.full_name||staff?.email||staffId} from agent`;
+  const ag=(allAgents||[]).find(a=>sstr(a.id)===sstr(agentId));
+  const staff=staffId?(allUsers||[]).find(u=>sstr(u.id)===sstr(staffId)):null;
+  const detail=staff
+    ? `Assigned agent ${ag?.full_name||ag?.email||agentId} to staff ${staff.full_name||staff.email}`
+    : `Unassigned agent ${ag?.full_name||ag?.email||agentId} from staff`;
 
   await logAct('assign',null,detail);
-  toast(ag?`Staff linked to ${ag.full_name||ag.email}`:'Staff unassigned from agent');
+  toast(staff?`Agent linked to ${staff.full_name||staff.email}`:'Agent unassigned from staff');
   await loadAllUsers();
   await loadAgents();
   populateAmStaffMap();
@@ -3741,27 +3961,30 @@ async function renderAgentAppsView(){
   const countEl=$('agentAppsViewCount');
   if(!list) return;
 
-  // For a staff member: CP.assigned_agent_id is their linked agent
-  // For an agent viewing their own apps, assigned_agent_id is CU.id
-  const agentId = CP.role==='agent' ? CU.id : CP.assigned_agent_id;
+  // Find all agents supervised by this staff member
+  const {data:myAgents,error:agErr}=await sb.from('profiles')
+    .select('id,full_name,email')
+    .eq('assigned_staff_id',CU.id)
+    .eq('role','agent');
+  if(agErr){list.innerHTML=`<p style="color:var(--danger);padding:12px;">Error loading agents: ${agErr.message}</p>`;return;}
 
-  if(!agentId){
+  if(!(myAgents||[]).length){
     list.innerHTML='';
     empty?.classList.remove('hidden');
     if(countEl) countEl.textContent='0';
     return;
   }
 
-  // Load apps assigned to this agent fresh from DB (read-only, staff may not have them cached)
+  const agentIds=myAgents.map(a=>a.id);
+  const agentNameById={};
+  myAgents.forEach(a=>{ agentNameById[a.id]=a.full_name||a.email||'Agent'; });
+
+  // Load apps assigned to any of these agents (read-only, staff may not have them cached)
   const {data:apps,error}=await sb.from('applications')
     .select('*')
-    .eq('assigned_agent_id',agentId)
+    .in('assigned_agent_id',agentIds)
     .order('created_at',{ascending:false});
   if(error){list.innerHTML=`<p style="color:var(--danger);padding:12px;">Error loading apps: ${error.message}</p>`;return;}
-
-  // Get agent name for the banner
-  const {data:agentProfile}=await sb.from('profiles').select('full_name,email').eq('id',agentId).single();
-  const agentName=agentProfile?.full_name||agentProfile?.email||'Agent';
 
   if(countEl) countEl.textContent=(apps||[]).length;
 
@@ -3774,9 +3997,9 @@ async function renderAgentAppsView(){
 
   list.innerHTML=`
     <div style="background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid #fed7aa;border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
-      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">${san(agentName).charAt(0).toUpperCase()}</div>
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;"><i class="fas fa-handshake"></i></div>
       <div>
-        <p style="font-weight:700;font-size:.875rem;color:#7c2d12;">Viewing ${san(agentName)}'s Applications</p>
+        <p style="font-weight:700;font-size:.875rem;color:#7c2d12;">Viewing Applications from ${myAgents.length} Agent${myAgents.length!==1?'s':''}</p>
         <p style="font-size:.75rem;color:#9a3412;">${(apps||[]).length} application${(apps||[]).length!==1?'s':''} · Read-only</p>
       </div>
     </div>
@@ -3790,6 +4013,7 @@ async function renderAgentAppsView(){
           <p style="font-size:.75rem;color:var(--muted);">${san(a.package||'—')} · ${fmt(a.created_at)}</p>
           ${stageBarSmall(a.stage||1)}
         </div>
+        <span style="font-size:.72rem;background:#fff7ed;color:#9a3412;padding:3px 8px;border-radius:99px;border:1px solid #fed7aa;white-space:nowrap;">${san(agentNameById[a.assigned_agent_id]||'Agent')}</span>
         <span class="badge badge-${a.status||'pending'}">${(a.status||'pending').charAt(0).toUpperCase()+(a.status||'pending').slice(1)}</span>
         <span style="font-size:.72rem;background:#fff7ed;color:#9a3412;padding:3px 8px;border-radius:99px;border:1px solid #fed7aa;white-space:nowrap;"><i class="fas fa-lock" style="font-size:.65rem;"></i> Read-only</span>
       </div>`).join('')}
@@ -3799,35 +4023,34 @@ async function renderAgentAppsView(){
 async function renderAgentStaffMsgList(){
   const container=$('agentStaffMsgList'); if(!container) return;
 
-  // For agent: find all staff where assigned_agent_id = CU.id
-  const {data:staffList,error}=await sb.from('profiles')
+  // For staff: find all agents where assigned_staff_id = CU.id
+  const {data:agentList,error}=await sb.from('profiles')
     .select('id,full_name,email,role')
-    .eq('assigned_agent_id',CU.id)
-    .eq('role','staff');
+    .eq('assigned_staff_id',CU.id)
+    .eq('role','agent');
 
   if(error){container.innerHTML=`<p style="color:var(--danger);padding:12px;">Error: ${error.message}</p>`;return;}
 
-  if(!(staffList||[]).length){
+  if(!(agentList||[]).length){
     container.innerHTML=`<div style="text-align:center;padding:48px 24px;color:var(--muted);">
-      <div style="font-size:3rem;margin-bottom:12px;">👥</div>
-      <p style="font-weight:600;">No staff assigned to you yet</p>
-      <p style="font-size:.83rem;margin-top:4px;">Ask admin to assign staff members to your agent account</p>
+      <div style="font-size:3rem;margin-bottom:12px;">🤝</div>
+      <p style="font-weight:600;">No agents assigned to you yet</p>
+      <p style="font-size:.83rem;margin-top:4px;">Ask admin to assign agents to your staff account</p>
     </div>`;
     return;
   }
 
-  // Get unread counts per staff profile (notes from staff that agent hasn't authored)
-  container.innerHTML=staffList.map(s=>`
-    <div onclick="openAgentThread('${s.id}','${san(s.full_name||s.email)}')"
+  container.innerHTML=agentList.map(a=>`
+    <div onclick="openAgentThread('${a.id}','${san(a.full_name||a.email)}')"
          style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:all .2s;"
          onmouseover="this.style.borderColor='#fb923c';this.style.boxShadow='0 4px 16px rgba(251,146,60,.12)'"
          onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-      <div style="width:44px;height:44px;border-radius:12px;background:#e0f2fe;color:#0369a1;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">${san(s.full_name||'?').charAt(0).toUpperCase()}</div>
+      <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;font-family:'Bricolage Grotesque',sans-serif;flex-shrink:0;">${san(a.full_name||'?').charAt(0).toUpperCase()}</div>
       <div style="flex:1;min-width:0;">
-        <p style="font-weight:600;font-size:.875rem;">${san(s.full_name||'—')}</p>
-        <p style="font-size:.75rem;color:var(--muted);">${san(s.email)}</p>
+        <p style="font-weight:600;font-size:.875rem;">${san(a.full_name||'—')}</p>
+        <p style="font-size:.75rem;color:var(--muted);">${san(a.email)}</p>
       </div>
-      <span class="badge badge-staff">Staff</span>
+      <span class="badge badge-agent">Agent</span>
       <i class="fas fa-chevron-right" style="color:var(--muted);font-size:.75rem;"></i>
     </div>`).join('');
 }
@@ -3870,7 +4093,7 @@ async function loadAgentThread(){
   container.innerHTML=notes.map(n=>{
     const isMe=sstr(n.author_id)===sstr(CU.id);
     const role=n.author?.role||'staff';
-    const name=n.author?.full_name||(isMe?'You':'Staff');
+    const name=n.author?.full_name||(isMe?'You':'Agent');
     return `<div style="display:flex;flex-direction:column;align-items:${isMe?'flex-end':'flex-start'};">
       <div style="max-width:82%;background:${isMe?'linear-gradient(135deg,#fb923c,#ea580c)':'var(--surface)'};color:${isMe?'#fff':'var(--text)'};border:1px solid ${isMe?'transparent':'var(--border)'};border-radius:${isMe?'14px 14px 4px 14px':'14px 14px 14px 4px'};padding:11px 14px;">
         <div class="msg-rich" style="font-size:.83rem;line-height:1.55;">${sanitizeRich(n.content)}</div>
@@ -3911,7 +4134,7 @@ async function sendAgentThreadMsg(){
 // =========================================================
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    ['detailModal','newAppModal','userProfileModal','referrerModal','codeOwnerModal','agentThreadModal'].forEach(id=>$(id)?.classList.add('hidden'));
+    ['detailModal','newAppModal','userProfileModal','referrerModal','codeOwnerModal','agentThreadModal','docPreviewModal'].forEach(id=>$(id)?.classList.add('hidden'));
     selAppId=null; editMode=false; _agentThreadProfileId=null; closeSidebar();
   }
 });
@@ -3921,22 +4144,9 @@ document.addEventListener('keydown',e=>{
 // =========================================================
 window.addEventListener('load',async()=>{
   const {data:{session}}=await sb.auth.getSession();
+  if(_inPasswordRecovery) return; // reset-password screen already shown by the listener above
   if(session){await bootApp(session.user);}
   else{showLoading(false);$('authScreen').style.display='flex';switchAuthMode('login');}
-  sb.auth.onAuthStateChange((event,session)=>{
-    if(event==='SIGNED_OUT'){
-      stopChimeLoop();
-      clearInterval(_pollTimer); _pollTimer=null;
-      _staffUnreadMsgs=0; _adminUnreadStaffMsgs=0; _staffUnreadReqs=0;
-      _applicantUnreadNotes=0; _applicantNotesBaseCount=0;
-      // Reset inline RTE state so they rebuild fresh on next login
-      window._staffReplyRte=null;
-      window._agentThreadRte=null;
-      $('mainApp').style.display='none'; $('authScreen').style.display='flex'; switchAuthMode('login');
-      CU=null;CP=null;allApps=[];allUsers=[];allStaff=[];allLogs=[];allRequests=[];
-    }
-    if(event==='SIGNED_IN'&&session&&!CP&&!_signingUp) bootApp(session.user);
-  });
 });
 </script>
 </body>
