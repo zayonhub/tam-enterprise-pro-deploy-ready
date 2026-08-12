@@ -1144,29 +1144,42 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // Registered immediately (not deferred to window 'load') so this never misses the
 // PASSWORD_RECOVERY event that Supabase fires very early when the user lands here
 // from a "reset password" email link.
+// NOTE: helper functions ($, switchAuthMode, showLoading, etc.) are defined later in
+// this script block. We queue any early events and replay them once the page is ready.
+let _pendingAuthEvent=null;
 sb.auth.onAuthStateChange((event,session)=>{
+  // If core helpers aren't ready yet, queue and replay after page load
+  if(typeof $==='undefined'||typeof switchAuthMode==='undefined'){
+    _pendingAuthEvent={event,session};
+    return;
+  }
+  _handleAuthEvent(event,session);
+});
+
+function _handleAuthEvent(event,session){
   if(event==='PASSWORD_RECOVERY'){
     _inPasswordRecovery=true;
     showLoading(false);
-    $('mainApp').style.display='none';
-    $('authScreen').style.display='flex';
+    document.getElementById('mainApp').style.display='none';
+    document.getElementById('authScreen').style.display='flex';
     switchAuthMode('reset');
     return;
   }
   if(event==='SIGNED_OUT'){
     _inPasswordRecovery=false;
-    stopChimeLoop();
+    if(typeof stopChimeLoop==='function') stopChimeLoop();
     clearInterval(_pollTimer); _pollTimer=null;
     _staffUnreadMsgs=0; _adminUnreadStaffMsgs=0; _staffUnreadReqs=0;
     _applicantUnreadNotes=0; _applicantNotesBaseCount=0;
-    // Reset inline RTE state so they rebuild fresh on next login
     window._staffReplyRte=null;
     window._agentThreadRte=null;
-    $('mainApp').style.display='none'; $('authScreen').style.display='flex'; switchAuthMode('login');
+    document.getElementById('mainApp').style.display='none';
+    document.getElementById('authScreen').style.display='flex';
+    switchAuthMode('login');
     CU=null;CP=null;allApps=[];allUsers=[];allStaff=[];allLogs=[];allRequests=[];
   }
   if(event==='SIGNED_IN'&&session&&!CP&&!_signingUp&&!_inPasswordRecovery) bootApp(session.user);
-});
+}
 
 /*
   REQUIRED SUPABASE SETUP — run this SQL in your Supabase SQL Editor:
@@ -3383,8 +3396,17 @@ async function renameDoc(id, currentName){
   const trimmed=newName.trim();
   if(!trimmed||trimmed===currentName) return;
 
-  const {error}=await sb.from('application_documents').update({file_name:trimmed}).eq('id',id);
+  // Use .select() to confirm the row was actually updated (catches silent RLS blocks)
+  const {data:updated,error}=await sb.from('application_documents')
+    .update({file_name:trimmed})
+    .eq('id',id)
+    .select('id,file_name')
+    .single();
   if(error){toast('Rename failed: '+error.message,'error');return;}
+  if(!updated||updated.file_name!==trimmed){
+    toast('Rename blocked \u2014 you may not have permission to rename this document','error');
+    return;
+  }
 
   await logAct('rename',selAppId,`Renamed document "${currentName}" to "${trimmed}"`);
   toast('Document renamed');
@@ -3398,11 +3420,19 @@ async function renameDocFromPreview(){
   const trimmed=newName.trim();
   if(!trimmed||trimmed===_previewDocName) return;
 
-  const {error}=await sb.from('application_documents').update({file_name:trimmed}).eq('id',_previewDocId);
+  // Use .select() to confirm the row was actually updated (catches silent RLS blocks)
+  const {data:updated,error}=await sb.from('application_documents')
+    .update({file_name:trimmed})
+    .eq('id',_previewDocId)
+    .select('id,file_name')
+    .single();
   if(error){toast('Rename failed: '+error.message,'error');return;}
+  if(!updated||updated.file_name!==trimmed){
+    toast('Rename blocked — you may not have permission to rename this document','error');
+    return;
+  }
 
   await logAct('rename',selAppId,`Renamed document "${_previewDocName}" to "${trimmed}"`);
-  const old=_previewDocName;
   _previewDocName=trimmed;
   $('docPreviewTitle').textContent=trimmed;
   $('docPreviewDownloadBtn').onclick=()=>downloadDoc(_previewDocPath,trimmed);
@@ -4146,6 +4176,13 @@ document.addEventListener('click', function(e){
 //  INIT
 // =========================================================
 window.addEventListener('load',async()=>{
+  // Replay any auth event that fired before helper functions were defined
+  if(_pendingAuthEvent){
+    const {event,session}=_pendingAuthEvent;
+    _pendingAuthEvent=null;
+    _handleAuthEvent(event,session);
+    return;
+  }
   const {data:{session}}=await sb.auth.getSession();
   if(_inPasswordRecovery) return; // reset-password screen already shown by the listener above
   if(session){await bootApp(session.user);}
