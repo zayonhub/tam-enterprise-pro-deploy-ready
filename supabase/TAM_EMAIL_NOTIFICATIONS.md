@@ -1,7 +1,7 @@
 # TAM email notifications
 
 Deployed to Supabase project `asupemsmwzrovucpvqyt` on 21 October 2026.
-Sender: `NonStop Travels <noreply@nonstopgroup.co>`.
+Sender: `NonStop Travels <noreply@nonstoptravels.co>`.
 
 ## Enabled events
 
