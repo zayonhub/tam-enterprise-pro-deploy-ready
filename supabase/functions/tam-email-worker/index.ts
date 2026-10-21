@@ -49,7 +49,10 @@ Deno.serve(async (req: Request) => {
   if (mode === "verify") {
     try {
       await transport.verify();
-      return reply({ smtp_authenticated: true, sender: FROM });
+      return reply({ smtp_authenticated: true, sender: FROM,
+        smtp_host: Deno.env.get("SMTP_HOST"),
+        sender_matches_username: Deno.env.get("SMTP_USER")?.toLowerCase() === FROM,
+        username_is_email: /^[^@\s]+@[^@\s]+$/.test(Deno.env.get("SMTP_USER") || "") });
     } catch (e) { return reply({ smtp_authenticated: false, error: safeCode(e) }, 502); }
     finally { transport.close(); }
   }
