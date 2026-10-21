@@ -4,6 +4,14 @@ const FROM = "noreply@nonstopgroup.co";
 const reply = (data: unknown, status = 200) => Response.json(data, { status });
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]!));
 const safeCode = (e: any) => typeof e?.code === "string" && /^[A-Z_0-9]+$/.test(e.code) ? e.code : "SMTP_FAILED";
+const safeFailure = (e: any) => {
+  let message = String(e?.message || "SMTP failure");
+  for (const name of ["SMTP_PASSWORD", "SMTP_USER", "SUPABASE_SERVICE_ROLE_KEY"]) {
+    const value = Deno.env.get(name);
+    if (value) message = message.split(value).join("[redacted]");
+  }
+  return (safeCode(e) + ": " + message.replace(/[\r\n]/g, " ")).slice(0,100);
+};
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return reply({ error: "method_not_allowed" }, 405);
@@ -61,7 +69,7 @@ Deno.serve(async (req: Request) => {
         });
         success = Array.isArray(info.accepted) && info.accepted.length > 0;
         if (!success) error = "RECIPIENT_REJECTED";
-      } catch (e) { error = safeCode(e); }
+      } catch (e) { error = safeFailure(e); }
       const result = await rpc("complete", { p_id: job.id, p_lease: job.lease, p_success: success, p_error: error });
       if (!result.updated) throw new Error("lease_lost");
       success ? sent++ : failed++;
