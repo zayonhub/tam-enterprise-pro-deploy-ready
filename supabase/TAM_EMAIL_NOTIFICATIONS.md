@@ -130,3 +130,13 @@ where status='failed';
 Auth settings cannot be inspected or changed through the connected Supabase MCP
 tools. Registration/recovery end-to-end delivery was not tested by generating
 verification or password-reset emails for real users.
+
+## Branded email design
+
+All 17 custom notification types use the shared `email-template.ts` layout: the original NonStop Travels logo, website green (#075b32 / #064125) and orange (#f58220), white content area, mobile styling, structured application details, trusted portal/support buttons, and the verified website contact details. The logo is a 480px PNG rendered from the website's original SVG and embedded as an inline CID attachment from `email-logo.ts`. No external image fetch is required. Deploy index.ts together with both relative modules.
+
+Plain-text mail includes the portal or support link. Deleted-account/application messages point to support. Dynamic content is HTML-escaped. Template checks cover all 17 events, escaping, logo CID, action URLs and size. Welcome and progress previews were rendered and inspected at 660px and 375px widths using WeasyPrint; native email-client rendering was not tested. SMTP authentication passed after deployment. No additional preview email was sent.
+
+Run `node --experimental-strip-types email-template.test.mjs` from the function directory for template checks and HTML previews. Optional `--browser` checks require a separately installed Playwright browser.
+
+Supabase Auth verification and recovery emails still use their separately managed Auth templates; this design change applies to the custom TAM notification worker only.
