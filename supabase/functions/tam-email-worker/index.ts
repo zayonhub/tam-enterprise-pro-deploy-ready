@@ -1,8 +1,9 @@
 import nodemailer from "npm:nodemailer@10.1.7";
+import { renderEmail, LOGO_CID, PORTAL_URL, SUPPORT_EMAIL } from "./email-template.ts";
+import { LOGO_BASE64 } from "./email-logo.ts";
 
 const FROM = "noreply@nonstoptravels.co";
 const reply = (data: unknown, status = 200) => Response.json(data, { status });
-const escapeHtml = (s: string) => s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]!));
 const safeCode = (e: any) => typeof e?.code === "string" && /^[A-Z_0-9]+$/.test(e.code) ? e.code : "SMTP_FAILED";
 const safeFailure = (e: any) => {
   let message = String(e?.message || "SMTP failure");
@@ -66,8 +67,9 @@ Deno.serve(async (req: Request) => {
           from: { name: "NonStop Travels", address: FROM },
           to: { address: job.recipient, name: "" },
           subject: "NonStop Travels | " + job.subject.replace(/[\r\n]/g, " "),
-          text: job.body + "\n\nNonStop Travels\nThis is an automated notification. Please do not reply to this address.",
-          html: '<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#18372a"><div style="background:#0d5c3a;color:#fff;padding:24px;font-size:22px">NonStop Travels</div><div style="padding:24px"><h2>' + escapeHtml(job.subject) + '</h2><p style="white-space:pre-line;line-height:1.7">' + escapeHtml(job.body) + '</p><hr><p style="font-size:12px;color:#555">This is an automated notification. Please do not reply to this address.</p></div></div>',
+          text: job.body + "\n\n" + ([25,26].includes(job.event_no) ? "Contact our team: " + SUPPORT_EMAIL : "Open your portal: " + PORTAL_URL) + "\n\nNonStop Travels Limited\nSupport: " + SUPPORT_EMAIL + "\nThis is an automated notification. Please do not reply to this address.",
+          html: renderEmail(job),
+          attachments: [{ filename: "nonstop-travels-logo.png", content: LOGO_BASE64, encoding: "base64", cid: LOGO_CID, contentType: "image/png", contentDisposition: "inline" }],
           messageId: "<tam-" + job.id + "@nonstoptravels.co>",
         });
         success = Array.isArray(info.accepted) && info.accepted.length > 0;
